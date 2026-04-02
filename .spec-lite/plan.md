@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-Auto-Mate is a self-hostable, AI-powered task automation platform that lets everyday users — not just developers — describe what they need done in plain English, upload files (local or via URL), and get polished results back: cleaned datasets, visualizations, summaries, interactive dashboards, and more. Phase 1 delivers the core automation loop (describe → upload → generate → test → execute → artifacts), persistent task history with reusable task widgets, a task scheduler, and a gamified dashboard. It runs locally with Node.js + Python/uv, or containerized via Docker Compose. Built on pi-web-ui and pi-agent-core for the AI chat interface, with React 19 for the application shell and a composable class-based design system.
+Auto-Mate is a self-hostable, AI-powered task automation platform that lets everyday users — not just developers — describe what they need done in plain English, upload files (local or via URL), and get polished results back: cleaned datasets, visualizations, summaries, interactive dashboards, and more. Phase 1 delivers the core automation loop (describe → upload → generate → test → execute → artifacts), persistent task history with reusable task widgets, a task scheduler, and a gamified dashboard. It runs locally with Node.js + Python/uv, or containerized via Docker Compose. Built on pi-web-ui for the chat UI, pi-coding-agent (SDK) as the server-side AI coding engine, with React 19 for the application shell and a composable class-based design system.
 
 **Decomposition Strategy: Vertical Slicing** — Each feature is a thin end-to-end slice (DB → API → UI) delivering user-visible value independently. Features are ordered so each builds on the last, and the app is usable after each slice lands.
 
@@ -13,9 +13,9 @@ Auto-Mate is a self-hostable, AI-powered task automation platform that lets ever
 | FEAT-ID | Feature | Spec File | Status |
 |---------|---------|-----------|--------|
 | FEAT-001 | Project Bootstrap & Design System — monorepo scaffold, build tooling, Express skeleton, SQLite/Drizzle setup, composable design token system, app shell with routing | `features/feature_bootstrap_design_system.md` | [ ] Not started |
-| FEAT-002 | AI Chat & Provider Setup — pi-web-ui ChatPanel in React, server-side pi-agent-core agent, WebSocket bridge, first-run wizard, settings page | `features/feature_ai_chat_provider_setup.md` | [ ] Not started |
+| FEAT-002 | AI Chat & Provider Setup — pi-web-ui ChatPanel in React, server-side pi-coding-agent session (SDK), WebSocket bridge for agent event streaming, first-run wizard (provider selection + API key), settings page | `features/feature_ai_chat_provider_setup.md` | [ ] Not started |
 | FEAT-003 | File Upload & Smart Detection — multi-file drag-and-drop + URL links, smart type detection with metadata extraction, file metadata cards UI, files persisted to disk | `features/feature_file_upload_smart_detection.md` | [ ] Not started |
-| FEAT-004 | Task Creation & Execution Engine — natural language task creation (adhoc/reusable), AI analysis + clarification + parameter extraction, script generation (Python/shell), verification loop (ruff + bandit + unit tests + AI review), sandboxed execution via uv, real-time progress streaming | `features/feature_task_creation_execution.md` | [ ] Not started |
+| FEAT-004 | Task Creation & Execution Engine — Contract-based execution model: pi-coding-agent generates code in an isolated workspace (never sees full user data, only metadata previews); app handles execution in a separate phase. Includes: natural language task creation (adhoc/reusable), environment-aware dynamic prompt construction, agent-driven verification loop (ruff + bandit + unit tests — agent iterates until clean), script contract (env var I/O, manifest.json artifacts), dependency allowlist validation, sandboxed execution via `uv run`, real-time progress streaming via agent events, smart clarification (auto-defaults first 5, then escalate to user), and execution state tracking | `features/feature_task_creation_execution.md` | [ ] Not started |
 | FEAT-005 | Artifact Generation & Storage — artifact production from scripts, storage to `~/.automate/artifacts/{taskId}/`, inline HTML/Plotly rendering, document downloads, version history (last 10), artifact viewer | `features/feature_artifact_generation_storage.md` | [ ] Not started |
 | FEAT-006 | Task Persistence & Execution History — full execution logging, Execution History page (searchable/filterable), execution detail view, re-run capability | `features/feature_task_persistence_history.md` | [ ] Not started |
 | FEAT-007 | Reusable Task Widgets — save reusable tasks with script + parameter schema, searchable gallery page, re-run with new params/files, edit metadata | `features/feature_reusable_task_widgets.md` | [ ] Not started |
@@ -36,7 +36,7 @@ Auto-Mate is a self-hostable, AI-powered task automation platform that lets ever
 | Frontend framework | React 19 + TypeScript 5.5+ | Rich SPA ecosystem, hooks composition, great DX |
 | Build tool | Vite 6+ | Fast HMR, native ESM, excellent TypeScript support |
 | Chat UI | @mariozechner/pi-web-ui (latest) | Battle-tested chat, artifacts, attachments, provider management — eliminates ~40-50% of frontend work. MIT licensed. Web components (mini-lit) embed in React via refs |
-| AI agent | @mariozechner/pi-agent-core + @mariozechner/pi-ai (latest) | Server-side agent with tool execution, event streaming, provider-agnostic. MIT licensed |
+| AI coding engine | @mariozechner/pi-coding-agent (latest, SDK mode) | Full coding agent with built-in tools (read, write, edit, bash), custom tool support via `defineTool()`, provider-agnostic (Anthropic, OpenAI, Google, GitHub Copilot, etc.), session management, event streaming, system prompt customization, skills, and extensions. Wraps pi-agent-core + pi-ai internally. MIT licensed |
 | Styling | TailwindCSS v4 + composable design token layer | Semantic class system wrapping Tailwind; dark/light mode; no raw Tailwind in components |
 | Server state (client) | TanStack Query v5 | Cache, dedupe, background refetch for API data |
 | Routing (client) | TanStack Router v1 or React Router v7 | Type-safe routing with code splitting |
@@ -165,15 +165,17 @@ Auto-Mate is a self-hostable, AI-powered task automation platform that lets ever
 **AI Chat (WebSocket)**
 | Event | Direction | Description |
 |-------|-----------|-------------|
-| `task:start` | server→client | Task execution started |
-| `task:progress` | server→client | Progress update (phase, message, percentage) |
-| `task:script_generated` | server→client | Generated script available for preview |
-| `task:test_result` | server→client | Unit test results |
-| `task:review_result` | server→client | AI code review result |
-| `task:artifact` | server→client | New artifact produced |
+| `task:start` | server→client | Task execution started (agent session created) |
+| `task:progress` | server→client | Progress update (phase inferred from agent events: generating, verifying, executing) |
+| `task:script_detected` | server→client | Script file detected from agent's `write` tool call (includes language, filename) |
+| `task:clarification` | server→client | Agent escalated a clarification to the user (after 5 auto-defaults) |
+| `task:clarification_response` | client→server | User's answer to an escalated clarification |
+| `task:deps_review` | server→client | Non-approved packages found in requirements.txt, awaiting user approval |
+| `task:deps_response` | client→server | User's approval/rejection of flagged packages |
+| `task:artifact` | server→client | New artifact registered from manifest.json post-execution |
 | `task:complete` | server→client | Execution finished (success/failure) |
 | `task:error` | server→client | Error with plain-English explanation |
-| `agent:event` | server→client | Forwarded pi-agent-core events for pi-web-ui rendering |
+| `agent:event` | server→client | Forwarded pi-coding-agent session events (message_update, tool_execution_start/end, etc.) for real-time UI rendering |
 
 **System**
 | Method | Path | Description |
@@ -186,11 +188,15 @@ Auto-Mate is a self-hostable, AI-powered task automation platform that lets ever
 
 Security is built organically into the execution flow, not over-engineered:
 
-- **Script verification loop**: Every AI-generated script passes through ruff (linting) + bandit (security scanning) + AI-generated unit tests + AI code review before execution. Max 3 iteration attempts.
+- **Privacy-first code generation**: The AI coding agent never sees full user data files. It receives only metadata previews (column names, types, row counts, and a small sample of 3–5 rows for tabular data). Full data is only accessed at execution time by the generated script, via environment-variable-based I/O paths. This limits data exposure to the LLM provider.
+- **Two-phase separation**: Code generation (AI domain) and code execution (app domain) are strictly separated. The agent generates code and runs static analysis in an isolated workspace. The app takes over for real execution against user data — no AI involved in the execution phase.
+- **Agent-driven verification loop**: The agent iterates through ruff (linting) + bandit (security scanning) + unit tests (with mock data) using its `bash` tool scoped to the task workspace. The agent fixes issues and re-runs until clean. System prompt guardrails limit iteration to a max of 5 attempts before failing with a clear error.
+- **Dependency allowlist**: Generated `requirements.txt` is validated against a curated allowlist of approved packages (pandas, plotly, openpyxl, etc.). Non-approved packages are flagged to the user for explicit approval before installation.
+- **Scoped `bash` tool**: During code generation, the agent's `bash` tool is scoped to the task workspace via `createBashTool(taskWorkspacePath)`. The workspace contains only generated code — no user data files.
 - **Resource limits**: Script execution has configurable timeout (default: 60s) and memory limits. uv virtualenv provides dependency isolation per-task.
-- **File access**: Scripts operate on files within the task's designated directories only. The execution environment's working directory is scoped to the task.
-- **No outbound network by default**: Generated scripts should not make network calls unless the task explicitly requires it (AI is instructed to flag network usage in the execution plan).
-- **Artifact rendering**: pi-web-ui's ArtifactsPanel renders HTML artifacts in sandboxed iframes. Trusted as-is for MVP.
+- **File access**: Generated scripts read inputs from `AUTOMATE_INPUT_DIR` and write outputs to `AUTOMATE_OUTPUT_DIR` — both set as environment variables by the app. Scripts cannot access files outside these paths.
+- **No outbound network by default**: Generated scripts should not make network calls unless the task explicitly requires it (system prompt instructs the agent to flag network usage).
+- **Artifact rendering**: HTML/Plotly artifacts rendered in sandboxed iframes. All artifacts have a declared type in the manifest, so the app uses deterministic renderers — no guessing.
 - **User responsibility**: The app provides safety mechanisms, but ultimately the user decides their isolation level. Clear messaging: "For full isolation, run Auto-Mate in a Docker container."
 - **Input validation**: All API inputs validated via TypeBox schemas. File uploads validated for MIME type and size (configurable limit, default 50MB).
 - **No authentication in MVP**: Single-user local deployment. Auth deferred to Phase 2 (multi-user).
@@ -201,19 +207,69 @@ Security is built organically into the execution flow, not over-engineered:
 
 ### Plan-Specific Decisions
 
-- **Server-side AI agent**: pi-agent-core runs on the Express server, not in the browser. The server orchestrates the full task execution loop (analysis → code gen → static analysis → test → review → execute). WebSocket forwards pi-agent-core events to the client for real-time rendering via pi-web-ui components. Rationale: the server must orchestrate Python execution, file I/O, and sandbox management — browser can't do this.
+- **Server-side AI coding agent via pi-coding-agent SDK**: `@mariozechner/pi-coding-agent` runs on the Express server via its SDK (`createAgentSession()`). It replaces the previously planned `pi-agent-core` + `pi-ai` direct usage. The SDK provides built-in coding tools (read, write, edit, bash), custom tool registration via `defineTool()`, system prompt customization via `DefaultResourceLoader`, full event streaming, session management, and multi-provider support (Anthropic, OpenAI, Google, GitHub Copilot, etc.) out of the box. The server creates scoped `AgentSession` instances per task execution and forwards agent events to the client via WebSocket.
+
+- **Contract-based execution model (two-phase separation)**: Code generation and code execution are strictly separated into two phases:
+  - **Phase 1 — Code Generation (Agent Domain)**: The pi-coding-agent session receives dynamic system prompts with environment context, file metadata previews (not full data), coding guidelines, and the script contract. The agent uses its built-in tools (write, edit, bash scoped to task workspace) to generate code, run static analysis (ruff + bandit), generate and run unit tests with mock data, and iterate until all checks pass. The agent **never** sees full user data — only metadata previews.
+  - **Phase 2 — Execution (App Domain)**: The app takes over entirely — no AI involved. It validates `requirements.txt` against the approved package allowlist, installs dependencies via `uv`, sets environment variables (`AUTOMATE_INPUT_DIR`, `AUTOMATE_OUTPUT_DIR`, `AUTOMATE_TASK_ID`, plus task parameters), executes the script via `uv run`, reads the generated `manifest.json` from the output directory, and registers artifacts in the database.
+
+- **Script contract**: Every generated script follows a strict contract enforced via system prompt:
+  1. Read input files from `os.environ["AUTOMATE_INPUT_DIR"]` (Python) or `$AUTOMATE_INPUT_DIR` (shell)
+  2. Write all outputs to `os.environ["AUTOMATE_OUTPUT_DIR"]`
+  3. Write `manifest.json` to the output directory declaring all produced artifacts with type, filename, title, and description
+  4. Exit 0 on success, non-zero on failure
+  5. Write human-readable errors to stderr
+  6. No network calls unless explicitly authorized
+  7. No file access outside input/output directories
+  8. Task parameters are read from environment variables (prefixed `AUTOMATE_PARAM_`)
+
+- **Artifact manifest**: Scripts produce a `manifest.json` in `AUTOMATE_OUTPUT_DIR` that declares all artifacts:
+  ```json
+  [
+    { "filename": "cleaned_data.csv", "type": "csv", "title": "Cleaned Dataset", "description": "Removed nulls, standardized dates" },
+    { "filename": "sales_chart.html", "type": "plotly-html", "title": "Sales by Region", "description": "Interactive bar chart" }
+  ]
+  ```
+  Supported artifact types: `csv`, `plotly-html`, `html`, `image` (png/svg/jpeg), `markdown`, `json`, `text`, `xlsx`, `pdf`. The system prompt instructs the agent to use Plotly (not matplotlib) for interactive visualizations and to generate self-contained HTML with embedded Plotly.js CDN. The app uses deterministic renderers per declared type.
+
+- **Environment awareness**: On startup, the server detects the runtime environment: OS (Windows/macOS/Linux), Python version and availability (via uv), shell type (PowerShell on Windows / bash on Unix), and available disk space. This context is injected into every agent session's system prompt so that:
+  - Python scripts use OS-appropriate path handling
+  - Shell scripts are generated in the correct dialect (PowerShell `.ps1` on Windows, bash `.sh` on Unix)
+  - The agent chooses the right script type based on task nature + environment capabilities
+  - Examples in the system prompt are platform-specific
+
+- **Dynamic prompt construction**: For each task execution, the `TaskOrchestrator` builds a comprehensive initial message that includes:
+  - User's task description (natural language)
+  - File metadata previews: filenames, MIME types, and type-specific metadata (column names + types + sample rows for tabular; page count for docs; dimensions for images)
+  - Environment context (OS, shell, Python version, venv path)
+  - Script contract reference
+  - Output directory path
+  - Available pre-installed packages in the venv
+  - For reusable template re-runs: the canonical script is executed directly (agent is not invoked)
+
+- **Smart clarification flow**: The agent has a single custom tool: `request_clarification`. Behavior:
+  - For the first 5 clarifications, the system prompt instructs the agent to pick the most reasonable default and proceed (auto-resolve). The chosen default is logged for transparency.
+  - If the agent calls `request_clarification` more than 5 times, the app routes the question to the user via WebSocket. The execution status changes to `waiting` with a visual indicator (flashing icon). The user can answer or cancel.
+  - The app is designed for non-technical users — clarification questions must be in plain English, avoid jargon, and offer recommended options.
+
+- **Execution state tracking**: Each execution has a state that the app infers from agent events and its own execution phases: `pending → generating → verifying → executing → completed | failed | waiting`. This is a **tracking mechanism** rather than an orchestration controller — the agent drives its own workflow within the generation/verification phases. The `waiting` state is entered when the agent escalates a clarification to the user.
+
+- **Reusable task template execution**: When a user re-runs a reusable template with new parameters, the agent is **not** invoked. The app directly executes the template's canonical script with new environment variables (params + input/output paths). The template's script workspace is persistent; each execution creates a fresh run directory under it.
+
+- **Dependency allowlist and validation**: The app ships with a curated allowlist of approved Python packages organized by domain:
+  - **Data**: pandas, polars, numpy, openpyxl, xlsxwriter
+  - **Visualization**: plotly, kaleido (for static image export)
+  - **Text/Docs**: beautifulsoup4, markdown, pdfplumber, python-docx
+  - **Utility**: requests, python-dateutil, chardet, pyyaml
+  When the agent generates `requirements.txt`, the app validates every package against the allowlist. Non-approved packages are flagged in the UI for the user to approve or reject before installation proceeds.
+
+- **Script type detection**: The app monitors `write` tool calls from the agent session events. Files written with `.py` extension indicate Python; `.sh` or `.ps1` indicate shell scripts. `requirements.txt` indicates Python dependencies. `test_*.py` indicates tests exist. This is more reliable than asking the agent to declare the type.
 
 - **pi-web-ui ↔ React integration via refs**: pi-web-ui uses mini-lit web components. React shell wraps them using `useRef` + `useEffect` for lifecycle management. Shared TailwindCSS v4 ensures visual consistency. Rationale: simplest integration path, avoids `@lit/react` build dependency, provides full control over the web component lifecycle.
 
 - **Composable class-based design system**: A design token module in `packages/web` maps semantic classes to TailwindCSS utilities via CSS custom properties. Components use `ds.card`, `ds.btnPrimary`, `ds.surface` etc. — never raw Tailwind classes. CSS variables switch for dark/light mode. This makes the design system extensible (future themes) without touching component code.
 
-- **Task execution as a state machine**: Each execution follows a deterministic state machine: `pending → analyzing → generating → testing → reviewing → executing → completed | failed`. State transitions are logged, and the current state drives the UI progress display. This makes the execution flow predictable and debuggable.
-
-- **Artifact-first output model**: The execution engine is designed around artifact production. Every script execution is expected to produce artifacts (files in a designated output directory). The engine scans the output directory after execution, catalogs artifacts by type, and stores metadata. This is the contract between the AI code generator and the artifact system.
-
-- **Tool interface designed for AI invocability**: Every `Tool` has a TypeBox parameter schema and a natural-language description. The `asAgentTool()` adapter converts it into a pi-agent-core `AgentTool`, making it available in the AI agent's tool list. The AI decides when to invoke tools based on the description. Tools that are not AI-appropriate (dashboard-only widgets) can opt out of the adapter.
-
-- **Execution environment detection**: On startup, the server detects the runtime environment: OS (Windows/macOS/Linux), Python availability (via uv), shell type (PowerShell/bash), and available disk space. This information is injected into the AI's system prompt so generated scripts are platform-appropriate.
+- **Tool interface designed for AI invocability**: Every `Tool` has a TypeBox parameter schema and a natural-language description. The `asAgentTool()` adapter converts it into a pi-coding-agent `AgentTool` (via `defineTool()`), making it available in the AI agent's tool list. The AI decides when to invoke tools based on the description. Tools that are not AI-appropriate (dashboard-only widgets) can opt out of the adapter.
 
 ## 8. Coding Standards (Plan-Specific Overrides)
 

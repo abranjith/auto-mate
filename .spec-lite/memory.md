@@ -27,7 +27,7 @@
 - **Frontend framework**: React 19 + TypeScript.
 - **Build tool**: Vite 6+ — fast HMR, native ESM, TypeScript support.
 - **Chat UI**: `@mariozechner/pi-web-ui` (latest) — web components (mini-lit) for chat interface, artifact rendering, attachments, session storage, provider management. MIT licensed.
-- **AI agent**: `@mariozechner/pi-agent-core` + `@mariozechner/pi-ai` (latest) — server-side agent with tool execution, event streaming, provider-agnostic. MIT licensed.
+- **AI coding engine**: `@mariozechner/pi-coding-agent` (latest, SDK mode) — full coding agent with built-in tools (read, write, edit, bash), custom tool support via `defineTool()`, multi-provider (Anthropic, OpenAI, Google, GitHub Copilot, etc.), session management (`createAgentSession()`), event streaming, system prompt customization via `DefaultResourceLoader`, skills, and extensions. Wraps pi-agent-core + pi-ai internally. MIT licensed.
 - **Styling**: TailwindCSS v4 (open source) + composable class-based design token layer. Components consume semantic design tokens, never raw Tailwind utility classes.
 - **Server state (client)**: TanStack Query v5 — cache, dedupe, background refetch for API data.
 - **Routing (client)**: TanStack Router v1 or React Router v7 — type-safe routing with code splitting.
@@ -83,20 +83,21 @@
 ## Architecture
 
 - Follow **SOLID software design principles** (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion) and clean code principles across all code.
-- **Server-side AI agent**: pi-agent-core runs on the Express server, not in the browser. The server orchestrates the full task execution loop (analysis → code gen → static analysis → test → review → execute). WebSocket forwards pi-agent-core events to the client for real-time rendering via pi-web-ui.
+- **Server-side AI coding agent**: `@mariozechner/pi-coding-agent` (SDK) runs on the Express server via `createAgentSession()`. The server creates scoped agent sessions per task execution with workspace-specific tools (`createBashTool(taskWorkspace)`, etc.), dynamic system prompts (environment context, file metadata, coding guidelines), and custom tools (`request_clarification`). Agent events are forwarded to the client via WebSocket for real-time rendering.
+- **Contract-based execution (two-phase separation)**: Code generation (AI domain) and code execution (app domain) are strictly separated. Phase 1: the agent generates code in an isolated workspace, never seeing full user data — only metadata previews (column names, types, sample rows). Phase 2: the app executes the generated script against real data with environment-variable-based I/O (`AUTOMATE_INPUT_DIR`, `AUTOMATE_OUTPUT_DIR`), reads the `manifest.json` for artifacts, and registers them. No AI involved in Phase 2.
 - **pi-web-ui ↔ React integration**: pi-web-ui web components (mini-lit) are embedded in the React shell using `useRef` + `useEffect` for lifecycle management. Shared TailwindCSS v4 ensures visual consistency. No `@lit/react` dependency.
 - **Composable class-based design system**: A design token module in `packages/web` maps semantic classes to TailwindCSS utilities via CSS custom properties. Components never reference Tailwind directly. CSS variables switch for dark/light mode.
-- **Task execution as a state machine**: Each execution follows: `pending → analyzing → generating → testing → reviewing → executing → completed | failed`. State transitions are logged and drive the UI progress display.
-- **Artifact-first output model**: Every script execution produces artifacts in a designated output directory. The engine scans the output directory after execution, catalogs artifacts by type, and stores metadata.
-- **Tool interface designed for AI invocability**: Every `Tool` has a TypeBox parameter schema and a natural-language description. The `asAgentTool()` adapter converts it to a pi-agent-core `AgentTool`. The AI decides when to invoke tools based on the description.
-- **Execution environment detection**: On startup, the server detects OS, Python availability (via uv), shell type (PowerShell/bash), and available disk space. This context is injected into the AI system prompt.
+- **Task execution as a state machine**: Each execution follows: `pending → generating → verifying → executing → completed | failed | waiting`. State is a **tracking mechanism** inferred from agent events and app execution phases — not an orchestration controller. The `waiting` state is entered when the agent escalates a clarification to the user.
+- **Artifact manifest output model**: Every script execution produces a `manifest.json` in `AUTOMATE_OUTPUT_DIR` declaring all artifacts (filename, type, title, description). The app reads this post-execution to register artifacts. Supported types: csv, plotly-html, html, image, markdown, json, text, xlsx, pdf.
+- **Tool interface designed for AI invocability**: Every `Tool` has a TypeBox parameter schema and a natural-language description. The `asAgentTool()` adapter converts it to a pi-coding-agent `AgentTool` (via `defineTool()`). The AI decides when to invoke tools based on the description.
+- **Execution environment detection**: On startup, the server detects OS, Python version (via uv), shell type (PowerShell on Windows / bash on Unix), and available disk space. This context is injected into every agent session's system prompt so generated scripts and shell dialect are platform-appropriate.
 
 ## Design Patterns
 
 - **Repository Pattern** for data access — all database operations go through repository classes in `packages/server`. No direct Drizzle queries in route handlers or services.
 - **State Machine Pattern** for task execution lifecycle — deterministic state transitions with logged events.
 - **Adapter Pattern** for pi-web-ui integration — React wrapper components manage web component lifecycle via refs.
-- **Factory Pattern** for agent tools — `asAgentTool()` factory converts `Tool` definitions into pi-agent-core `AgentTool` instances.
+- **Factory Pattern** for agent tools — `asAgentTool()` factory converts `Tool` definitions into pi-coding-agent `AgentTool` instances via `defineTool()`.
 - **Observer Pattern** for real-time events — pi-agent-core events are subscribed to on the server and forwarded via WebSocket to connected clients.
 
 ## Error Handling

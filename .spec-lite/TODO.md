@@ -7,11 +7,15 @@
 - [ ] Content-Security-Policy layer on top of pi-web-ui's iframe sandboxing for artifact rendering (discovered during: planning)
 - [ ] RAG (retrieval-augmented generation) with a library of proven script patterns to improve AI generation reliability (discovered during: planning)
 - [ ] Pre-warmed Python environment with common data science packages (pandas, matplotlib, plotly, openpyxl) to reduce first-task cold start (discovered during: planning)
+- [ ] Revisit orchestrator-driven vs agent-driven verification loop — evaluate if the app should control each verification phase (lint, test, review) as discrete steps rather than letting the agent self-drive. Trade-offs: more control/predictability vs simpler code and more resilient iteration (discovered during: planning-v2)
+- [ ] Make agent clarification escalation threshold a user-configurable app setting (currently hardcoded at 5 auto-defaults before escalating to user) (discovered during: planning-v2)
+- [ ] Community-maintained package allowlist with automatic CVE scanning for Python dependencies (discovered during: planning-v2)
 
 ## Performance
 
 - [ ] Cache installed Python packages across task runs to avoid redundant pip/uv installs (discovered during: planning)
 - [ ] Debounced smart detection — batch-process metadata extraction when multiple files are uploaded simultaneously (discovered during: planning)
+- [ ] Evaluate `uv run --isolated` flag for additional Python execution sandboxing beyond venv isolation (discovered during: planning-v2)
 
 ## UI
 

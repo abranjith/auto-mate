@@ -56,7 +56,7 @@ A single run of a task. Captures the full execution context: generated script, v
 | `id` | `INTEGER` | `PK AUTOINCREMENT` | — | Primary key |
 | `task_id` | `INTEGER` | `FK → task.id, NOT NULL` | — | Task this execution belongs to |
 | `schedule_id` | `INTEGER` | `FK → schedule.id` | `NULL` | Set if triggered by a schedule; NULL for manual/rerun |
-| `status` | `TEXT` | `NOT NULL` | `'pending'` | State machine: pending, analyzing, generating, testing, reviewing, executing, completed, failed |
+| `status` | `TEXT` | `NOT NULL` | `'pending'` | State machine: pending, generating, verifying, executing, completed, failed, waiting |
 | `trigger` | `TEXT` | `NOT NULL` | `'manual'` | What initiated this run: manual, scheduled, rerun |
 | `script_content` | `TEXT` | — | `NULL` | Exact script that was executed (snapshot) |
 | `script_language` | `TEXT` | `CHECK(script_language IN ('python','shell'))` | `NULL` | Script language |
