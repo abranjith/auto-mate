@@ -49,21 +49,23 @@ Individual task instance. Adhoc tasks have `template_id = NULL`. Template-derive
 
 ### execution
 
-A single run of a task. Captures the full execution context: generated script, verification output, execution logs (stdout/stderr), status, and per-phase timing. Immutable once status reaches `completed` or `failed`.
+A single run of a task. Captures the full execution context: generated script, verification output, execution logs (stdout/stderr), status, and per-phase timing. After successful execution, enters `awaiting_review` so the user can approve or reject artifacts. If rejected, user feedback drives a new execution via the feedback loop. Immutable once status reaches `completed`, `failed`, or `rejected`.
 
 | Column | Type | Constraints | Default | Description |
 |--------|------|-------------|---------|-------------|
 | `id` | `INTEGER` | `PK AUTOINCREMENT` | — | Primary key |
 | `task_id` | `INTEGER` | `FK → task.id, NOT NULL` | — | Task this execution belongs to |
 | `schedule_id` | `INTEGER` | `FK → schedule.id` | `NULL` | Set if triggered by a schedule; NULL for manual/rerun |
-| `status` | `TEXT` | `NOT NULL` | `'pending'` | State machine: pending, generating, verifying, executing, completed, failed, waiting |
-| `trigger` | `TEXT` | `NOT NULL` | `'manual'` | What initiated this run: manual, scheduled, rerun |
+| `parent_execution_id` | `INTEGER` | `FK → execution.id` | `NULL` | Links to the execution this is a feedback re-run of; NULL for first runs |
+| `status` | `TEXT` | `NOT NULL` | `'pending'` | State machine: pending, generating, verifying, executing, awaiting_review, completed, failed, rejected, waiting |
+| `trigger` | `TEXT` | `NOT NULL` | `'manual'` | What initiated this run: manual, scheduled, rerun, feedback |
 | `script_content` | `TEXT` | — | `NULL` | Exact script that was executed (snapshot) |
 | `script_language` | `TEXT` | `CHECK(script_language IN ('python','shell'))` | `NULL` | Script language |
 | `stdout` | `TEXT` | — | `NULL` | Captured stdout from script execution |
 | `stderr` | `TEXT` | — | `NULL` | Captured stderr from script execution |
 | `exit_code` | `INTEGER` | — | `NULL` | Process exit code (0 = success) |
 | `error_message` | `TEXT` | — | `NULL` | Plain-English error description for UI display |
+| `review_feedback` | `TEXT` | — | `NULL` | User's rejection feedback explaining what was wrong or what they expected instead |
 | `verification_log` | `TEXT` | — | `NULL` | JSON: { analysis, staticAnalysis, testOutput, reviewComments } |
 | `phase_timings` | `TEXT` | — | `NULL` | JSON: { analyzing: ms, generating: ms, testing: ms, reviewing: ms, executing: ms } |
 | `started_at` | `INTEGER` | — | `NULL` | Timestamp when execution actually began running |
@@ -73,13 +75,13 @@ A single run of a task. Captures the full execution context: generated script, v
 
 ### artifact
 
-Output file produced by an execution. `task_id` is denormalized from `execution.task_id` for direct task-level artifact queries without joining through execution.
+Output file produced by an execution. `task_id` is denormalized from `execution.task_id` for direct task-level artifact queries without joining through execution. Artifacts can be independently saved by the user — saved artifacts survive parent task/execution deletion and appear in the Artifact Library.
 
 | Column | Type | Constraints | Default | Description |
 |--------|------|-------------|---------|-------------|
 | `id` | `INTEGER` | `PK AUTOINCREMENT` | — | Primary key |
-| `execution_id` | `INTEGER` | `FK → execution.id, NOT NULL` | — | Execution that produced this artifact |
-| `task_id` | `INTEGER` | `FK → task.id, NOT NULL` | — | Denormalized: task this artifact belongs to |
+| `execution_id` | `INTEGER` | `FK → execution.id` | `NULL` | Execution that produced this artifact; NULL if execution was deleted and artifact was saved |
+| `task_id` | `INTEGER` | `FK → task.id` | `NULL` | Denormalized: task this artifact belongs to; NULL if task was deleted and artifact was saved |
 | `type` | `TEXT` | `NOT NULL` | — | Artifact type: html, csv, pdf, image, markdown, xlsx, plotly-json, text, json |
 | `filename` | `TEXT` | `NOT NULL` | — | Output filename (e.g., report.html, chart.png) |
 | `file_path` | `TEXT` | `NOT NULL` | — | Relative path from AUTOMATE_HOME (e.g., artifacts/42/1.html) |
@@ -87,6 +89,9 @@ Output file produced by an execution. `task_id` is denormalized from `execution.
 | `mime_type` | `TEXT` | `NOT NULL` | — | Detected MIME type (e.g., text/html, image/png) |
 | `title` | `TEXT` | — | `NULL` | Display title for UI cards |
 | `description` | `TEXT` | — | `NULL` | Display description for UI cards |
+| `saved` | `INTEGER` | `NOT NULL` | `0` | Boolean: 1 = user has saved this artifact to the Artifact Library |
+| `saved_at` | `INTEGER` | — | `NULL` | Timestamp when the user saved this artifact |
+| `tags` | `TEXT` | — | `NULL` | JSON array of user-assigned tags for search/categorization (e.g., ["sales","Q1","chart"]) |
 | `created_at` | `INTEGER` | `NOT NULL` | `(unixepoch())` | Record creation timestamp |
 
 ### upload
@@ -170,20 +175,21 @@ Registered automation tool. Can be built-in or user-created. AI agent can invoke
 | `task` | `task_template` | `N:1` | `task.template_id` | `RESTRICT` | Tasks reference their source template. Template cannot be deleted while tasks exist. |
 | `execution` | `task` | `N:1` | `execution.task_id` | `CASCADE` | Executions belong to a task. Deleting a task removes all its executions. |
 | `execution` | `schedule` | `N:1` | `execution.schedule_id` | `SET NULL` | Scheduled executions reference their trigger. Deleting a schedule preserves execution history. |
-| `artifact` | `execution` | `N:1` | `artifact.execution_id` | `CASCADE` | Artifacts belong to an execution. Deleting an execution removes its artifacts. |
-| `artifact` | `task` | `N:1` | `artifact.task_id` | `CASCADE` | Denormalized FK for direct task→artifact queries. Deleting a task removes its artifacts. |
+| `execution` | `execution` | `N:1` | `execution.parent_execution_id` | `SET NULL` | Feedback chain: links a re-run to the rejected execution that triggered it. Deleting a parent preserves child history. |
+| `artifact` | `execution` | `N:1` | `artifact.execution_id` | `SET NULL` | Artifacts reference their execution. Deleting an execution nullifies the FK — saved artifacts survive; app cleans up unsaved orphans. |
+| `artifact` | `task` | `N:1` | `artifact.task_id` | `SET NULL` | Artifacts reference their task. Deleting a task nullifies the FK — saved artifacts survive; app cleans up unsaved orphans. |
 | `upload` | `task` | `N:1` | `upload.task_id` | `CASCADE` | Uploads belong to a task. Deleting a task removes its uploads. |
 | `schedule` | `task_template` | `N:1` | `schedule.task_template_id` | `CASCADE` | Schedules belong to a template. Deleting a template removes its schedules. |
 
 ### Cascade Summary (Delete Flows)
 
-**Delete a task** → CASCADE: executions → CASCADE: artifacts. CASCADE: uploads. CASCADE: artifacts (via denormalized FK).
+**Delete a task** → CASCADE: executions (which SET NULL on their artifacts). SET NULL: `artifact.task_id`. App-level cleanup deletes unsaved orphan artifacts (saved = 0, task_id = NULL) and their files. CASCADE: uploads.
 
 **Delete a task_template** → RESTRICT if any `task.template_id` references it. If no tasks reference it: CASCADE schedules.
 
 **Delete a schedule** → SET NULL on `execution.schedule_id` (preserve execution history).
 
-**Delete an execution** → CASCADE artifacts.
+**Delete an execution** → SET NULL on `artifact.execution_id`. App-level cleanup deletes unsaved orphan artifacts (saved = 0, execution_id = NULL, task_id = NULL) and their files. SET NULL on child `execution.parent_execution_id`.
 
 ## 4. Indexes
 
@@ -197,6 +203,8 @@ Registered automation tool. Can be built-in or user-created. AI agent can invoke
 | `execution` | `idx_execution_schedule_id` | `schedule_id` | B-tree | Executions triggered by a specific schedule (schedule history view) |
 | `artifact` | `idx_artifact_execution_id` | `execution_id` | B-tree | All artifacts for an execution (execution detail page) |
 | `artifact` | `idx_artifact_task_id` | `task_id` | B-tree | All artifacts for a task (task detail, avoids join through execution) |
+| `artifact` | `idx_artifact_saved` | `saved` | B-tree | Filter saved artifacts for the Artifact Library page |
+| `execution` | `idx_execution_parent_id` | `parent_execution_id` | B-tree | Feedback chain: find re-runs spawned from a rejected execution |
 | `upload` | `idx_upload_task_id` | `task_id` | B-tree | All uploads for a task (task detail, execution input display) |
 | `schedule` | `idx_schedule_template_id` | `task_template_id` | B-tree | Schedules for a template (template detail, scheduler page) |
 | `schedule` | `idx_schedule_enabled_next` | `enabled, next_run_at` | B-tree | Scheduler query: find next enabled schedule to fire |
@@ -217,7 +225,9 @@ No lookup tables — all enumerations use CHECK constraints on TEXT columns. Thi
 | `testing` | Running ruff + bandit + unit tests |
 | `reviewing` | AI code review in progress |
 | `executing` | Script is running |
-| `completed` | Finished successfully |
+| `awaiting_review` | Execution succeeded, artifacts produced — waiting for user to approve or reject |
+| `completed` | Finished successfully and approved by user |
+| `rejected` | User rejected artifacts and provided feedback — a new feedback execution was spawned |
 | `failed` | Finished with error |
 
 ### execution_trigger
@@ -227,6 +237,7 @@ No lookup tables — all enumerations use CHECK constraints on TEXT columns. Thi
 | `manual` | User initiated from the UI |
 | `scheduled` | Triggered by a schedule |
 | `rerun` | Re-run of a previous execution |
+| `feedback` | Re-run triggered by user rejecting artifacts and providing feedback |
 
 ### script_language
 
@@ -274,6 +285,10 @@ No lookup tables — all enumerations use CHECK constraints on TEXT columns. Thi
 | 11 | No Connector table | Create table with empty rows | Connectors are type-only for MVP — TypeScript interface in `packages/core` is sufficient. Table will be added in Phase 2 when actual implementations exist. |
 | 12 | Singleton `gamification_profile` (id=1) | Separate counters table, or derive all metrics from queries | Single-user MVP — one row is all we need. Denormalized counters avoid expensive aggregate queries on every dashboard load. Updated atomically on each execution. |
 | 13 | Uploads belong to `task` (not `execution`) | `execution_upload` M:N join table | Since each template re-run creates a new `task` row with its own uploads, the task-level association is sufficient. The uploads for an execution are simply "the uploads on its task." No M:N needed. |
+| 14 | Artifact FKs nullable with SET NULL on delete | CASCADE (original) or separate `saved_artifact` table | Enables standalone artifact survival. When a task or execution is deleted, saved artifacts keep their files and metadata — only the FK becomes NULL. Unsaved orphans are cleaned up by application logic. Simpler than a separate copy table, avoids data duplication, and artifacts retain their original file paths. |
+| 15 | `saved` boolean + `tags` on artifact | Separate `artifact_library` table with copied metadata | Keeping it on the same row avoids duplication and keeps queries trivial. A saved artifact is just an artifact with `saved = 1`. Tags enable lightweight categorization in the Artifact Library without a join table (MVP is single-user, tag volume is low). |
+| 16 | Feedback loop via `parent_execution_id` self-FK | Store feedback on the task, or use a separate `feedback` table | Self-referential FK on execution cleanly models the "this execution was spawned because the user rejected that execution" chain. The rejected execution keeps its artifacts for comparison. Feedback text lives on the rejected execution row since it's specific to that run's output. |
+| 17 | `awaiting_review` as explicit execution status | Auto-complete and let user re-run manually | Explicit review status makes the approval gate visible in the UI and prevents artifacts from being treated as final before user sign-off. Non-technical users get a clear "approve or tell me what's wrong" prompt instead of having to figure out re-runs themselves. |
 
 ## 7. Migration Notes
 
@@ -284,8 +299,8 @@ No lookup tables — all enumerations use CHECK constraints on TEXT columns. Thi
 3. `tool` — no dependencies
 4. `task` — depends on `task_template`
 5. `schedule` — depends on `task_template`
-6. `execution` — depends on `task`, `schedule`
-7. `artifact` — depends on `execution`, `task`
+6. `execution` — depends on `task`, `schedule`, self (`parent_execution_id`)
+7. `artifact` — depends on `execution` (nullable), `task` (nullable)
 8. `upload` — depends on `task`
 
 ### Seed Data
