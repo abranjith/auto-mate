@@ -153,3 +153,6 @@ vite.config.ts.timestamp-*
 .spec-lite/refs/
 .spec-lite/TODO.md
 hooks.log.jsonl
+.github/prompts/spec.plan.prompt.md
+.github/prompts/spec.brainstorm.prompt.md
+.spec-lite/TODO.md

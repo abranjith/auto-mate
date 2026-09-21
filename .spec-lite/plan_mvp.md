@@ -18,7 +18,39 @@ The user explicitly requested clarification whenever something conflicts or is u
 
 The original plan and reviews remain separate reference documents. This draft does not yet supersede the original plan or change project memory, feature specifications, or the data model.
 
-## 2. Established direction
+## 2. High-Level Features
+
+**Status:** Proposed breakdown — derived strictly from the decisions confirmed on 2026-09-10 (D01–D09b). Every row is scoped to the **developer preview** milestone. Nothing here is a new decision: where a choice is still open, the row names it rather than resolving it.
+
+The `Blocked by` column lists the open decisions in §5 that must resolve before that row's feature specification can be written without assumptions. It does not mean the feature boundary is uncertain — the boundaries follow from confirmed scope; the internals do not. `Spec File` is populated by the Feature skill. `Status` is owned exclusively by the Implement skill.
+
+> **Numbering**: IDs start at `FEAT-101` so they cannot be confused with `FEAT-001`–`FEAT-011` in [the original plan](reviews/plan.md), which carry different content and are cited by that ID throughout [the earlier criticism](reviews/plan.criticism.md) and [Claude's phase split](reviews/plan-feedback-claude.md). IDs are assigned once, never renumbered, and never reused.
+
+| FEAT-ID | Feature | Blocked by | Spec File | Status |
+| --- | --- | --- | --- | --- |
+| FEAT-101 | **Project bootstrap & application shell** — monorepo scaffold, TypeScript build tooling, local server skeleton, embedded database setup, application data root, and an app shell with navigation. Establishes the structure every later row is built inside. | D09 (router/database/exact versions), D12 (application data root, storage layout), D13 (Windows/Unix targets, setup expectations) | | [ ] Not started |
+| FEAT-102 | **Pi provider interface & configuration** — SDK-independent `AgentProvider.open(options)` creating an application-facing session that exposes `run(prompt)`, `subscribe(listener)`, `abort()`, and `close()`; a Pi adapter keeping SDK session construction and model lookup internal; event mapping that translates SDK events into application-owned tool events, assistant text, usage, failures, and terminal outcomes, sanitizing data crossing the boundary; and app-owned model/settings/session files with optional use of an existing personal Pi credential file. No Pi SDK types appear in the application-facing contract, and Pi's provider registry and internal agent loop are not reproduced. | Pi package identity and version (§6 records `@mariozechner/pi-web-ui` as deprecated in favor of `@earendil-works/pi-web-ui`, and `0.80.6` as an observed reference version, not a selected one); D12 (credential/config storage location follows the storage decision) | | [ ] Not started |
+| FEAT-103 | **Task description & conversation surface** — the interface where a user describes work in plain language and follows agent progress, consuming the normalized application events from FEAT-102 rather than raw SDK events. | D09 (pi-web-ui integration decision, rendering adapter and compatibility proof — the original plan forwards raw SDK events whereas the thin interface exposes normalized ones), D10 (transports, progress and recovery) | | [ ] Not started |
+| FEAT-104 | **CSV/XLSX ingestion & profiling** — local file intake, CSV/XLSX parsing, and extraction of column names and types, locally computed statistics, and bounded sample rows, producing the disclosure payload that FEAT-105 presents. Full input files never enter model context. URL ingestion is out of scope per D08. | D04 (sample size, bounded-sample rules), D12 (input retention, storage layout), D14 (file limits) | | [ ] Not started |
+| FEAT-105 | **Disclosure review & clarification behavior** — disclose what leaves the machine (column names/types, locally computed statistics, small sample rows) before it is sent, and ask the user when ambiguity changes the meaning of the task or risks data loss while defaulting cosmetic details. Applies identically to repair prompts and diagnostics: a failed run does not authorize sending the full dataset. | D04 (disclosure interaction, diagnostic filtering), D06 (question cap, handling of unresolved critical questions) | | [ ] Not started |
+| FEAT-106 | **Code generation & agent repair loop** — the agent generates Python, writes and runs its own tests, and repairs failures through the provider session, while the application tracks attempts without directing every internal repair step. Agent progress messages alone do not authorize execution. | D07 (repair limits, review UX), D14 (three versus five attempts, time and spend limits) | | [ ] Not started |
+| FEAT-107 | **Independent verification & execution gate** — the application independently checks the final code version and enforces execution gates, binding verification results to the exact code and runtime they apply to so that what was actually checked is established. | D07 (exact check contracts, pre-run intent review, post-run acceptance, whether execution outcome and user review are separate), D14 (limit values, concrete acceptance gates) | | [ ] Not started |
+| FEAT-108 | **Python runtime & script execution** — Python-only execution against a fixed, preinstalled dependency set with explicit locked setup and run behavior, and cancellation covering generation, generated tests, dependency preparation, and real execution. Developer preview only: working directories and Python environments must not be presented as security isolation. | D05 (dependency set, version/update policy, exact locked commands), D13 (platform), D14 (time/resource limits, concurrency) | | [ ] Not started |
+| FEAT-109 | **Results, outputs & downloads** — produce, render, and make downloadable the outputs of a run, with failure messages that help a person who cannot debug code take the next step. | D12 (required output formats, generated HTML versus trusted renderers, standalone offline exports, and the artifact path/registration/rendering/deletion/retention lifecycle) | | [ ] Not started |
+| FEAT-110 | **Execution history** — persistent run history with detail views and access to prior outputs, plus defined outcomes and state recovery across browser disconnects and server restarts. | D10 (server-owned state, WS progress and recovery, loopback-only access, local session protection without accounts), D12 (retention of inputs and provenance) | | [ ] Not started |
+| FEAT-111 | **Save-and-rerun** — save a completed task and run it again against another file, with input compatibility checks and recorded rules, inputs, parameters, and environment. Basic reuse only; the richer gallery is deferred per D02. | D11 (templates with immutable revisions, recorded inputs/parameters/runtime, explicit mapping and repair creating a revision for approval, historical replay) | | [ ] Not started |
+
+### Scope held outside this table
+
+- **Target-user pilot** — restricted execution must be in place before tech-savvy non-programmers participate (D03). No row is allocated because the restricted runner technology is not yet selected.
+- **Deferred per D08** — scheduling (also D15), URL ingestion, the standalone artifact library, gamification, generated tools, and connectors. These are later candidates, not committed deliverables. Deferring the standalone artifact library does not remove access to outputs in execution history (FEAT-110).
+
+### Carried into every row's specification
+
+- Acceptance tests useful, correct results and repeat use, rather than successful process exit alone.
+- [data_model.md](data_model.md) predates these decisions and still defines `schedule`, `gamification_profile`, and `tool` tables covering scope that D08 defers. It must be reconciled before it is treated as the authoritative schema for any row above.
+
+## 3. Established direction
 
 - The target audience is tech-savvy people who need not be programmers.
 - The product provides a user interface for describing work and obtaining useful results without requiring the user to write code.
@@ -77,7 +109,7 @@ The user confirmed the Yantra configuration approach: keep model configuration, 
 
 The reference's package manifest currently pins `@earendil-works/pi-coding-agent` to `0.80.6`. This is an observed reference version, **not an automatically selected Auto-Mate version**. Likewise, Yantra's browser/workflow tools, configuration projection, credential-storage details, and raw session-log handling are not automatically imported into this plan. The existing pi-web-ui choice needs an explicit integration decision because the original plan forwards raw SDK events, whereas the thin interface exposes normalized application events.
 
-## 3. Decisions requested first
+## 4. Decisions requested first
 
 | ID | Decision | Conflict to resolve | Status |
 | --- | --- | --- | --- |
@@ -92,7 +124,7 @@ The reference's package manifest currently pins `@earendil-works/pi-coding-agent
 | D09a | AI provider abstraction | Pi coding agent behind a thin provider interface following the inspected Yantra pattern. | Confirmed by user, 2026-09-10 |
 | D09b | Pi configuration ownership | App-owned configuration with optional personal Pi credentials; follow Yantra. | Confirmed by user, 2026-09-10 |
 
-## 4. Remaining decisions to resolve after scope
+## 5. Remaining decisions to resolve after scope
 
 These are the remaining portions of the decision inventory, not approved defaults. Questions will be presented in related groups; confirmed answers above take precedence over older proposals.
 
@@ -110,7 +142,7 @@ These are the remaining portions of the decision inventory, not approved default
 | D14 | Operational limits and acceptance | Resolve three versus five attempts, time/resource/spend limits, file limits, concurrency, and concrete acceptance gates. The reviews' timing and pilot targets are unapproved proposals. |
 | D15 | Scheduling semantics | Deferred with scheduling until after the pilot. No scheduling implementation is part of this MVP; a later proposal must define fresh inputs, timezone, overlap, missed runs, sleep, and unattended review. |
 
-## 5. Review findings to carry into the design
+## 6. Review findings to carry into the design
 
 The sources identify the following concerns to address. Their implementation and milestone assignment remain subject to the decisions above.
 
@@ -132,7 +164,7 @@ Technical assertions disputed by the reviews will be checked against primary doc
 - The original `@mariozechner/pi-web-ui` package is marked deprecated by its publisher, pointing to `@earendil-works/pi-web-ui`. If the user retains pi-web-ui, the compatibility proof must target the maintained package identity rather than copying the original plan's imports. This does not select a package version or prove UI integration. [Publisher's package notice](https://www.npmjs.com/package/%40mariozechner/pi-web-ui).
 - `uv run` can update its lockfile/environment automatically; `--locked` prevents lockfile changes and errors on an outdated lockfile. The fixed dependency policy therefore needs explicit locked setup/run behavior rather than relying on a bare `uv run` invocation. Exact commands remain part of the runtime proof. [uv locking and syncing documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
 
-## 6. Final plan structure to complete after decisions
+## 7. Final plan structure to complete after decisions
 
 1. Product promise, target jobs, and success criteria.
 2. Initial scope, exclusions, and later milestones.
@@ -146,7 +178,7 @@ Technical assertions disputed by the reviews will be checked against primary doc
 10. Testing, acceptance gates, logging, and retention.
 11. Review disposition and user decision record.
 
-## 7. User decision record
+## 8. User decision record
 
 | Date | Decisions | User answer |
 | --- | --- | --- |
