@@ -157,6 +157,8 @@ TASK-001 re-verifies these at scaffold time and records the final values; they a
 
 ### TASK-001: Monorepo scaffold with exactly pinned toolchain
 
+> DEVIATION: TypeScript 7.0.2 is incompatible with the current `typescript-eslint` 8.70.0 peer range (`>=4.8.4 <6.1.0`). Pin TypeScript 6.0.3 as the specified fallback.
+
 - [ ] **Implementation**: Create the root `package.json` (private, `"type": "module"`, `packageManager`, `engines.node: ">=24.15.0 <25"`, workspace scripts), `pnpm-workspace.yaml`, `.nvmrc`, `.npmrc` (`engine-strict=true`, `save-exact=true`), `tsconfig.base.json` (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, path aliases `@core/*`/`@server/*`/`@web/*`), the solution `tsconfig.json`, `eslint.config.js` + Prettier config, and the root `vitest.config.ts` using `test.projects` with v8 coverage. Create the three package directories with their own `package.json`/`tsconfig.json` and an `index.ts` barrel each. Install every dependency with `pnpm add -E` so no range specifiers appear, and commit `pnpm-lock.yaml`. Write `scripts/check-exact-pins.mjs`, which walks every `package.json` and exits non-zero on any `^`, `~`, `*`, `x`, or range specifier in `dependencies`/`devDependencies`. Prove the selected TypeScript line works end to end (`tsc --noEmit`, typescript-eslint, Vite, `drizzle-kit generate`) before committing the pin; if the 7.x toolchain blocks any of the four, pin `6.0.3` instead and record a DEVIATION note in this spec naming the blocker.
 - [ ] **Unit Tests**: Cover `check-exact-pins`: a manifest with all exact pins passes; a `^1.2.3` dependency fails with that package named; a `~1.2.3` devDependency fails; a `workspace:*` dependency is allowed; a manifest with no dependency blocks passes.
 - [ ] **Documentation Update**: Invoke **Document** update mode for project setup and toolchain.
@@ -247,15 +249,15 @@ TASK-001 re-verifies these at scaffold time and records the final values; they a
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Monorepo scaffold with exactly pinned toolchain
-- [ ] TASK-002: Shared error hierarchy and health contract in `packages/core`
-- [ ] TASK-003: Application data root and storage layout
-- [ ] TASK-004: Express server skeleton, logging, error envelope, and `GET /api/health`
-- [ ] TASK-005: Embedded database on `node:sqlite` with a migration pipeline
-- [ ] TASK-006: Environment preflight (`pnpm doctor` and startup check)
-- [ ] TASK-007: Web package with Vite, React 19, Tailwind v4, and the design-token layer
-- [ ] TASK-008: App shell and navigation with TanStack Router
-- [ ] TASK-009: Client-server wiring — typed API client, health status, single `pnpm dev`
-- [ ] TASK-010: Developer setup documentation
+- [x] TASK-001: Monorepo scaffold with exactly pinned toolchain
+- [x] TASK-002: Shared error hierarchy and health contract in `packages/core`
+- [x] TASK-003: Application data root and storage layout
+- [x] TASK-004: Express server skeleton, logging, error envelope, and `GET /api/health`
+- [x] TASK-005: Embedded database on `node:sqlite` with a migration pipeline
+- [x] TASK-006: Environment preflight (`pnpm doctor` and startup check)
+- [x] TASK-007: Web package with Vite, React 19, Tailwind v4, and the design-token layer
+- [x] TASK-008: App shell and navigation with TanStack Router
+- [x] TASK-009: Client-server wiring — typed API client, health status, single `pnpm dev`
+- [x] TASK-010: Developer setup documentation
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

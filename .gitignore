@@ -81,6 +81,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+packages/web/src/routeTree.gen.ts
 
 # Gatsby files
 .cache/

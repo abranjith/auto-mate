@@ -1,0 +1,33 @@
+{
+  "name": "auto-mate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"pnpm --filter @automate/server dev\" \"pnpm --filter @automate/web dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @automate/web generate:routes && vitest run && node --test scripts/check-exact-pins.test.mjs packages/web/scripts/check-design-tokens.test.mjs",
+    "lint": "eslint . && node scripts/check-exact-pins.mjs && node packages/web/scripts/check-design-tokens.mjs && node scripts/check-readme-commands.mjs",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write .",
+    "doctor": "pnpm --filter @automate/server doctor",
+    "db:generate": "pnpm --filter @automate/server db:generate"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.2",
+    "@vitest/coverage-v8": "5.0.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.11.0",
+    "jsdom": "30.1.0",
+    "prettier": "3.9.8",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "5.0.1"
+  }
+}
