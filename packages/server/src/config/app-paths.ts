@@ -11,6 +11,15 @@ export interface AppPaths {
   uploadsDir: string;
   scriptsDir: string;
   envDir: string;
+  configDir: string;
+  agentConfigFile: string;
+  piDir: string;
+  piAuthFile: string;
+  piModelsFile: string;
+  piSessionStagingDir: string;
+  agentSessionsDir: string;
+  /** Resolve the session directory for one execution, guarded against traversal. */
+  sessionDirFor(executionId: string): string;
 }
 
 /** Resolve the configured data root and all durable child directories. @param home Optional root override. @returns Absolute paths for application storage. */
@@ -19,10 +28,17 @@ export function getAppPaths(home = process.env.AUTOMATE_HOME): AppPaths {
   const expanded = configured === '~' ? homedir() : /^~[\\/]/.test(configured) ? path.join(homedir(), configured.slice(2)) : configured;
   const root = path.resolve(expanded);
   const dataDir = path.join(root, 'data');
+  const configDir = path.join(root, 'config');
+  const piDir = path.join(root, 'pi');
+  const agentSessionsDir = path.join(root, 'agent-sessions');
   return {
     root, dataDir, dbFile: path.join(dataDir, 'automate.db'),
     artifactsDir: path.join(root, 'artifacts'), uploadsDir: path.join(root, 'uploads'),
     scriptsDir: path.join(root, 'scripts'), envDir: path.join(root, 'env'),
+    configDir, agentConfigFile: path.join(configDir, 'agent.json'),
+    piDir, piAuthFile: path.join(piDir, 'auth.json'), piModelsFile: path.join(piDir, 'models.json'),
+    piSessionStagingDir: path.join(piDir, 'sessions'), agentSessionsDir,
+    sessionDirFor: (executionId: string) => resolveWithin(agentSessionsDir, executionId),
   };
 }
 
@@ -43,8 +59,15 @@ export function ensureAppDirectories(paths: AppPaths): void {
     mkdirSync(paths.root, { recursive: true });
     if (!statSync(paths.root).isDirectory()) throw new Error('not a directory');
     accessSync(paths.root, constants.W_OK);
-    for (const directory of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.scriptsDir, paths.envDir]) {
+    for (const directory of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.scriptsDir, paths.envDir, paths.configDir, paths.agentSessionsDir]) {
       mkdirSync(directory, { recursive: true });
+      accessSync(directory, constants.W_OK);
+    }
+    // The Pi directory holds the managed credential store, so it is created
+    // restrictively. The mode is a best-effort no-op on filesystems without
+    // POSIX permissions.
+    for (const directory of [paths.piDir, paths.piSessionStagingDir]) {
+      mkdirSync(directory, { recursive: true, mode: 0o700 });
       accessSync(directory, constants.W_OK);
     }
   } catch (cause) {

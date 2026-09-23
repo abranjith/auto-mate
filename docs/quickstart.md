@@ -2,7 +2,7 @@
 
 # Quickstart
 
-Auto-Mate currently provides a local developer-preview shell. You can open its starter pages, switch themes, and check that the server and SQLite database are running. Task creation, uploads, AI providers, and script execution are not available in this bootstrap.
+Auto-Mate currently provides a local developer-preview shell. You can open its starter pages, switch themes, check that the server and SQLite database are running, and choose the AI provider and model it uses. Task creation, uploads, and script execution are not available in this preview.
 
 > **Developer preview:** This milestone has no enforced isolation boundary for generated code. FEAT-101 does not execute generated code yet, but later preview features may run code that can access other host files. Working directories, Python environments, and the default loopback address are not security isolation. Restricted execution is required before a target-user pilot.
 
@@ -42,4 +42,24 @@ export AUTOMATE_HOME="$HOME/automate-data"
 pnpm dev
 ```
 
-For the available pages, commands, health response, storage layout, and troubleshooting, see [Usage](usage.md). The [project bootstrap feature](features/project-bootstrap.md) describes this milestone's scope.
+## Choose an AI provider
+
+Open <http://127.0.0.1:5173/settings>, pick a provider and model, and press **Test connection**. The test opens one real agent session, calls a single `status` tool, and closes, so you find out immediately whether the selection works.
+
+Every provider needs a credential, and Auto-Mate never asks you to paste an API key into the page. Supply one in any of three ways: set the provider's environment variable in the environment the server starts in, sign in with the Pi CLI so a credential lands in Auto-Mate's own `~/.automate/pi/auth.json`, or point the settings page at an existing personal Pi `auth.json` — which changes the credential file path and nothing else, importing no personal Pi settings, extensions, skills, prompts, or themes. The settings page names the exact variable for each provider; `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY` are examples.
+
+```powershell
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY = 'your-key'
+pnpm dev
+```
+
+```sh
+# macOS/Linux shell
+export ANTHROPIC_API_KEY="your-key"
+pnpm dev
+```
+
+`pnpm doctor --agent-smoke` makes the same round trip from a terminal.
+
+For the available pages, commands, health response, storage layout, and troubleshooting, see [Usage](usage.md). The [project bootstrap feature](features/project-bootstrap.md) describes this milestone's shell, and [AI provider configuration](features/provider-configuration.md) is the full reference for providers, credentials, and the agent seam.

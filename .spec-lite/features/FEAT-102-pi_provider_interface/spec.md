@@ -22,12 +22,30 @@ The plan lists FEAT-102 as blocked by **Pi package identity/version** and **D12 
 | Decision | Resolution | Notes |
 | --- | --- | --- |
 | Pi package identity | **`@earendil-works/pi-coding-agent`** (MIT) | Already authoritative in memory's Tech Stack. `@mariozechner/*` is deprecated by its publisher and is never targeted. Note the deprecation applies to the **web UI** package (`pi-web-ui`, a FEAT-103 concern); the coding-agent SDK is a separate package and is not implicated. |
-| Pi SDK version | **Pin the newest version that passes TASK-011's compile-and-smoke proof, starting at `0.86.1`.** Fallback `0.85.1`, then `0.80.6`. | Memory: prefer the latest stable, pin exactly. `0.86.1` was published 2026-09-20 and is the newest on the registry; the local registry mirror used to verify this spec has a 2026-09-15 cutoff, so `0.86.1` itself could not be downloaded and inspected here. TASK-011 is the gate — do not pin a version the smoke proof has not passed. |
+| Pi SDK version | **Superseded 2026-09-23 — shipped `0.87.1`.** The spec said to start at `0.86.1` (fallbacks `0.85.1`, `0.80.6`); the user's standing rule is to take the latest stable regardless of what a spec names. See [Version gate result](#version-gate-result-recorded-2026-09-22-updated-2026-09-23-by-implement). | Memory: prefer the latest stable, pin exactly. `0.86.1` was published 2026-09-20 and is the newest on the registry; the local registry mirror used to verify this spec has a 2026-09-15 cutoff, so `0.86.1` itself could not be downloaded and inspected here. TASK-011 is the gate — do not pin a version the smoke proof has not passed. |
 | Pi API generation | **Write the adapter against `ModelRuntime`**, not `AuthStorage` + `ModelRegistry`. | **DEVIATION from the Yantra reference**, which is written against `0.80.6`. See [Verified SDK drift](#verified-sdk-drift-0806--0851) below — this is a real breaking change, confirmed by inspecting both packages, not an assumption. |
 | D12 — agent config location | **`~/.automate/config/agent.json`** (app-owned selection: provider, model, thinking, auth mode) | Extends the FEAT-101 layout, which is authoritative for the data root (`~/.automate/`, overridable by `AUTOMATE_HOME`). |
 | D12 — credential location | **`~/.automate/pi/auth.json`** (mode `managed`), or an explicit absolute path to an existing personal Pi `auth.json` (mode `personal-pi`) | Follows the plan's "app-owned files with optional use of an existing personal Pi credential file". Selecting the personal file changes **the auth path only** — no personal settings, extensions, skills, prompts, themes, or project instructions are ever imported. TASK-005 proves this. |
 | Auth modes | **`managed` \| `personal-pi`.** Environment variables are a resolved *source*, not a mode. | **DEVIATION from the Yantra reference**, which also has a `runtime-key` mode backed by an OS keychain. Auto-Mate has no keychain decision, and D10 (local session protection) is open — adding one here would pre-empt it. Dropped deliberately, not overlooked. |
 | Scope | **Includes a minimal settings API + UI.** | FEAT-101 marked `/settings` as "FEAT-102 fills it". The plan row names only the server-side contract; this resolves the tension in favor of a feature a person can actually verify. |
+
+### Version gate result (recorded 2026-09-22, updated 2026-09-23 by implement)
+
+**Pinned: `@earendil-works/pi-coding-agent@0.87.1`** — the newest stable on the registry, and it passed the compile-and-smoke proof.
+
+**DEVIATION from this spec's ladder, on explicit user instruction (2026-09-23):** the spec directed starting at `0.86.1` with fallbacks `0.85.1` and `0.80.6`. `0.86.1` was pinned first and passed the gate on 2026-09-22. The user then set a standing rule — *always take the latest stable release, even when a spec or plan names an older version* — so the pin moved to `0.87.1` and the gate was re-run in full against it. The rule is recorded in `.spec-lite/memory.md` under Dependencies and now governs every later feature; a version named in a spec is a snapshot, not a pin to honor.
+
+Evidence for `0.87.1` (all re-run, not inherited from the `0.86.1` proof):
+
+- Compiles with no change to adapter source: the `ModelRuntime` API is unchanged from `0.86.1` — `ModelRuntime.create({ authPath, modelsPath, allowModelNetwork, signal })`, `CreateAgentSessionOptions.modelRuntime`, `runtime.getModel`, `runtime.getModels`.
+- The isolation surface survives: `noExtensions`, `noSkills`, `noPromptTemplates`, `noThemes`, `noContextFiles`, `systemPromptOverride`, and `appendSystemPromptOverride` on `DefaultResourceLoader`, and `quietStartup`, `defaultProjectTrust`, `enableAnalytics`, `enableInstallTelemetry`, `enableSkillCommands`, and `sessionDir` on `SettingsManager`.
+- Full suite green: 305 tests, including the planted-files enumeration test that proves a session sees zero ambient extensions, skills, prompts, themes, and context files.
+- Live smoke against `google` / `gemini-3.5-flash`: session opened, the `status` tool called once and returned, events in order, outcome `completed` over 2 turns, `0` ambient resources, parseable JSONL at the reported `logPath`, exit code 0.
+- Negative paths re-confirmed live: no credential exits 1 with `AGENT_AUTH_UNAVAILABLE`; an unknown model exits 1 with `AGENT_MODEL_NOT_FOUND`.
+
+Note: `0.87.x` adds a `@earendil-works/pi-telemetry` transitive dependency. The adapter's in-memory settings keep `enableAnalytics` and `enableInstallTelemetry` `false`, and the environment test still asserts no network call is made while constructing a session.
+
+`0.87.1` is younger than the five-day quarantine in the user's `~/.npmrc` (`min-release-age=5`), so pnpm recorded per-version `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml`. Those are the explicit, committed record of taking a fresh release; the quarantine setting itself is untouched.
 
 ### Verified SDK drift (0.80.6 → 0.85.1)
 
@@ -315,18 +333,18 @@ FEAT-101 established `data/`, `artifacts/`, `uploads/`, `scripts/`, `env/`. FEAT
 
 ## 8. State Tracking
 
-- [ ] TASK-001: SDK-independent provider contract and typed startup errors in `packages/core`
-- [ ] TASK-002: Boundary sanitizer for payloads crossing the seam
-- [ ] TASK-003: App-owned agent configuration file
-- [ ] TASK-004: Pinned Pi environment on `ModelRuntime` with no ambient configuration
-- [ ] TASK-005: Session file placement under the application data root
-- [ ] TASK-006: Pi event mapping to the normalized event union
-- [ ] TASK-007: `PiAgentProvider` — open, run, subscribe, abort, close
-- [ ] TASK-008: Architectural boundary enforcement and the in-memory seam double
-- [ ] TASK-009: Offline credential and model catalog probe
-- [ ] TASK-010: Agent settings API
-- [ ] TASK-011: Live smoke check against a real provider
-- [ ] TASK-012: Settings page — model selection and credential status
-- [ ] TASK-013: Documentation for provider configuration
+- [x] TASK-001: SDK-independent provider contract and typed startup errors in `packages/core`
+- [x] TASK-002: Boundary sanitizer for payloads crossing the seam
+- [x] TASK-003: App-owned agent configuration file
+- [x] TASK-004: Pinned Pi environment on `ModelRuntime` with no ambient configuration
+- [x] TASK-005: Session file placement under the application data root
+- [x] TASK-006: Pi event mapping to the normalized event union
+- [x] TASK-007: `PiAgentProvider` — open, run, subscribe, abort, close
+- [x] TASK-008: Architectural boundary enforcement and the in-memory seam double
+- [x] TASK-009: Offline credential and model catalog probe
+- [x] TASK-010: Agent settings API
+- [x] TASK-011: Live smoke check against a real provider
+- [x] TASK-012: Settings page — model selection and credential status
+- [x] TASK-013: Documentation for provider configuration
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

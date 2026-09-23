@@ -2,7 +2,7 @@
 
 # Usage
 
-This guide covers the implemented FEAT-101 developer preview. Start with the [Quickstart](quickstart.md) if you have not installed the prerequisites.
+This guide covers the implemented developer preview: the application shell (FEAT-101) and AI provider configuration (FEAT-102). Start with the [Quickstart](quickstart.md) if you have not installed the prerequisites.
 
 > **Developer preview:** There is no enforced execution isolation. FEAT-101 does not run generated code, but later preview features may run code that can access other host files. The data directories and Python environment are storage and dependency locations, not security boundaries. The default `127.0.0.1` bind is a local access setting, not an isolation boundary. Do not use this preview for a target-user pilot.
 
@@ -10,11 +10,11 @@ This guide covers the implemented FEAT-101 developer preview. Start with the [Qu
 
 Run `pnpm dev` from the repository root. It starts the Express API and the Vite browser server together. Open <http://127.0.0.1:5173/> and use the header links:
 
-| Page                       | Current behavior                                   |
-| -------------------------- | -------------------------------------------------- |
-| **New task** (`/`)         | Placeholder for task conversation and file intake. |
-| **History** (`/history`)   | Placeholder for execution history.                 |
-| **Settings** (`/settings`) | Placeholder for provider settings.                 |
+| Page                       | Current behavior                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **New task** (`/`)         | Placeholder for task conversation and file intake.                                                                                                      |
+| **History** (`/history`)   | Placeholder for execution history.                                                                                                                      |
+| **Settings** (`/settings`) | Choose the AI provider, model, and reasoning effort, see which providers have a usable credential and where it came from, and run a **Test connection**. |
 
 The header theme button switches between light and dark modes. The browser saves the choice under `automate-theme` when local storage is available; otherwise, it uses the operating system preference at startup. The header also shows **Server connected** and the database schema version, **Server degraded** if its database probe fails, or **Server unreachable** if the API cannot be reached. The shell polls health about every ten seconds.
 
@@ -82,6 +82,13 @@ Startup creates this layout beneath the selected data root:
 ~/.automate/
 ├── data/
 │   └── automate.db       # SQLite database and schema metadata
+├── config/
+│   └── agent.json         # Application-owned AI provider and model selection
+├── pi/                    # Application-owned agent config root (mode 0700 on POSIX)
+│   ├── auth.json          # Managed credential store (mode 0600 on POSIX)
+│   ├── models.json        # Custom or local model definitions
+│   └── sessions/          # SDK session staging directory
+├── agent-sessions/        # Raw session logs, one directory per execution
 ├── artifacts/             # Reserved for later output artifacts
 ├── uploads/               # Reserved for later input files
 ├── scripts/               # Reserved for later generated scripts
@@ -90,6 +97,24 @@ Startup creates this layout beneath the selected data root:
 
 The bootstrap writes the database; it does not create tasks, artifacts, uploads, or scripts. SQLite may create its own companion files beside `automate.db` while running.
 
+## Configure an AI provider
+
+Open **Settings** at <http://127.0.0.1:5173/settings> to choose which AI provider and model Auto-Mate uses, see which providers have a usable credential, and run a live **Test connection**.
+
+Auto-Mate never asks you to paste an API key into the page and never stores one itself. Supply a credential in one of three ways:
+
+- Set the provider's environment variable in the environment the server starts in (the settings page names the exact variable for each provider).
+- Sign in with the Pi CLI so a credential lands in Auto-Mate's own `~/.automate/pi/auth.json`.
+- Point Auto-Mate at an existing personal Pi `auth.json`. This changes the credential file path and nothing else — no personal settings, extensions, skills, prompts, or themes are imported.
+
+To check the same thing from a terminal:
+
+```sh
+pnpm doctor --agent-smoke
+```
+
+That opens one real session with the saved selection, calls a single `status` tool, prints the normalized events, and exits non-zero with an actionable error code if anything fails. See [AI provider configuration](features/provider-configuration.md) for the full reference, including the five-member event union, the architectural boundary, the sanitizer's limits, and a troubleshooting table keyed by error code.
+
 ## Troubleshoot startup and status
 
 - **`pnpm doctor` reports `FAIL`:** Install a Node.js version in `>=24.15.0 <25`, make `pnpm` available on `PATH`, and rerun the check. A `node:sqlite` failure also requires a compatible Node build.
@@ -97,5 +122,7 @@ The bootstrap writes the database; it does not create tasks, artifacts, uploads,
 - **Server unreachable in the header:** Make sure `pnpm dev` is running and the API is reachable at <http://127.0.0.1:4317/api/health>. If the API port was changed, the Vite proxy still points to 4317 until its configuration is changed.
 - **Server degraded:** Check the API server log and the database under the reported `dataRoot`. The health response reports `database.connected: false` when its metadata query fails.
 - **Data directory error:** Choose a writable `AUTOMATE_HOME` path and restart. Startup stops if it cannot create or write its data directories.
+- **Settings reports no usable credential:** The provider's environment variable must be set in the environment the *server* starts in, not only in your current shell. Set it and restart `pnpm dev`. The settings page names the variable and gives the per-platform command.
+- **`AGENT_MODEL_NOT_FOUND` when saving a model:** The error lists model ids the provider actually has. Choose one from the dropdown, or define a custom model in `~/.automate/pi/models.json`.
 
-For more detail on the browser shell and API contract, see [Project Bootstrap and Application Shell](features/project-bootstrap.md). For the implemented system layout, see [Architecture](architecture.md).
+For more detail on the browser shell and API contract, see [Project Bootstrap and Application Shell](features/project-bootstrap.md). For AI provider settings, credentials, and the agent seam, see [AI Provider Configuration](features/provider-configuration.md). For the implemented system layout, see [Architecture](architecture.md).

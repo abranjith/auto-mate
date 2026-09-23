@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"pnpm --filter @automate/server dev\" \"pnpm --filter @automate/web dev\"",
     "build": "pnpm -r build",
-    "test": "pnpm --filter @automate/web generate:routes && vitest run && node --test scripts/check-exact-pins.test.mjs packages/web/scripts/check-design-tokens.test.mjs",
-    "lint": "eslint . && node scripts/check-exact-pins.mjs && node packages/web/scripts/check-design-tokens.mjs && node scripts/check-readme-commands.mjs",
+    "test": "pnpm --filter @automate/web generate:routes && vitest run && node --test scripts/check-exact-pins.test.mjs scripts/check-doc-error-codes.test.mjs packages/web/scripts/check-design-tokens.test.mjs",
+    "lint": "eslint . && node scripts/check-exact-pins.mjs && node packages/web/scripts/check-design-tokens.mjs && node scripts/check-readme-commands.mjs && node scripts/check-doc-error-codes.mjs",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "doctor": "pnpm --filter @automate/server doctor",
@@ -23,11 +23,11 @@
     "@vitest/coverage-v8": "5.0.1",
     "concurrently": "10.0.5",
     "eslint": "10.11.0",
-    "jsdom": "30.1.0",
+    "jsdom": "30.1.1",
     "prettier": "3.9.8",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.0",
+    "typescript-eslint": "8.70.1",
     "vitest": "5.0.1"
   }
 }

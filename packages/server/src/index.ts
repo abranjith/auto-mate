@@ -24,7 +24,7 @@ function start(): void {
     migrateDatabase(connection);
     logger.info('database migrations applied');
     const meta = new AppMetaRepository(connection);
-    const app = createApp({ logger, dataRoot: paths.root, version: '0.1.0', getSchemaVersion: () => meta.getSchemaVersion() });
+    const app = createApp({ logger, dataRoot: paths.root, version: '0.1.0', paths, getSchemaVersion: () => meta.getSchemaVersion() });
     const server = app.listen(config.port, config.host, () => logger.info({ url: `http://${config.host}:${config.port}` }, 'server listening'));
     const shutdown = () => server.close(() => { connection.close(); process.exitCode = 0; });
     process.once('SIGINT', shutdown);

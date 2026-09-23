@@ -31,7 +31,7 @@ The plan lists FEAT-103 as blocked by **D09** (pi-web-ui integration, rendering 
 
 | Finding | Consequence |
 | --- | --- |
-| Latest is `0.75.3`, published 2026-05-27. FEAT-102 pins `@earendil-works/pi-coding-agent` at `0.86.1`. | Ten minor versions and four months of skew against the SDK it is supposed to pair with. |
+| Latest is `0.75.3`, published 2026-05-27. FEAT-102 pins `@earendil-works/pi-coding-agent` at `0.87.1` (raised from `0.86.1` on 2026-09-23). | Twelve minor versions and four months of skew against the SDK it is supposed to pair with. |
 | Depends on `@earendil-works/pi-ai@^0.75.3` and `@earendil-works/pi-tui@^0.75.3`; the agent SDK requires `^0.85.1` of both. Under 0.x semver, `^0.75.3` means `>=0.75.3 <0.76.0`. | The ranges are disjoint. The two packages cannot share a Pi stack; `packages/web` would carry its own older copy. |
 | `peerDependencies` includes `@mariozechner/mini-lit`. | Memory says never to target the `@mariozechner` publisher scope. Adopting pi-web-ui reintroduces it as a required peer. |
 | Bundles `ollama` and `@lmstudio/sdk`. | A second provider registry in the browser — exactly what D09a's thin interface exists to prevent, and a direct contradiction of "do not reproduce Pi's provider registry in Auto-Mate". |

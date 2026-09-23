@@ -4,12 +4,17 @@ import { HealthResponseSchema, ValidationError } from '@automate/core';
 import pino from 'pino';
 import type { Server } from 'node:http';
 import { createApp } from '../app';
+import { getAppPaths } from '../config/app-paths';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const servers: Server[] = [];
 afterEach(async () => { await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve())))); });
 
 async function request(path: string, getSchemaVersion = () => '1', headers?: HeadersInit) {
   const app = createApp({ logger: pino({ level: 'silent' }), dataRoot: '/private/root', version: '0.1.0', getSchemaVersion,
+    paths: getAppPaths(mkdtempSync(join(tmpdir(), 'automate-health-'))),
     configureRoutes: (router) => {
       router.get('/api/validation-test', () => { throw new ValidationError('Invalid request.'); });
       router.get('/api/unknown-test', () => { throw new Error('Secret /private/root'); });

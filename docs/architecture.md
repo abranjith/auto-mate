@@ -3,7 +3,7 @@
 
 ## System Context
 
-Auto-Mate currently runs as a single-user, local developer preview. The browser app provides a navigation shell, theme control, and server status. The Express server checks its prerequisites at startup, prepares local storage, applies a SQLite migration, and exposes a health endpoint. The New task, History, and Settings pages are placeholders; task execution, AI integration, uploads, and provider settings are not implemented in this bootstrap.
+Auto-Mate currently runs as a single-user, local developer preview. The browser app provides a navigation shell, theme control, and server status. The Express server checks its prerequisites at startup, prepares local storage, applies a SQLite migration, and exposes a health endpoint alongside the agent settings endpoints. Settings is a working page: it reads and writes the application-owned AI provider and model selection, reports whether each provider has a usable credential, and runs a live connection test that opens one real agent session. The New task and History pages remain placeholders; task execution, uploads, and script execution are not implemented in this milestone.
 
 ```mermaid
 flowchart LR
@@ -16,34 +16,59 @@ flowchart LR
 
 ## Components
 
-The pnpm workspace has three TypeScript ESM packages. `@automate/core` exports the TypeBox health and error contracts and the application error hierarchy. Both `@automate/web` and `@automate/server` import that package; the web package does not import server code.
+The pnpm workspace has three TypeScript ESM packages. `@automate/core` exports the TypeBox health, error, and agent contracts, the application error hierarchy, and the boundary sanitizer. It holds the `AgentProvider` seam, whose two invariants are that no provider SDK type may be imported into it and that its five-member `AgentEvent` union may not be widened without a named consumer. Both `@automate/web` and `@automate/server` import that package; the web package does not import server code.
 
-`@automate/web` mounts a React 19 app with TanStack Router file routes and a TanStack Query provider. The shared shell contains links to the three placeholder pages, a theme toggle, and `ServerStatus`. The API client validates the health payload against the shared schema and turns the shared error envelope into `AutoMateError`. Components use semantic class names from `design-system/tokens.ts`, backed by light and dark CSS variables.
+`@automate/web` mounts a React 19 app with TanStack Router file routes and a TanStack Query provider. The shared shell contains links to the New task and History placeholders and to the working Settings page, a theme toggle, and `ServerStatus`. The `/settings` route composes `ModelSelector`, `CredentialStatus`, and `ConnectionTest` over the TanStack Query hooks in `api/agent-queries.ts`. The API client’s `getJson` and `sendJson` helpers validate every response against the shared schemas and turn the shared error envelope into `AutoMateError`. Components use semantic class names from `design-system/tokens.ts`, backed by light and dark CSS variables.
 
-`@automate/server` composes correlation ID middleware, JSON parsing, the health route, a not-found handler, and one error handler. Its startup entry point owns preflight checks, directory setup, database opening, migration, and HTTP listening. `AppMetaRepository` is the application access path to persisted metadata.
+`@automate/server` composes correlation ID middleware, JSON parsing, the health route, the agent settings routes, a not-found handler, and one error handler. Its startup entry point owns preflight checks, directory setup, database opening, migration, and HTTP listening. `AppMetaRepository` is the application access path to persisted metadata.
+
+`src/agent/index.ts` is the only agent module the rest of the server imports; the Pi SDK is confined to `src/agent/adapters/pi/` by an ESLint rule and a source-text boundary scan. Inside that directory, the adapter pins every Pi path under the application data root, builds its model runtime with `allowModelNetwork: false`, supplies settings in memory, and uses a resource loader that yields zero ambient extensions, skills, prompt templates, themes, and context files. Every payload crossing back out passes the core sanitizer; only the exact-match scrub is a guarantee, and the shape-based pass is a documented heuristic.
 
 ```mermaid
-flowchart TD
-  subgraph Web["@automate/web"]
-    Router[Router and shell] --> Status[ServerStatus]
-    Status --> Query[TanStack Query health query]
-    Query --> Client[Typed API client]
-    Router --> Tokens[Semantic design tokens]
+flowchart TB
+  subgraph web["@automate/web (browser)"]
+    Shell["Router and shell<br/>semantic design tokens"]
+    Pages["ServerStatus and Settings page"]
+    Hooks["TanStack Query hooks"]
+    Client["Typed API client"]
+    Shell --> Pages --> Hooks --> Client
   end
-  subgraph Core["@automate/core"]
-    Contracts[Health and error contracts]
+
+  Http["HTTP<br/>/api/health, /api/agent/*"]
+  Core["@automate/core<br/>contracts, errors, sanitizer"]
+
+  subgraph server["@automate/server (Node)"]
+    Startup["Startup and preflight"]
+    App["Express app<br/>correlation id, error handler"]
+    Migrate["Migration runner"]
+    Health["Health route"]
+    Agents["Agent settings routes"]
+    Repo["AppMetaRepository"]
+    Barrel["Agent barrel<br/>src/agent/index.ts"]
+    Config["Agent config store"]
+    Adapter["Pi adapter<br/>SDK confined here"]
+    Startup --> App
+    Startup --> Migrate
+    App --> Health
+    App --> Agents
+    Health --> Repo
+    Agents --> Barrel
+    Barrel --> Config
+    Barrel --> Adapter
   end
-  subgraph Server["@automate/server"]
-    Startup[Startup and preflight] --> App[Express app]
-    Startup --> Migration[Migration runner]
-    App --> Health[Health route]
-    Health --> Repository[AppMetaRepository]
-    Migration --> Database[(SQLite)]
-    Repository --> Database
+
+  subgraph state["Local state"]
+    Db[("SQLite<br/>data/automate.db")]
+    AgentFiles[("config/agent.json<br/>and pi/")]
+    Sdk[["Pi coding agent SDK"]]
   end
-  Client -->|HTTP /api/health| App
-  Client --> Contracts
-  App --> Contracts
+
+  Client --> Http --> App
+  Client -. "shared schemas" .-> Core -. "shared schemas" .-> App
+  Repo --> Db
+  Migrate --> Db
+  Config --> AgentFiles
+  Adapter --> Sdk
 ```
 
 ## Data Flow
@@ -79,6 +104,9 @@ The committed initial migration creates `app_meta`, a key-value table with `key`
 | Store | Current use |
 | --- | --- |
 | `data/automate.db` | SQLite database under the application data root. |
+| `config/agent.json` | Application-owned AI provider and model selection, written atomically and validated on every read and write. Contains no credential material. |
+| `pi/` | Application-owned agent config root (`0700` on POSIX): the managed credential store `auth.json` (`0600`), custom model definitions, and a session staging directory. Auto-Mate supplies the credential path and asks the SDK for status; it never parses or reads values out of the store. |
+| `agent-sessions/<executionId>/` | Raw session JSONL written by the SDK at its final location. A local debugging artifact only: never served to the browser and never the source of a rendered event. |
 | `artifacts/`, `uploads/`, `scripts/`, `env/` | Directories created at startup for later features; the bootstrap writes no domain files to them. |
 | Browser `localStorage` | Saves the `automate-theme` light or dark preference when storage is available. |
 
@@ -86,8 +114,10 @@ The committed initial migration creates `app_meta`, a key-value table with `key`
 
 - **Shared contract package:** TypeBox schemas and error classes live in `@automate/core` so the browser and server use the same health and error shapes.
 - **Local SQLite:** `node:sqlite` `DatabaseSync` sits behind Drizzle and `AppMetaRepository`. The connection enables WAL and foreign keys. Drizzle Kit generates migration files offline; the server applies them in-process at startup.
-- **Explicit data root:** `AUTOMATE_HOME` overrides `~/.automate/`; path construction uses Node path APIs. `resolveWithin` rejects lexical traversal outside a supplied base directory, though no upload or script flow uses it yet.
+- **Explicit data root:** `AUTOMATE_HOME` overrides `~/.automate/`; path construction uses Node path APIs. `resolveWithin` rejects lexical traversal outside a supplied base directory; `sessionDirFor` uses it to keep each execution’s agent session directory inside `agent-sessions/`, and no upload or script flow uses it yet.
 - **Correlated API errors:** Request middleware accepts a bounded inbound correlation ID or generates one. A single Express error handler returns a stable JSON envelope and hides unexpected error details.
+- **One agent seam, one adapter directory:** The application consumes `AgentProvider.open(options)` and a closed five-member event union. The provider SDK is confined to `packages/server/src/agent/adapters/pi/` by an ESLint rule and a source-text scan, each provable against a deliberate-violation fixture. A startup problem is always one of the typed `AGENT_*` errors — the provider never degrades to a null or stub client.
+- **Credentials are status, not values:** Auto-Mate reports whether a provider has a credential and where it came from. It never parses, returns, renders, or logs a key, the API response shapes have no field able to carry one, and the settings page offers no field to type one.
 - **Developer preview scope:** The server defaults to loopback and there is no authentication. No generated-code runner or isolation boundary is implemented in this milestone.
 
 ## Deployment and Runtime

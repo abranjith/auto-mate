@@ -1,8 +1,8 @@
 # Auto-Mate
 
-Auto-Mate is a local app in development for turning plain-language data tasks into repeatable outputs. The implemented FEAT-101 milestone is a developer-preview shell: it has New task, History, and Settings placeholder pages, a light/dark theme switch, live server status, and a local SQLite database. Task creation, uploads, AI providers, and script execution are not available yet.
+Auto-Mate is a local app in development for turning plain-language data tasks into repeatable outputs. Two milestones are implemented: the developer-preview shell (FEAT-101) and AI provider configuration (FEAT-102). New task and History are still placeholder pages, but Settings is a working page for choosing an AI provider, model, and reasoning effort, seeing which providers have a usable credential, and running a live connection test. The preview also has a light/dark theme switch, live server status, and a local SQLite database. Task creation, uploads, and script execution are not available yet.
 
-> **Developer preview — no enforced execution isolation.** This milestone does not run generated code. Later preview features may run code with access to other host files. Working directories, Python environments, and the loopback address are not security boundaries. Restricted execution is required before a target-user pilot.
+> **Developer preview — no enforced execution isolation.** This preview does not run generated code. Later preview features may run code with access to other host files. Working directories, Python environments, and the loopback address are not security boundaries. Restricted execution is required before a target-user pilot.
 
 ## Prerequisites
 
@@ -50,20 +50,23 @@ pnpm dev
 
 Open <http://127.0.0.1:5173/>. The browser server proxies `/api` to the Express API at <http://127.0.0.1:4317/>. The header should report **Server connected** and schema version `1`. `pnpm doctor` checks Node, pnpm, and `node:sqlite` as required; missing `uv` or Python is a warning. Stop both development processes with `Ctrl+C`.
 
+Open <http://127.0.0.1:5173/settings> to choose the AI provider, model, and reasoning effort, see which providers have a usable credential and where it came from, and press **Test connection**, which opens one real agent session, calls a single `status` tool, and closes. `pnpm doctor --agent-smoke` makes the same round trip from a terminal. Auto-Mate never asks you to paste an API key and never stores one: a credential comes from a provider environment variable, a Pi CLI sign-in, or an opt-in to an existing personal Pi `auth.json`. The agent SDK is `@earendil-works/pi-coding-agent`, pinned at `0.87.1` and reachable only through Auto-Mate's own `AgentProvider` seam. [AI provider configuration](docs/features/provider-configuration.md) is the full reference.
+
 The API binds to `127.0.0.1` by default. `AUTOMATE_HOST` and `AUTOMATE_PORT` can change that address, but this preview has no authentication or local session protection. D10 in the [MVP plan](.spec-lite/plan_mvp.md) owns the final local-access design; the current loopback default does not settle it or isolate code execution.
 
 ## Workspace commands
 
-| Command            | Purpose                                                             |
-| ------------------ | ------------------------------------------------------------------- |
-| `pnpm doctor`      | Report required prerequisites and optional Python tooling.          |
-| `pnpm dev`         | Start the API and browser development servers.                      |
-| `pnpm build`       | Type-check core and server; build the browser bundle.               |
-| `pnpm test`        | Run route generation, Vitest suites, and repository checks.         |
-| `pnpm typecheck`   | Type-check the workspace packages.                                  |
-| `pnpm lint`        | Run ESLint and repository checks.                                   |
-| `pnpm format`      | Format repository files with Prettier.                              |
-| `pnpm db:generate` | Generate a Drizzle migration; startup applies committed migrations. |
+| Command                     | Purpose                                                             |
+| --------------------------- | ------------------------------------------------------------------- |
+| `pnpm doctor`               | Report required prerequisites and optional Python tooling.          |
+| `pnpm doctor --agent-smoke` | Open one real agent session with the saved selection and close it.  |
+| `pnpm dev`                  | Start the API and browser development servers.                      |
+| `pnpm build`                | Type-check core and server; build the browser bundle.               |
+| `pnpm test`                 | Run route generation, Vitest suites, and repository checks.         |
+| `pnpm typecheck`            | Type-check the workspace packages.                                  |
+| `pnpm lint`                 | Run ESLint and repository checks.                                   |
+| `pnpm format`               | Format repository files with Prettier.                              |
+| `pnpm db:generate`          | Generate a Drizzle migration; startup applies committed migrations. |
 
 `pnpm build` does not create a deployable server bundle. Package-specific commands and current behavior are described in [Usage](docs/usage.md).
 
@@ -74,6 +77,9 @@ Server startup creates the following under `~/.automate/` (your user home direct
 ```text
 ~/.automate/
 ├── data/automate.db   SQLite database and schema metadata
+├── config/agent.json  AI provider and model selection (never a credential)
+├── pi/                agent credential store and model definitions
+├── agent-sessions/    raw agent session logs, one directory per execution
 ├── artifacts/         reserved for later outputs
 ├── uploads/           reserved for later inputs
 ├── scripts/           reserved for later generated scripts
@@ -84,10 +90,11 @@ Set `AUTOMATE_HOME` before starting the server to use another writable data root
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.md) — installation and first launch.
-- [Usage](docs/usage.md) — pages, commands, configuration, health API, and troubleshooting.
+- [Quickstart](docs/quickstart.md) — installation, first launch, and choosing a provider.
+- [Usage](docs/usage.md) — pages, commands, configuration, provider setup, health API, and troubleshooting.
 - [Architecture](docs/architecture.md) — implemented packages, data flow, and deployment scope.
 - [Project bootstrap feature](docs/features/project-bootstrap.md) — FEAT-101 behavior and limitations.
+- [AI provider configuration](docs/features/provider-configuration.md) — FEAT-102 provider settings, credentials, the agent seam, and troubleshooting.
 - [Core package](packages/core/README.md), [server package](packages/server/README.md), and [web package](packages/web/README.md) — package-level development notes.
 - [Changelog](CHANGELOG.md) — milestone history.
 
