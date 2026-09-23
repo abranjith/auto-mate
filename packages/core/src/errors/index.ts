@@ -4,8 +4,12 @@ import { ERROR_CODES } from './error-codes';
 /** An invalid user input or requested path. */
 export class ValidationError extends AutoMateError {
   /** @param message Public explanation. @param details Private diagnostics. @example new ValidationError('Invalid path.') */
-  constructor(message: string, details?: unknown) {
-    super(ERROR_CODES.VALIDATION_ERROR, message, details);
+  constructor(
+    message: string,
+    details?: unknown,
+    code: string = ERROR_CODES.VALIDATION_ERROR,
+  ) {
+    super(code, message, details);
   }
 }
 

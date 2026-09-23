@@ -309,18 +309,18 @@ FEAT-103 adds **no new directories**. It writes to `data/automate.db` (FEAT-101)
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Conversation contracts and typed errors in `packages/core`
-- [ ] TASK-002: Execution state machine as pure core logic
-- [ ] TASK-003: Persistence — task, execution, and conversation event tables with repositories
-- [ ] TASK-004: `TaskSession` — run a conversation over the provider seam and record it
-- [ ] TASK-005: Session registry, concurrency limit, and startup reconciliation
-- [ ] TASK-006: REST command and replay API
-- [ ] TASK-007: WebSocket transport with origin validation and resume-from-seq
-- [ ] TASK-008: Task composer — describe work in plain language
-- [ ] TASK-009: Conversation view — render the normalized event stream
-- [ ] TASK-010: Live stream hook — REST history, WS tail, and reconnect
-- [ ] TASK-011: Run controls and terminal states
-- [ ] TASK-012: Disconnect and restart recovery proof
-- [ ] TASK-013: Documentation for the conversation surface
+- [x] TASK-001: Conversation contracts and typed errors in `packages/core`
+- [x] TASK-002: Execution state machine as pure core logic
+- [x] TASK-003: Persistence — task, execution, and conversation event tables with repositories
+- [x] TASK-004: `TaskSession` — run a conversation over the provider seam and record it
+- [x] TASK-005: Session registry, concurrency limit, and startup reconciliation
+- [x] TASK-006: REST command and replay API
+- [x] TASK-007: WebSocket transport with origin validation and resume-from-seq
+- [x] TASK-008: Task composer — describe work in plain language
+- [x] TASK-009: Conversation view — render the normalized event stream
+- [x] TASK-010: Live stream hook — REST history, WS tail, and reconnect
+- [x] TASK-011: Run controls and terminal states
+- [x] TASK-012: Disconnect and restart recovery proof
+- [x] TASK-013: Documentation for the conversation surface
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

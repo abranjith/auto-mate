@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — FEAT-103 Task description and conversation surface
+
+- Added text-only task creation, persisted task/execution state, and a gap-free ordered conversation transcript.
+- Added provider-backed task sessions with assistant-text coalescing, cancellation, a configurable concurrency cap, graceful shutdown, and honest restart interruption recovery.
+- Added validated task, execution, replay, and abort REST endpoints plus an Origin/Host-guarded WebSocket snapshot and live tail with heartbeat and backpressure handling.
+- Added the React task composer, safe Markdown and tool-event rendering, reconnecting live stream, execution status, cancellation controls, and readable terminal failures.
+- Recorded the D09 decision to use an application-owned React conversation surface instead of `@earendil-works/pi-web-ui`.
+
 ## Unreleased — FEAT-102 Pi provider interface and configuration
 
 - Added `AgentProvider.open(options)`, an SDK-independent seam whose sessions expose only `run`, `subscribe`, `abort`, and `close`, over a closed five-member event union.

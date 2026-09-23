@@ -7,6 +7,7 @@ const CLIENT_ERROR_CODES: ReadonlySet<string> = new Set([
   ERROR_CODES.VALIDATION_ERROR,
   ERROR_CODES.AGENT_MODEL_NOT_FOUND,
   ERROR_CODES.AGENT_CONFIG_INVALID,
+  ERROR_CODES.INVALID_STATE_TRANSITION,
 ]);
 
 /** Format safe error envelopes. @param logger Fallback logger. @returns Express error middleware that sends a correlation ID. */
@@ -15,10 +16,36 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
     const correlationId = String(response.locals.correlationId);
     const known = error instanceof AutoMateError;
     const code = known ? error.code : ERROR_CODES.INTERNAL_ERROR;
-    const message = known ? error.message : 'An unexpected server error occurred.';
-    const status = CLIENT_ERROR_CODES.has(code) ? 400 : code === ERROR_CODES.NOT_FOUND ? 404 : 500;
-    if (status >= 500) (response.locals.log ?? logger).error({ err: error, correlationId }, 'request failed');
-    else (response.locals.log ?? logger).info({ code, status, correlationId }, 'request rejected');
+    const message = known
+      ? error.message
+      : 'An unexpected server error occurred.';
+    const notFound =
+      code === ERROR_CODES.NOT_FOUND ||
+      code === ERROR_CODES.TASK_NOT_FOUND ||
+      code === ERROR_CODES.EXECUTION_NOT_FOUND;
+    const conflict =
+      code === ERROR_CODES.EXECUTION_NOT_RUNNING ||
+      code === ERROR_CODES.EXECUTION_INTERRUPTED ||
+      code === ERROR_CODES.EXECUTION_LIMIT_REACHED;
+    const status = CLIENT_ERROR_CODES.has(code)
+      ? 400
+      : notFound
+        ? 404
+        : code === ERROR_CODES.ORIGIN_REJECTED
+          ? 403
+          : conflict
+            ? 409
+            : 500;
+    if (status >= 500)
+      (response.locals.log ?? logger).error(
+        { err: error, correlationId },
+        'request failed',
+      );
+    else
+      (response.locals.log ?? logger).info(
+        { code, status, correlationId },
+        'request rejected',
+      );
     response.status(status).json({ error: { code, message, correlationId } });
   };
 }

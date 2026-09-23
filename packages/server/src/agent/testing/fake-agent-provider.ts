@@ -8,7 +8,14 @@
  * double and the stub-backed `PiSession`, so the two cannot drift.
  */
 
-import type { AgentAuthSource, AgentEvent, AgentProvider, AgentRunResult, AgentSession, AgentSessionOptions } from '@automate/core';
+import type {
+  AgentAuthSource,
+  AgentEvent,
+  AgentProvider,
+  AgentRunResult,
+  AgentSession,
+  AgentSessionOptions,
+} from '@automate/core';
 
 /** One scripted run: the events to emit, then the result to return. */
 export interface FakeAgentScript {
@@ -16,10 +23,16 @@ export interface FakeAgentScript {
   readonly events: readonly AgentEvent[];
   /** The terminal result the run resolves with. */
   readonly result: AgentRunResult;
+  /** Optional gate keeping the fake run live until a test releases it. */
+  readonly waitUntil?: Promise<void>;
 }
 
 /** The result used when a run has no script left. */
-const IDLE_RESULT: AgentRunResult = { outcome: 'completed', stopReason: 'stop', usage: { turns: 0 } };
+const IDLE_RESULT: AgentRunResult = {
+  outcome: 'completed',
+  stopReason: 'stop',
+  usage: { turns: 0 },
+};
 
 /** An in-memory `AgentSession` driven by a list of scripted runs. */
 export class FakeAgentSession implements AgentSession {
@@ -34,6 +47,10 @@ export class FakeAgentSession implements AgentSession {
   private runIndex = 0;
   private closed = false;
   private aborted = false;
+  private resolveAbort!: () => void;
+  private readonly abortSignal = new Promise<void>((resolve) => {
+    this.resolveAbort = resolve;
+  });
 
   /** @param id Session identity. @param logPath Reported log path. @param authSource Reported credential origin. @param script One entry per expected run. @example new FakeAgentSession('s1', '/tmp/s1.jsonl', 'managed', [{ events, result }]) */
   constructor(
@@ -44,20 +61,29 @@ export class FakeAgentSession implements AgentSession {
   ) {}
 
   /** Emit the next scripted batch and return its result. @param prompt The prompt text, recorded for assertions. @returns The scripted terminal result, or an aborted one after `abort()`. @throws Error when the session is closed, matching the real session's misuse behavior. @example await fake.run('go') */
-  run(prompt: string): Promise<AgentRunResult> {
-    if (this.closed) return Promise.reject(new Error('run() was called on a closed session'));
+  async run(prompt: string): Promise<AgentRunResult> {
+    if (this.closed) throw new Error('run() was called on a closed session');
     this.prompts.push(prompt);
     const scripted = this.script[this.runIndex];
     this.runIndex += 1;
     for (const event of scripted?.events ?? []) this.dispatch(event);
-    if (this.aborted) return Promise.resolve({ outcome: 'aborted', stopReason: 'aborted', usage: scripted?.result.usage ?? { turns: 0 } });
-    return Promise.resolve(scripted?.result ?? IDLE_RESULT);
+    if (scripted?.waitUntil)
+      await Promise.race([scripted.waitUntil, this.abortSignal]);
+    if (this.aborted)
+      return {
+        outcome: 'aborted',
+        stopReason: 'aborted',
+        usage: scripted?.result.usage ?? { turns: 0 },
+      };
+    return scripted?.result ?? IDLE_RESULT;
   }
 
   /** Subscribe to scripted events. @param listener Receives every emitted event. @returns The unsubscribe function. @example const off = fake.subscribe(collect) */
   subscribe(listener: (event: AgentEvent) => void): () => void {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   /** Record an abort. @returns Nothing; idempotent counting matches the real session. @example await fake.abort() */
@@ -65,7 +91,13 @@ export class FakeAgentSession implements AgentSession {
     if (this.closed) return Promise.resolve();
     this.abortCount += 1;
     this.aborted = true;
+    this.resolveAbort();
     return Promise.resolve();
+  }
+
+  /** Emit one normalized event while a deferred run is live. */
+  emit(event: AgentEvent): void {
+    this.dispatch(event);
   }
 
   /** Record a close. @returns Nothing; a second close is a no-op. @example await fake.close() */
@@ -80,8 +112,11 @@ export class FakeAgentSession implements AgentSession {
   /** Deliver one event, keeping the real session's promise that a throwing listener does not starve the others. */
   private dispatch(event: AgentEvent): void {
     for (const listener of [...this.listeners]) {
-      try { listener(event); }
-      catch { /* a throwing consumer must not break the loop, exactly as in PiSession */ }
+      try {
+        listener(event);
+      } catch {
+        /* a throwing consumer must not break the loop, exactly as in PiSession */
+      }
     }
   }
 }
@@ -103,8 +138,14 @@ export class FakeAgentProvider implements AgentProvider {
   open(options: AgentSessionOptions): Promise<AgentSession> {
     this.opened.push(options);
     if (this.failWith !== undefined) return Promise.reject(this.failWith);
-    const authSource: AgentAuthSource = options.auth.mode === 'personal-pi' ? 'personal-pi' : 'managed';
-    const session = new FakeAgentSession(`fake-session-${this.sessions.length + 1}`, `${options.sessionDir}/fake-session.jsonl`, authSource, this.script);
+    const authSource: AgentAuthSource =
+      options.auth.mode === 'personal-pi' ? 'personal-pi' : 'managed';
+    const session = new FakeAgentSession(
+      `fake-session-${this.sessions.length + 1}`,
+      `${options.sessionDir}/fake-session.jsonl`,
+      authSource,
+      this.script,
+    );
     this.sessions.push(session);
     return Promise.resolve(session);
   }
