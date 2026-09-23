@@ -6,7 +6,7 @@ From the repository root, run `pnpm install` then `pnpm --filter @automate/web d
 
 Components use semantic classes from `src/design-system/tokens.ts`. Routes live under `src/routes/`; the TanStack Router plugin regenerates `src/routeTree.gen.ts` during build and development. `src/api/api-client.ts` validates the shared health contract and decodes the server error envelope.
 
-`src/routes/settings.tsx` and `src/components/settings/` provide provider and model selection, per-provider credential status with remediation text, and a live **Test connection**. The page never renders a credential value and offers no field to type one; `src/api/agent-queries.ts` holds the TanStack Query hooks over the shared agent contracts. Route files exclude co-located `*.test.tsx` through `routeFileIgnorePattern`.
+`src/routes/settings.tsx` and `src/components/settings/` provide provider and model selection, per-provider credential status with remediation text, and a live **Test connection**. The page never renders a credential value and offers no field to type one; `src/api/agent-queries.ts` holds the TanStack Query hooks over the shared agent contracts. Tests live under `src/__tests__/`, mirroring the source tree, rather than beside their routes/components.
 
 `src/components/conversation/` renders the seven normalized conversation event kinds, status, cancellation, connection health, and safe failure details. Assistant output uses `react-markdown` with raw HTML disabled; tool payloads render as text. `src/api/use-execution-stream.ts` loads durable REST history before opening the WebSocket tail, deduplicates by sequence number, reloads on gaps, and reconnects with backoff. The composer deliberately has no file or URL input; ingestion and disclosure are later features.
 
