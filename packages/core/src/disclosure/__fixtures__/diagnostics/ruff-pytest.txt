@@ -1,0 +1,4 @@
+src/job.py:12:3: F821 Undefined name 'customer_email'
+FAILED tests/test_job.py::test_one - ValueError: record 123456789 failed
+----------------------------- Captured stdout call -----------------------------
+private customer row

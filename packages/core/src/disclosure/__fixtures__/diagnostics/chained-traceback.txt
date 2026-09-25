@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/person/project/reader.py", line 7, in load
+KeyError: 'customer_email'
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/home/person/project/main.py", line 21, in main
+ValueError: could not load 'private row'

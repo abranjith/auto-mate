@@ -409,23 +409,34 @@ The database is authoritative for code; the disk is a projection written immedia
 
 > Captured by hooks (`capture-baseline` / `capture-changeset`), not hand-maintained. See `.spec-lite/features/FEAT-106-code_generation_repair/changeset.json` — the authoritative deterministic review scope. `.spec-lite/hooks.json` currently registers no hooks, so that file will be absent until hooks are configured; until then, fall back to the **Files** list in §3 as the review scope.
 
+### Implementation notes and deviations (recorded 2026-09-25 by implement)
+
+- **DEVIATION — migration identity.** drizzle-kit v1 names migrations by timestamp: the migration is `drizzle/20260925044250_damp_otto_octavius/`, and it is the **fifth** migration (FEAT-105 took the fourth), not `0004`. It adds `execution`'s columns with `ALTER TABLE ADD` (no rebuild of `execution`, which would cascade-delete child rows inside the migrator's transaction) and rebuilds only `conversation_event`.
+- **DEVIATION — one `generation_settled`, appended at run end.** `finalize_script` does not append it; the generation lifecycle appends exactly one when the run settles. The outcome union gained `incomplete` (the agent stopped without finalizing, the provider failed, diagnostics were not granted, or uv/Python was unavailable). **Exhaustion wins over finalization**: a run whose attempts all failed settles `failed`/`GENERATION_ATTEMPTS_EXHAUSTED` even when the agent obeyed the refusal and finalized its best version — that version stays recorded (`is_final = 1`, `tests_passed = 0`). A run with a final version otherwise settles `completed`, whether or not its own tests passed.
+- **DEVIATION — `TaskSession` stays generic.** Instead of constructing the budget inside `TaskSession`, a strategy may return an optional `RunLifecycle` (usage hook, wall-clock deadline, cancel-before-abort, settle). `CodeGenerationRunStrategy` builds the per-execution `GenerationBudget` and `GenerationLifecycle`; `TaskSession` drives it. `RunStrategy.buildRun` may now return a promise.
+- **DEVIATION — fixtures are built from the disclosed tables.** `buildSyntheticFixture` accepts a `TableProfile` or a `DisclosedTable`; the service passes the approved payload's tables, so a column or value the degradation ladder left out never reaches a fixture. It reuses FEAT-104's seeded `sfc32` PRNG rather than a new in-module xorshift. CSV fixtures are byte-identical per seed; XLSX fixtures are content-identical (their zip container records write timestamps).
+- **Additions.** pytest runs as `python -m pytest -q --tb=native -rfE -p no:cacheprovider` (native frames are the shape FEAT-105's allowlist keeps). Child processes withhold `AUTOMATE_*` (except the two I/O variables), `VIRTUAL_ENV`, and credential-shaped variables — hygiene, not isolation. `validateCodePath` also restricts names to `[A-Za-z0-9_-]`, rejects Windows device names, and reserves `output/`. The write and run tools refuse once a final version exists. `GET /api/executions/:id/attempts` also returns `limits`; `POST …/retry` returns `201 { task, execution }`. `finalize_script`'s column hint names only disclosed columns. `computeVersionDigest` uses a browser-safe SHA-256 in `packages/core` (parity with `node:crypto` asserted). `DisclosureRunStrategy.buildRun` gained optional `extras` so the contract and guidance join the same `assemblePromptContext` call. `FakeAgentProvider` gained tool-calling steps and `enqueue()`. The registry gained `onInterrupted`, which settles attempts a crash left `running` as `aborted`. A retry's guidance is recorded as a second `user_prompt` event.
+- **Pre-existing defects found (logged in TODO.md, not fixed here).** FEAT-105: a task with required pre-flight decisions cannot be created (nested transaction) — the retry route seeds answers after its own transaction to avoid it. FEAT-104: a workbook with a native date column fails to profile (`type_confidence = 2`).
+- **Not performed.** TASK-014's manual browser check with a scripted provider (no fake-provider wiring exists for the running server). TASK-004's manual `uv` check was performed on Windows: the environment prepared and `import pandas, openpyxl, plotly, pytest` succeeded; with `uv` hidden, `probe()` threw `PYTHON_RUNTIME_UNAVAILABLE` with the install hint.
+- **Test location.** Profile fixtures live in `src/__tests__/generation/synthetic-profiles.ts` per memory's test-location rule, not `src/generation/__fixtures__/`.
+
 ## 8. State Tracking
 
-- [ ] TASK-001: Generation contracts, limits, the `PythonRunner` seam, and typed errors in `packages/core`
-- [ ] TASK-002: Synthetic fixture builder — the row that makes "the real file is not read" structural
-- [ ] TASK-003: Persistence — code versions, files, attempts, fixtures, and migration `0004`
-- [ ] TASK-004: `PythonRunner` seam implementation — minimal uv runner and environment preparation
-- [ ] TASK-005: Fixture materialization — profiles to files on disk
-- [ ] TASK-006: Code workspace — draft, seal, project to disk
-- [ ] TASK-007: `write_script` and `write_test` tools
-- [ ] TASK-008: `run_tests` tool — the attempt cap, the filter, and the receipts
-- [ ] TASK-009: `finalize_script` tool
-- [ ] TASK-010: `CodeGenerationRunStrategy` — the contract, the prompt, and the tool set
-- [ ] TASK-011: Generation budget — attempts, wall clock, spend, and cancellation across every leg
-- [ ] TASK-012: Transcript events and tool-argument elision
-- [ ] TASK-013: Generation REST API and retry-with-guidance
-- [ ] TASK-014: Generation surfaces — progress, code, results, and the honest line
-- [ ] TASK-015: End-to-end generation and repair proof
-- [ ] TASK-016: Documentation for code generation and the repair loop
+- [x] TASK-001: Generation contracts, limits, the `PythonRunner` seam, and typed errors in `packages/core`
+- [x] TASK-002: Synthetic fixture builder — the row that makes "the real file is not read" structural
+- [x] TASK-003: Persistence — code versions, files, attempts, fixtures, and migration `0004`
+- [x] TASK-004: `PythonRunner` seam implementation — minimal uv runner and environment preparation
+- [x] TASK-005: Fixture materialization — profiles to files on disk
+- [x] TASK-006: Code workspace — draft, seal, project to disk
+- [x] TASK-007: `write_script` and `write_test` tools
+- [x] TASK-008: `run_tests` tool — the attempt cap, the filter, and the receipts
+- [x] TASK-009: `finalize_script` tool
+- [x] TASK-010: `CodeGenerationRunStrategy` — the contract, the prompt, and the tool set
+- [x] TASK-011: Generation budget — attempts, wall clock, spend, and cancellation across every leg
+- [x] TASK-012: Transcript events and tool-argument elision
+- [x] TASK-013: Generation REST API and retry-with-guidance
+- [x] TASK-014: Generation surfaces — progress, code, results, and the honest line
+- [x] TASK-015: End-to-end generation and repair proof
+- [x] TASK-016: Documentation for code generation and the repair loop
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

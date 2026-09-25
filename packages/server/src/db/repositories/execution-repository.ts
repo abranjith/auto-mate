@@ -28,6 +28,36 @@ export class ExecutionRepository {
       this.connection.db.insert(execution).values({ taskId }).returning().get(),
     );
   }
+  /**
+   * Create a guidance retry of an existing run (FEAT-106): same task, `trigger = 'rerun'`, linked back to its source.
+   * The source row is never touched; the failed run stays failed and readable.
+   * @param fromExecutionId The run being retried.
+   * @param guidance The person's hint, or null.
+   * @returns The new pending execution.
+   */
+  createRetry(fromExecutionId: number, guidance: string | null): ExecutionRow {
+    return this.write('created', () => this.connection.db.transaction((tx) => {
+      const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
+      if (!source) throw new RepositoryError('The execution could not be found.');
+      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, guidance }).returning().get();
+    }));
+  }
+  /**
+   * Follow retry links back to the first run.
+   * @param executionId Any run in a chain.
+   * @returns The chain oldest-first, ending with `executionId`; empty when it does not exist.
+   */
+  getRetryChain(executionId: number): ExecutionRow[] {
+    const chain: ExecutionRow[] = [];
+    const seen = new Set<number>();
+    let current = this.getById(executionId);
+    while (current && !seen.has(current.id)) {
+      chain.unshift(current);
+      seen.add(current.id);
+      current = current.retryOfExecutionId === null ? undefined : this.getById(current.retryOfExecutionId);
+    }
+    return chain;
+  }
   getById(id: number): ExecutionRow | undefined {
     return this.read(() =>
       this.connection.db

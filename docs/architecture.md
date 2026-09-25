@@ -8,7 +8,9 @@ Auto-Mate is a single-user, local developer preview. The React shell provides ta
 
 The server reaches `@earendil-works/pi-coding-agent` only through Auto-Mate's SDK-independent `AgentProvider` contract. Provider events are normalized and sanitized before the conversation layer sees them. The application persists the transcript in SQLite before broadcasting it; the Pi session JSONL remains a local debugging artifact and is never the rendered transcript or an API response.
 
-For a text-only task, the provider receives only the words typed into the task composer. An attached file is read, measured, and profiled locally. Before its bounded description can leave the machine, the browser shows the exact disclosure text and current provider/model, collects every required pre-flight decision, and records an explicit consent. The server binds that consent to the exact upload set, canonical payload digest, provider, and model; it verifies the binding again immediately before opening the provider session and records a transmission receipt. The agent can pause a live run through the application-owned `request_clarification` tool, and the answer becomes part of the durable transcript. There is still no generated-code workflow, script runner, or artifact renderer. The loopback bind and request-origin checks protect the local application surface, but they are not a generated-code isolation boundary.
+For a text-only task, the provider receives only the words typed into the task composer. An attached file is read, measured, and profiled locally. Before its bounded description can leave the machine, the browser shows the exact disclosure text and current provider/model, collects every required pre-flight decision, and records an explicit consent. The server binds that consent to the exact upload set, canonical payload digest, provider, and model; it verifies the binding again immediately before opening the provider session and records a transmission receipt. The agent can pause a live run through the application-owned `request_clarification` tool, and the answer becomes part of the durable transcript.
+
+A task with attached files runs as a code-generation run (FEAT-106). The agent writes Python and pytest tests through four application-owned tools. It has no filesystem, shell, or network tool of its own. The application stores every file in SQLite and seals each candidate as an immutable version identified by a SHA-256 digest. It writes that version to `scripts/{executionId}/attempt-{n}/` and runs pytest through `uv` against synthetic fixtures built from the approved disclosure payload. The real upload is not opened during generation. Output from a failed test run goes back to the model only after the default-deny diagnostic filter, and each one is recorded as a `diagnostics` transmission. A final version is recorded but not authorized to run. There is still no verification gate, no run against the real file, and no artifact renderer. Generated tests run unisolated, with the server process's privileges, and can reach any file or host the server can. The loopback bind, request-origin checks, uv environment, and attempt directory protect or organize local state, but none of them is a generated-code isolation boundary.
 
 ```mermaid
 flowchart LR
@@ -21,9 +23,16 @@ flowchart LR
   Sessions --> Provider[AgentProvider boundary]
   Provider --> Pi[Pi coding agent SDK]
   Provider -->|request_clarification| Sessions
+  Sessions --> Generation[Code generation strategy and lifecycle]
+  Provider -->|generation tool calls| Generation
+  Generation --> Runner[PythonRunner seam]
+  Runner -->|uv run pytest, unisolated| Python[[uv and Python on the host]]
+  Generation --> Scripts[("scripts/ fixtures and attempt files")]
+  Runner --> Env[("env/ shared uv project")]
   Api --> Db[(SQLite database)]
   Gate --> Db
   Sessions --> Db
+  Generation --> Db
   Provider --> Files[(Agent config, credentials, and session logs)]
   Browser --> LocalStorage[(Theme preference)]
 ```
@@ -32,12 +41,60 @@ flowchart LR
 
 The pnpm workspace has three TypeScript ESM packages with one-way dependencies from the web and server packages into the browser-safe core package.
 
-- `@automate/core` owns TypeBox API schemas, the ten-member `ConversationEvent` contract, the WebSocket message union, typed errors, and the execution transition table. It also owns the pure disclosure policy: canonical serialization and digest inputs, exact disclosure rendering, consent evaluation, pre-flight ambiguity classification, the default-deny diagnostic filter, and `assemblePromptContext`, the single prompt-context construction boundary. It imports no Node or provider SDK types in the conversation boundary.
-- `@automate/web` owns the React 19 shell, TanStack Router pages, TanStack Query data access, and the conversation presentation. The New task route combines the task composer and attachment intake with a blocking disclosure review that renders the literal payload, recipient, required choices, applied defaults, truncation notices, and the separate diagnostics scope. `/tasks/$taskId` renders ordered user, assistant, tool, turn, state, failure, disclosure-receipt, and clarification events; a pending clarification is answered as one batch, and a waiting banner exposes the existing abort action. `/settings` reads and updates provider/model selection and runs a live connection test, while the shell polls server health. Assistant markdown is rendered without raw HTML, while file values, clarification text, diagnostics, and tool payloads render as text. Semantic `ds.*` tokens provide styling.
+- `@automate/core` owns TypeBox API schemas, the thirteen-member `ConversationEvent` contract, the WebSocket message union, typed errors, and the execution transition table. It also owns the pure disclosure policy: canonical serialization and digest inputs, exact disclosure rendering, consent evaluation, pre-flight ambiguity classification, the default-deny diagnostic filter, and `assemblePromptContext`, the single prompt-context construction boundary. It imports no Node or provider SDK types in the conversation boundary.
+- `@automate/web` owns the React 19 shell, TanStack Router pages, TanStack Query data access, and the conversation presentation. The New task route combines the task composer and attachment intake with a blocking disclosure review that renders the literal payload, recipient, required choices, applied defaults, truncation notices, and the separate diagnostics scope. `/tasks/$taskId` renders ordered user, assistant, tool, turn, state, failure, disclosure-receipt, and clarification events; a pending clarification is answered as one batch, and a waiting banner exposes the existing abort action. `/settings` reads and updates provider/model selection and runs a live connection test, while the shell polls server health. Assistant markdown is rendered without raw HTML, while file values, clarification text, diagnostics, and tool payloads render as text. Semantic `ds.*` tokens provide styling. For a generation run, the transcript renders each `code_version_sealed` event as a collapsed code card. The card fetches file content only when opened. Each `test_run_finished` event renders its counts and a fixture note stating that the tests ran on synthetic rows and that the real file has not been read. A failed run also fetches its filtered failure text and withheld-line count. `generation_settled` renders its plain-English summary. An elided write argument renders as a size ("wrote 4.1 KiB"). While the run is active, a progress line shows the attempt count against the limit. After a failed generation run, a panel lists every attempt and offers a guidance retry. Generated code, the agent's summary, and filtered diagnostics are model-influenced text and render as text only.
 - `@automate/core` also owns the pure ingestion logic (FEAT-104): format, encoding, and CSV dialect detection, cell and column type inference, the bounded single-pass column accumulator, the table profiler, and the disclosure payload builder. It is browser-safe and does no I/O; the server feeds it byte buffers and row iterators.
-- `@automate/server` owns startup, Express routes, SQLite repositories, live sessions, transport, the Pi adapter, the ingestion pipeline, and the disclosure boundary. `DisclosureService` rebuilds previews from stored profiles and the current recipient, grants exact approvals, and verifies them again for transmission. `PreflightService` re-derives meaning-changing findings server-side. `DisclosureRunStrategy` assembles approved context, records the context receipt before the provider is opened, and registers `request_clarification`. `ClarificationService` durably records batches and answers while keeping only the live blocked promise in memory. The ingestion directory imports nothing from the agent layer and makes no network call; a test enforces both. Routes depend on repositories and the conversation or agent barrels rather than directly on provider SDK internals.
+- `@automate/core` also owns the browser-safe generation module (FEAT-106) under `src/generation/`. It contains:
+  - the provisional generation limits
+  - `validateCodePath`, shared by the tool boundary and the repository so the two cannot disagree
+  - `computeVersionDigest`, built on an in-module synchronous SHA-256 so the browser and server derive the same identity
+  - `summarizeAttempts`, one plain-English wording for the API, the transcript, and the UI
+  - `buildSyntheticFixture`
+  - `renderCodeContract`, the only place the code-generation instructions exist
+  - the generation REST and tool-argument schemas
+  - eleven typed generation errors
 
-`TaskSessionRegistry` enforces one live `TaskSession` per execution and the configured concurrency limit. Sessions in `waiting` remain live but do not occupy an active execution slot; a separate cap bounds parked sessions. A `TaskSession` opens one provider session, records session provenance, consumes normalized events, coalesces consecutive assistant deltas at 100 ms or 1 KiB boundaries, assigns the next per-execution sequence number, persists the event, and then notifies live subscribers. `DisclosureRunStrategy` sends plain user text unchanged for text-only tasks and, for attached files, sends the user request plus the approved payload snapshot and resolved pre-flight answers. It registers the clarification tool for both paths.
+  `src/execution/python-runner.ts` declares the types-only `PythonRunner` seam. `AgentToolDefinition` gained an optional `redactArgsInEvents`. None of this code imports a Node built-in.
+
+- `@automate/server` owns startup, Express routes, SQLite repositories, live sessions, transport, the Pi adapter, the ingestion pipeline, and the disclosure boundary. `DisclosureService` rebuilds previews from stored profiles and the current recipient, grants exact approvals, and verifies them again for transmission. `PreflightService` re-derives meaning-changing findings server-side. `DisclosureRunStrategy` assembles approved context, records the context receipt before the provider is opened, and registers `request_clarification`. `ClarificationService` durably records batches and answers while keeping only the live blocked promise in memory. The ingestion directory imports nothing from the agent layer and makes no network call; a test enforces both. Routes depend on repositories and the conversation or agent barrels rather than directly on provider SDK internals.
+- `@automate/server` owns the generation stack (FEAT-106) in `src/generation/`. `createGenerationStack` composes it, and routes and the composition root import it only through its barrel. Its parts:
+  - `CodeGenerationRunStrategy` wraps `DisclosureRunStrategy`.
+  - `CodeWorkspace` owns every generated file from draft to seal to disk.
+  - `FixtureService` and `fixture-writer.ts` build and write synthetic fixtures.
+  - `GenerationTools` builds the four tools once and shares them across runs.
+  - `GenerationRuns` holds one `GenerationRun`, a budget plus an `AbortController`, per live execution.
+  - `GenerationBudget` is the single place a refusal reason is decided.
+  - `GenerationLifecycle` decides how the phase ends.
+  - `GenerationService` serves the read model and guidance retries to `generation-route.ts`.
+
+  `src/execution/` holds:
+  - `ProcessRunner`: an injectable spawn with `shell: false`, bounded output capture, and whole-tree kill
+  - `MinimalUvPythonRunner`
+  - the provisional `GENERATION_DEPENDENCY_SET`
+  - a `FakePythonRunner` test double typed against the seam
+
+  Generation rows are reached only through `CodeVersionRepository`, `GenerationAttemptRepository`, and `SyntheticFixtureRepository`.
+
+`TaskSessionRegistry` enforces one live `TaskSession` per execution and the configured concurrency limit. Sessions in `waiting` remain live but do not occupy an active execution slot; a separate cap bounds parked sessions. A `TaskSession` opens one provider session, records session provenance, consumes normalized events, coalesces consecutive assistant deltas at 100 ms or 1 KiB boundaries, assigns the next per-execution sequence number, persists the event, and then notifies live subscribers. Before it persists a `tool_started` event, it replaces every argument key that the tool names in `redactArgsInEvents` with `{ elided: true, byteSize }`. Both write tools elide `content`, so generated code never enters `conversation_event`, while `execute()` still receives the full arguments. `DisclosureRunStrategy` sends plain user text unchanged for text-only tasks and, for attached files, sends the user request plus the approved payload snapshot and resolved pre-flight answers. It registers the clarification tool for both paths.
+
+`RunStrategy.buildRun` may return a promise and may supply an optional `RunLifecycle`, which keeps `TaskSession` generic. The session drives the lifecycle in five ways:
+
+- It passes the usage from every `turn_finished` event to the lifecycle, and a returned error stops the run.
+- It arms a timer from the lifecycle's remaining wall clock.
+- It reports every `state_changed` it records to the lifecycle's optional `onStatusChanged(to)`. On `waiting` it also disarms the timer, and on the return to `generating` it re-arms the timer with the time that remains.
+- It calls the lifecycle's `cancel()` before it aborts the provider.
+- It asks the lifecycle to `settle()` the terminal state once the provider run ends.
+
+`CodeGenerationRunStrategy` is the composed default. For a text-only task, it delegates to `DisclosureRunStrategy`, and the run has no fixtures, generation tools, or lifecycle. For a task with uploads, it builds the run in six steps:
+
+1. Verify the context consent before writing anything.
+2. Create the execution's `GenerationBudget` and `GenerationRun`.
+3. Write one fixture per upload.
+4. Render the code contract.
+5. Have the inner strategy build the run. The contract enters as application text, and retry guidance joins the person's words. This takes one `assemblePromptContext` call and records one `context` receipt.
+6. Return the generation system prompt, the clarification tool plus the four generation tools, and a `GenerationLifecycle`.
+
+The Pi adapter keeps `noTools: 'all'` and allowlists exactly the registered tools, so five tools reach the provider.
 
 The transport boundary is intentionally split. State-changing commands use REST so they pass through correlation-ID error handling and the Origin/Host guard. The WebSocket is server-to-client application traffic only: it sends an initial snapshot, event messages, and execution summaries; inbound application frames are ignored. It also owns heartbeat cleanup and closes slow consumers with a retryable close code.
 
@@ -53,38 +110,65 @@ flowchart TB
     Components --> Stream
   end
 
-  Core["@automate/core\ncontracts, schemas, errors, state machine"]
+  Core["@automate/core\ncontracts, schemas, errors, state machine, generation"]
 
   subgraph Server["@automate/server"]
     App[Express composition and middleware]
     Rest[Task and execution routes]
+    GenRoute[Generation routes]
     Socket[Execution WebSocket]
     Registry[TaskSessionRegistry]
     Session[TaskSession and text coalescer]
-    Strategy[RunStrategy]
+    Strategy[CodeGenerationRunStrategy]
+    Inner[DisclosureRunStrategy]
+    Lifecycle[GenerationLifecycle and GenerationBudget]
+    Tools[Generation tools]
+    Workspace[CodeWorkspace]
+    Fixtures[FixtureService]
+    GenService[GenerationService]
+    Runner["PythonRunner seam, MinimalUvPythonRunner"]
     Disclosure[Disclosure and pre-flight services]
     Clarification[Clarification service]
     Repos[Task, execution, and event repositories]
     DisclosureRepos[Consent, transmission, and clarification repositories]
+    GenRepos[Code version, attempt, and fixture repositories]
     Agent[AgentProvider barrel]
     Adapter[Pi adapter]
     App --> Rest
+    App --> GenRoute
     Rest --> Registry
+    GenRoute --> GenService
+    GenService --> Registry
     Socket --> Registry
     Socket --> Repos
     Registry --> Session
     Session --> Strategy
-    Strategy --> Disclosure
-    Strategy --> Clarification
+    Strategy --> Inner
+    Strategy --> Fixtures
+    Strategy -. builds .-> Lifecycle
+    Session --> Lifecycle
+    Inner --> Disclosure
+    Inner --> Clarification
     Session --> Repos
     Session --> Agent
     Agent --> Adapter
+    Agent -->|tool calls| Tools
+    Tools --> Workspace
+    Tools --> Runner
+    Tools -->|raw output to filter| Inner
+    Workspace --> GenRepos
+    Fixtures --> GenRepos
+    Lifecycle --> GenRepos
+    GenService --> GenRepos
   end
 
   Store[(SQLite)]
   Sdk[[Pi coding agent SDK]]
+  Uv[[uv, Python, and pytest]]
+  ScriptsDir[("scripts/ on disk")]
 
   Queries -->|HTTP| Rest
+  Queries -->|HTTP| GenRoute
   Stream -->|REST history| Rest
   Stream -->|WebSocket tail| Socket
   Web -. validates with .-> Core
@@ -92,15 +176,20 @@ flowchart TB
   Repos --> Store
   Disclosure --> DisclosureRepos
   Clarification --> DisclosureRepos
+  Inner --> DisclosureRepos
   DisclosureRepos --> Store
+  GenRepos --> Store
   Adapter --> Sdk
+  Runner --> Uv
+  Workspace --> ScriptsDir
+  Fixtures --> ScriptsDir
 ```
 
 ## Data Flow
 
 Creating a task is an asynchronous handoff, with an additional gate when files are attached. The browser first requests `GET /api/disclosure/preview`; the server rebuilds the exact text and pre-flight findings from persisted profiles and the current provider/model. `POST /api/disclosure/consents` re-derives that preview before storing the approval. `POST /api/tasks` then independently verifies the acknowledgement and all required choices before it attaches the consent and uploads in the transaction that creates the task and first pending execution. A text-only task skips this gate. The registry starts the run without making the HTTP response wait for completion. The browser navigates to the task page, loads task/execution state and paged transcript history over REST, then opens `/api/ws/executions/:id?afterSeq=N` from the last durable sequence it holds.
 
-During a run, the execution moves from `pending` to `generating`, and then to `completed`, `failed`, or `aborted`. An agent clarification adds the reversible `generating -> waiting -> generating` path. `verifying` and `executing` remain reserved for later features. Each application or normalized agent event is appended to `conversation_event` before it is sent to subscribers. The WebSocket supplies a snapshot for the REST-to-socket race window and then the live tail. The browser ignores already-seen sequence numbers; if it detects a gap, receives backpressure close code `1013`, or comes back online, it reloads durable history and reconnects with its cursor.
+During a run, the execution moves from `pending` to `generating`, and then to `completed`, `failed`, or `aborted`. An agent clarification adds the reversible `generating -> waiting -> generating` path. Code generation and its repair loop happen entirely inside `generating`. `verifying` and `executing` remain reserved for later features. Each application or normalized agent event is appended to `conversation_event` before it is sent to subscribers. The WebSocket supplies a snapshot for the REST-to-socket race window and then the live tail. The browser ignores already-seen sequence numbers; if it detects a gap, receives backpressure close code `1013`, or comes back online, it reloads durable history and reconnects with its cursor.
 
 ```mermaid
 sequenceDiagram
@@ -184,25 +273,133 @@ sequenceDiagram
   R-->>B: 201 upload, profiles, payload (still local)
 ```
 
-The disclosure path uses stored bytes instead of reconstructing approved context at send time. `assemblePromptContext` permits only the user request, an approved disclosure snapshot, filtered diagnostics, and application-authored text. The active run strategy uses the first, second, and fourth sources. The diagnostic filter and receipt path are implemented for the future repair loop, but no current execution path invokes a repair or sends diagnostics. The filter is default-deny: it keeps recognized traceback/check structure, masks quoted literals and long number runs, drops unrecognized lines, and caps the result.
+The disclosure path uses stored bytes instead of reconstructing approved context at send time. `assemblePromptContext` permits only the user request, an approved disclosure snapshot, filtered diagnostics, and application-authored text. For a task with uploads, the run makes a single call with three of those sources:
+
+- the user request, with any retry guidance appended as the person's own words
+- the consent snapshot
+- application text: the resolved pre-flight answers and the code contract
+
+Filtered diagnostics do not pass through that call. They return to the model as the result of a `run_tests` call. Their only route there is `recordDiagnosticTransmission`, which re-verifies the diagnostics scope, filters the raw output, stores the filtered text as a `diagnostics` transmission snapshot, appends a `disclosure_sent` event, and returns only the filtered text. The filter is default-deny: it keeps recognized traceback/check structure, masks quoted literals and long number runs, drops unrecognized lines, and caps the result at `AUTOMATE_MAX_DIAGNOSTIC_BYTES`.
 
 Agent clarification batches require a rationale, a `meaning` or `data_loss` impact, and a proposed default for every question. The server counts persisted agent questions and allows at most three by default. It declines an over-budget batch, or one that would exceed waiting capacity, records the decline, and returns the proposed defaults to the agent. An accepted batch moves the execution to `waiting`; the provider tool call remains blocked until the complete answer batch arrives. The parked session is excluded from active concurrency accounting.
 
-Cancellation uses `POST /api/executions/:id/abort`. The registry delegates to the live provider session and returns the settled execution. A terminal execution returns `EXECUTION_NOT_RUNNING`; a non-terminal database row with no live session returns `EXECUTION_INTERRUPTED`.
+### Code generation and the repair loop
+
+A generation run starts when `TaskSession` builds the run for a task with uploads. `CodeGenerationRunStrategy` verifies the context consent before any fixture is written. A revoked or stale approval therefore fails the run with nothing on disk, and the provider is never opened. The strategy then writes the fixtures, renders the code contract, and passes the contract and any retry guidance to the inner strategy's single prompt call. A fixture that cannot be built fails the run with `FIXTURE_GENERATION_FAILED` before the provider opens. After that, the application tracks the loop but does not drive it. The agent decides when to write, test, and finalize, through these tools:
+
+| Tool                         | What the application does                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `write_script`, `write_test` | Validates the path with `validateCodePath` (Python only, relative, at most two levels, no `..`, pytest naming for tests, `output/` reserved) at the tool boundary and again in the repository. Enforces `AUTOMATE_MAX_SCRIPT_BYTES`, then stores the file in the execution's single draft `code_version`, replacing any file at the same path. Returns the path, size, line count, and attempt number, but not the content.                   |
+| `run_tests`                  | Takes no arguments. Runs these steps in order and stops at the first refusal: (1) return a tool error if a final version already exists, (2) claim an attempt from `GenerationBudget`, (3) verify the diagnostics scope, (4) run `probe()` and `ensureEnvironment()`, (5) seal and project the draft, (6) run pytest, (7) filter output from a run that failed, errored, or timed out, (8) settle the attempt and append `test_run_finished`. |
+| `finalize_script`            | Seals an open draft that has files, or else takes the most recent sealed version. Checks that the entrypoint is a `script` file in that version and that every declared input column is a disclosed column. Then records the entrypoint, summary, and declared inputs and outputs, and marks the version final. It accepts a version whose own tests failed.                                                                                  |
+| `request_clarification`      | FEAT-105's tool, unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+
+A refusal is a recorded outcome, never a thrown error. The application records a `refused` `generation_attempt` row with its reason (`attempt_limit`, `time_limit`, `cost_limit`, `diagnostics_not_granted`, or `runtime_unavailable`) and appends a `test_run_finished` event. The tool result tells the agent to finalize its best version. A refusal seals nothing and runs nothing. Because the loop depends on the diagnostics scope, declining that scope turns the first `run_tests` into a `diagnostics_not_granted` refusal instead of a silent repair.
+
+```mermaid
+sequenceDiagram
+  participant S as TaskSession
+  participant G as CodeGenerationRunStrategy
+  participant X as DisclosureRunStrategy
+  participant A as AgentProvider
+  participant T as Generation tools
+  participant P as PythonRunner
+  participant D as SQLite
+  participant F as scripts/
+  participant L as GenerationLifecycle
+
+  S->>G: buildRun(task, execution)
+  G->>D: Verify context consent
+  G->>F: Write one synthetic fixture per upload
+  G->>D: Record synthetic_fixture rows
+  G->>X: buildRun with code contract and guidance
+  X->>D: One prompt context and one context receipt
+  G-->>S: Prompt, five tools, lifecycle
+  S->>A: open() and run(prompt)
+  loop Until the agent finalizes or stops
+    A->>T: write_script or write_test(path, content)
+    T->>D: Validate path and store code_file in the draft
+    Note over S,D: tool_started is persisted with content elided
+    A->>T: run_tests()
+    T->>D: Count non-refused attempts against the limit
+    T->>D: Verify the diagnostics scope
+    T->>P: probe() and ensureEnvironment(signal)
+    T->>D: Seal draft with a digest over the stored files
+    T->>F: Project rows to attempt-n and create output/
+    T->>D: Append code_version_sealed and open generation_attempt
+    T->>P: run pytest in attempt-n against the fixtures
+    P-->>T: Outcome with raw, untrusted output
+    alt Tests did not pass
+      T->>X: recordDiagnosticTransmission(raw output)
+      X->>D: Filter, store diagnostics receipt, append disclosure_sent
+      X-->>T: Filtered text only
+    end
+    T->>D: Settle attempt, mark version tested, append test_run_finished
+    T-->>A: Counts, filtered diagnostics, attempts remaining
+  end
+  A->>T: finalize_script(entrypoint, summary, inputs, outputs)
+  T->>D: Mark exactly one version final
+  A-->>S: Terminal result
+  S->>L: settle(ending)
+  L->>D: Abort running attempts and supersede a leftover draft
+  L-->>S: Status, error, and one generation_settled event
+  S->>D: Persist events and terminal state
+```
+
+The code path is database-first. A file lives only as a `code_file` row until `run_tests` or `finalize_script` seals its draft. Sealing reads the stored files in one transaction and computes `content_digest` as SHA-256 over the canonical JSON of `[{path, sha256}]` sorted by path. Projection then deletes and recreates `scripts/{executionId}/attempt-{n}/`, writes each file from its row through `resolveWithin`, and creates an empty `output/`. What pytest runs is written from what was digested, not from anything the agent supplied directly. Changing a sealed version's files raises `CODE_VERSION_IMMUTABLE`. The rows remain the authoritative copy, and `CodeWorkspace.project` can rewrite any sealed version from them.
+
+`MinimalUvPythonRunner` runs pytest as `uv run --project <env> --no-sync --locked -- python -m pytest -q --tb=native -rfE -p no:cacheprovider`. The working directory is the attempt directory. `AUTOMATE_INPUT_DIR` points at the execution's fixtures, and `AUTOMATE_OUTPUT_DIR` points at the attempt's scratch `output/`. The run has a wall clock of `AUTOMATE_TEST_RUN_TIMEOUT_MS`. The child environment is the server's environment minus `AUTOMATE_*` settings (other than those two), `VIRTUAL_ENV`, and credential-shaped variables. That is hygiene, not isolation. `--no-sync --locked` prevents dependency drift during a test run. It is not a network restriction, and generated code can still reach any file or host the server process can. pytest exit code 0 maps to `passed`, 1 to `failed`, and anything else to `errored`. A timeout maps to `timed_out`, and cancellation maps to `aborted`. Output is capped per stream, keeping the head and tail, and the dropped bytes are counted. `run_tests` records whether a parseable `manifest.json` appeared, but that observation never changes the outcome.
+
+Test output is untrusted input to the model. Generated code runs unisolated, so its stdout could carry anything the server process can read. `RunTestsExecutor.consumeRawOutput` is the only reader of raw output. It parses counts locally and, for a run that failed, errored, or timed out, sends the raw text through `recordDiagnosticTransmission`, which returns only the filtered text. `generation_attempt.diagnostic_digest` stores the SHA-256 of that filtered text, and `dropped_line_count` stores how many lines the allowlist withheld. Neither raw nor filtered output is logged.
+
+The attempt budget is counted in the database. `GenerationBudget.claimAttempt` counts non-`refused` `generation_attempt` rows on every call, never an in-memory tally. It then checks the wall clock, measured as the time since the execution's persisted start minus the time spent in `waiting`, and spend, when `AUTOMATE_MAX_GENERATION_COST_USD` is above zero. Spend adds up only the cost the provider actually reported. During the run, `TaskSession` feeds each `turn_finished` usage to the lifecycle, which can stop the run between turns. A timer armed from the remaining wall clock can also stop it at any moment while it is generating. The wall clock pauses while the run is parked in `waiting` for a person's answer. `GenerationLifecycle.onStatusChanged` pauses the budget on `waiting` and resumes it on any other status. `TaskSession` disarms the timer while the run waits, and the budget never reports a timeout while paused. When the run returns to `generating`, the timer is re-armed with the time that was left. Either limit cancels in-flight tests before aborting the provider. Once a final version exists, limits no longer stop the run.
+
+At the end of the run, `GenerationLifecycle.settle` marks any still-`running` attempt `aborted`. It seals a leftover draft that has files as `superseded` and discards an empty one. It then decides the terminal state from the database, using the first matching row below, and emits exactly one `generation_settled` event with the `summarizeAttempts` text. When the settlement carries an error that the provider did not report itself, `TaskSession` also appends a `failed` event.
+
+| Condition, checked in order                                              | Execution   | `generation_settled` outcome | Error code                                     |
+| ------------------------------------------------------------------------ | ----------- | ---------------------------- | ---------------------------------------------- |
+| The wall-clock timer or a spend check after a turn stopped the run       | `failed`    | `timed_out` / `cost_limit`   | `GENERATION_TIMEOUT` / `GENERATION_COST_LIMIT` |
+| The person aborted, or a shutdown drain did                              | `aborted`   | `aborted`                    | none                                           |
+| The provider run failed, or the session threw after the run was built    | `failed`    | `incomplete`                 | The provider's or the thrown error             |
+| No attempt passed, and diagnostics were not granted                      | `failed`    | `incomplete`                 | `DISCLOSURE_SCOPE_NOT_GRANTED`                 |
+| No attempt passed, and uv, Python, or the environment was unavailable    | `failed`    | `incomplete`                 | `PYTHON_RUNTIME_UNAVAILABLE`                   |
+| No attempt passed, and every allowed attempt was used                    | `failed`    | `exhausted`                  | `GENERATION_ATTEMPTS_EXHAUSTED`                |
+| No attempt passed, and `run_tests` was refused at the time or cost limit | `failed`    | `timed_out` / `cost_limit`   | `GENERATION_TIMEOUT` / `GENERATION_COST_LIMIT` |
+| A final version exists                                                   | `completed` | `finalized`                  | none                                           |
+| Anything else                                                            | `failed`    | `incomplete`                 | `CODE_VERSION_NOT_FINAL`                       |
+
+Exhaustion wins over finalization. A run whose attempts all failed settles `failed`, even when the agent obeyed the refusal and finalized its best version. That version stays recorded with `is_final = 1` and `tests_passed = 0`. Otherwise, a run with a final version settles `completed` whether or not its own tests passed. Judging that version is left to later verification.
+
+Generation events are receipts, not copies. `code_version_sealed` carries the version id, attempt, digest, and each file's path, role, size, and line count. `test_run_finished` carries counts, the refusal reason, the withheld-line count, attempts remaining, the limit, and whether a manifest was present. `generation_settled` carries the outcome, the final version id and digest, the attempts used, and the summary. No event carries code or diagnostic text. The browser fetches those over REST:
+
+- `GET /api/executions/:id/code-versions` returns summaries, newest attempt first, without file content.
+- `GET /api/code-versions/:id` returns every file's content and the declared contracts.
+- `GET /api/executions/:id/attempts` returns each attempt, joined by digest to the filtered text of its `diagnostics` transmission, plus the `limits`.
+- `GET /api/executions/:id/fixtures` returns each fixture with a preview of up to 20 rows per sheet. The preview is rebuilt from the disclosed profile and the recorded seed, not read from a file.
+
+No response body contains an absolute path.
+
+A guidance retry uses `POST /api/executions/:id/retry`, which sits behind the origin guard and accepts optional guidance of up to 2,000 characters. The source execution must be terminal, or the request returns `EXECUTION_NOT_RETRYABLE`. For a task with uploads, the existing consent is verified again, so a changed model or payload reopens FEAT-105's gate instead of reusing a stale approval. The prior pre-flight answers are resolved, and concurrency capacity is checked. `createRetry` then inserts a new `pending` execution with `trigger = 'rerun'`, `retry_of_execution_id`, and `guidance`. The answers are persisted after that insert commits, and the registry starts the run. The response is `201 { task, execution }`. The source run is never changed. The new run records the guidance as a second `user_prompt` event, and the guidance reaches the provider inside the `user_prompt` source.
+
+Cancellation uses `POST /api/executions/:id/abort`. The registry cancels a pending clarification first, then asks the live session to abort. `TaskSession.abort()` calls the lifecycle's `cancel()` before the provider's `abort()`. For a generation run, `cancel()` aborts the run's single `AbortController`. Every `ensureEnvironment` and `run` call receives that controller's signal. So the order is: pending clarification, then an in-flight `uv lock`/`uv sync` or pytest, then the provider session. A cancelled or timed-out process has its whole process tree killed: `taskkill /T /F` on Windows, and a signal to the process group elsewhere. A pytest cut short settles its attempt `aborted`. Shutdown draining and a lifecycle limit follow the same cancel-then-abort order, and there is no second cancel path. A terminal execution returns `EXECUTION_NOT_RUNNING`; a non-terminal database row with no live session returns `EXECUTION_INTERRUPTED`.
 
 Recovery has explicit outcomes:
 
-| Event                       | Implemented outcome                                                                                                                                                                                                                                         |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Browser disconnect          | The server-side run continues. Reconnection replays events after the browser's last sequence and resumes the live tail.                                                                                                                                     |
-| Server restart during a run | Before listening, startup marks every active execution, including `waiting`, `failed` with `EXECUTION_INTERRUPTED`, interrupts any pending clarification, and appends a final `state_changed` event. Provider sessions and in-memory waits are not resumed. |
-| Graceful shutdown           | The registry asks every live session to abort, waits up to five seconds, and marks any still-active row interrupted before closing sockets and SQLite.                                                                                                      |
-| Slow or half-open socket    | Backpressure closes with `1013` so the browser reloads history; heartbeat terminates a connection after two missed pong intervals.                                                                                                                          |
-| Multiple browser clients    | Each client receives the same persisted sequence; disconnecting one subscription does not stop the execution or other clients.                                                                                                                              |
+| Event                       | Implemented outcome                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser disconnect          | The server-side run continues. Reconnection replays events after the browser's last sequence and resumes the live tail.                                                                                                                                                                                                                                                                                                                             |
+| Server restart during a run | Before listening, startup marks every active execution, including `waiting`, `failed` with `EXECUTION_INTERRUPTED`, interrupts any pending clarification, settles any generation attempt still `running` as `aborted`, and appends a final `state_changed` event. Provider sessions, in-memory waits, and generation runs are not resumed. Sealed code versions, attempts, and fixtures stay readable, and a guidance retry starts a new execution. |
+| Graceful shutdown           | The registry cancels clarification waits and asks every live session to abort, which stops in-flight `uv` and pytest process trees before the provider. It waits up to five seconds, then marks any still-active row interrupted and its `running` attempts `aborted` before closing sockets and SQLite.                                                                                                                                            |
+| Slow or half-open socket    | Backpressure closes with `1013` so the browser reloads history; heartbeat terminates a connection after two missed pong intervals.                                                                                                                                                                                                                                                                                                                  |
+| Multiple browser clients    | Each client receives the same persisted sequence; disconnecting one subscription does not stop the execution or other clients.                                                                                                                                                                                                                                                                                                                      |
 
 ## Data Model
 
-SQLite is the durable source for application metadata, task definitions, execution summaries, and the displayed conversation. Drizzle defines the schema and the server applies committed migrations in-process. The connection enables WAL and foreign-key enforcement.
+SQLite is the durable source for application metadata, task definitions, execution summaries, the displayed conversation, and generated code. Drizzle defines the schema and the server applies committed migrations in-process. The connection enables WAL and foreign-key enforcement. There are five committed migrations, named by timestamp. The fifth, `20260925044250_damp_otto_octavius` (FEAT-106), does three things:
+
+- It creates the four generation tables.
+- It adds the two new `execution` columns with `ALTER TABLE ... ADD`. Rebuilding `execution` instead would cascade-delete its child rows inside the migrator's transaction.
+- It rebuilds `conversation_event` to widen its `kind` CHECK, copying every row and recreating the unique `(execution_id, seq)` index.
 
 ```mermaid
 erDiagram
@@ -216,6 +413,13 @@ erDiagram
   DISCLOSURE_CONSENT ||--o{ DISCLOSURE_TRANSMISSION : permits
   EXECUTION ||--o{ CLARIFICATION : asks
   CLARIFICATION ||--|{ CLARIFICATION_QUESTION : contains
+  EXECUTION |o--o{ EXECUTION : "retried as"
+  EXECUTION ||--o{ CODE_VERSION : generates
+  CODE_VERSION ||--o{ CODE_FILE : contains
+  EXECUTION ||--o{ GENERATION_ATTEMPT : counts
+  CODE_VERSION |o--o| GENERATION_ATTEMPT : "tested by"
+  EXECUTION ||--o{ SYNTHETIC_FIXTURE : "tests against"
+  UPLOAD ||--o{ SYNTHETIC_FIXTURE : "stands in for"
 
   TASK {
     integer id PK
@@ -243,6 +447,8 @@ erDiagram
     integer started_at
     integer completed_at
     integer duration_ms
+    integer retry_of_execution_id FK "null unless a guidance retry"
+    text guidance
     integer created_at
   }
 
@@ -350,6 +556,70 @@ erDiagram
     text answer_source
     integer answered_at
   }
+
+  CODE_VERSION {
+    integer id PK
+    integer execution_id FK
+    integer attempt
+    text status
+    text content_digest "null while draft"
+    text dir_path "relative to data root"
+    text entrypoint
+    integer is_final
+    integer tests_passed "recorded, not enforced"
+    text declared_inputs
+    text declared_outputs
+    text summary "model output"
+    integer sealed_at
+    integer created_at
+  }
+
+  CODE_FILE {
+    integer id PK
+    integer code_version_id FK
+    text path "relative to the attempt directory"
+    text role
+    text content
+    integer byte_size
+    text sha256
+    integer created_at
+  }
+
+  GENERATION_ATTEMPT {
+    integer id PK
+    integer execution_id FK
+    integer code_version_id FK "null for a refusal"
+    integer attempt
+    text call_id
+    text status
+    text refusal_reason
+    integer tests_total
+    integer tests_passed
+    integer tests_failed
+    integer exit_code
+    integer manifest_present
+    text diagnostic_digest "matches a diagnostics transmission"
+    integer dropped_line_count
+    integer duration_ms
+    integer started_at
+    integer settled_at
+    integer created_at
+  }
+
+  SYNTHETIC_FIXTURE {
+    integer id PK
+    integer execution_id FK
+    integer upload_id FK
+    text file_path "relative to data root"
+    text format
+    integer sheet_count
+    integer row_count
+    integer sample_row_count
+    integer byte_size
+    text sha256
+    text seed
+    integer created_at
+  }
 ```
 
 - `task` stores the trimmed plain-language request and a deterministic display name derived from its first useful line.
@@ -360,16 +630,22 @@ erDiagram
 - `disclosure_consent` is an immutable approval of one sorted upload set, exact payload snapshot and digest, recipient, and context/diagnostic scopes. It starts with a null `task_id` because approval precedes task creation, then is attached inside the task transaction. Revocation is represented without deleting the audit record.
 - `disclosure_transmission` is the append-only receipt linked to both execution and consent. A context row stores the approved digest but reuses the consent snapshot; a diagnostics row stores its filtered snapshot. Checks constrain kinds and snapshot nullability, while the repository transaction independently rejects a revoked consent, recipient mismatch, or context-digest mismatch.
 - `clarification` stores either an answered pre-flight batch or an agent batch with pending, answered, declined, cancelled, or interrupted status. `clarification_question` preserves order, impact, rationale, options, proposed default, answer, and answer source. Schema checks exclude cosmetic impact and constrain answer provenance to user, default, or seeded.
+- `code_version` (FEAT-106) is one candidate per attempt. `draft` is its only mutable status and has no digest. A CHECK makes "draft, no digest, no seal time" a single fact rather than three fields that could disagree. The sealed statuses are `sealed`, `tested_pass`, `tested_fail`, and `superseded`, which marks a leftover draft frozen when the run settles. `(execution_id, attempt)` is unique. Partial unique indexes allow at most one draft and at most one final version per execution, and `content_digest` is indexed for lookup by identity. `tests_passed` is recorded, not enforced. `dir_path` is relative, so `AUTOMATE_HOME` can move without rewriting rows.
+- `code_file` holds the only authoritative copy of generated code. `(code_version_id, path)` is unique, and a CHECK limits `role` to `script`, `test`, or `support`. The repository re-validates each path and refuses to add, replace, or seal files of a version that is no longer a draft. The files under `scripts/` are projections of these rows.
+- `generation_attempt` records one `run_tests` call, and it is the attempt limit: the budget counts its non-`refused` rows on every claim. `(execution_id, attempt)` is unique. `code_version_id` and `call_id` are unique where they are present, so there is one test run per sealed version and one attempt per tool call. A CHECK ties `status = 'refused'` to a non-null `refusal_reason`. The filtered diagnostic text is not stored here. `diagnostic_digest` matches the `payload_digest` of the `diagnostics` transmission that holds it, deliberately without a foreign key, because an attempt that passed sends nothing.
+- `synthetic_fixture` records one fixture per upload per execution, with `(execution_id, upload_id)` unique. It stores the relative file path, which is named after the upload's `stored_filename`, plus the format, sheet and row counts, how many rows are verbatim sample rows, the byte size, the SHA-256, and the seed. The seed is derived from the upload's SHA-256 and the execution id, so the same run always rebuilds identical fixture data.
+- `execution.retry_of_execution_id` links a guidance retry to its source with `ON DELETE SET NULL`, so deleting a failed run never deletes its replacement. `execution.guidance` holds the person's hint, and a retry's `trigger` is `rerun`. A partial index serves the retry link.
+- Deleting an execution cascades to its code versions, files, attempts, and fixtures. Deleting an upload cascades to its fixtures. Nothing deletes `scripts/{executionId}/` from disk yet, and code versions have no retention policy.
 - `app_meta` remains the key/value store for schema version, application version, and installation time. Drizzle also maintains its migration table.
 
-The broader `.spec-lite/data_model.md` remains a proposal and includes deferred tables that are not present. There are currently no artifact, schedule, template, tool-registry, code-version, verification, or script-run tables.
+The broader `.spec-lite/data_model.md` remains a proposal and includes deferred tables that are not present. There are currently no artifact, schedule, template, tool-registry, verification, or script-run tables.
 
 ## Key Design Decisions
 
 - **Shared application contracts:** TypeBox schemas, browser-safe types, and typed errors live in `@automate/core`, so the browser and server validate the same health, agent, task, execution, event, and error shapes.
 - **One agent seam and one SDK adapter:** Application code consumes `AgentProvider.open(options)` and normalized events. Pi session construction and model lookup stay under `packages/server/src/agent/adapters/pi/`; ambient Pi settings, prompts, skills, and extensions are not loaded into an Auto-Mate session.
 - **Application-owned configuration:** Provider/model selection lives in `config/agent.json`; managed credentials live under `pi/`, or the user can opt into a personal Pi credential file. Credential values are not returned by APIs, rendered, or logged.
-- **Explicit local storage boundary:** `AUTOMATE_HOME` overrides `~/.automate/`. OS-aware path construction and `resolveWithin` keep execution session directories beneath `agent-sessions/`. SQLite uses `node:sqlite` behind Drizzle with WAL and foreign keys.
+- **Explicit local storage boundary:** `AUTOMATE_HOME` overrides `~/.automate/`. OS-aware path construction and `resolveWithin` keep execution session directories beneath `agent-sessions/`, and generated files and fixtures beneath `scripts/`. SQLite uses `node:sqlite` behind Drizzle with WAL and foreign keys.
 - **Correlated API errors:** Middleware accepts a bounded inbound correlation ID or creates one, and one error handler returns the stable public envelope while hiding unexpected internal details.
 - **Application-owned React conversation UI:** FEAT-103 does not adopt `@earendil-works/pi-web-ui`. React components render Auto-Mate's normalized event contract directly, avoiding a second browser-side Pi stack and keeping SDK types behind the server adapter.
 - **Server-owned replayable state:** SQLite, not the browser or raw Pi JSONL, is authoritative. A single live writer assigns a monotonic per-execution `seq`, and the database uniqueness constraint catches violations.
@@ -379,20 +655,33 @@ The broader `.spec-lite/data_model.md` remains a proposal and includes deferred 
 - **Origin and Host validation:** State-changing REST routes and WebSocket upgrades accept the local application origins plus explicitly configured origins. Missing Origin is allowed for non-browser clients; an unrecognized or `null` Origin is rejected. This mitigates browser cross-site requests and DNS rebinding against the loopback service, but it is not authentication or code isolation.
 - **Local profiling, bounded disclosure (D04):** Ingestion runs in Node, not Python, so it works before any Python runtime exists. What may ever leave the machine is one bounded artifact: at most 10 sample rows with 200-character cells, frequent values only for columns under 1,000 distinct values, and 64 KiB in total, degraded in a fixed, recorded order. The bound is enforced in the accumulator, the repository, the payload builder, and the schema.
 - **Exact, recipient-bound approval:** The preview digest covers the rendered disclosure text, sorted upload ids, provider, and model. Consent is checked once before task creation and again before prompt construction. The provider receives the approved snapshot rather than a re-rendered payload, and a receipt is inserted before the session is opened.
-- **One prompt-context chokepoint:** `assemblePromptContext` admits only user text, approved disclosure bytes, filtered diagnostics, and application-authored context. Pi adapter details and arbitrary provider output cannot be injected as file context through this boundary.
-- **Default-deny diagnostics:** Repair support can retain only recognized traceback frames, exception types, static-analysis findings, and test-failure structure. Literals and long number runs are masked, unknown lines are counted and dropped, and the filtered text requires the separately granted diagnostics scope. This is an implemented seam; the current application has no repair loop that calls it.
+- **One prompt-context chokepoint:** `assemblePromptContext` admits only user text, approved disclosure bytes, filtered diagnostics, and application-authored context. Pi adapter details and arbitrary provider output cannot be injected as file context through this boundary. Code generation widens nothing. The strategy wraps FEAT-105's rather than replacing it, the code contract enters as application text, retry guidance enters as the person's words, and all of it goes through the same single call.
+- **Default-deny diagnostics:** Repair support can retain only recognized traceback frames, exception types, static-analysis findings, and test-failure structure. Literals and long number runs are masked, unknown lines are counted and dropped, and the filtered text requires the separately granted diagnostics scope. The repair loop is its caller: every byte of pytest output that reaches the model passes through `recordDiagnosticTransmission`, and the withheld-line count is shown rather than hidden.
 - **Questions are structural, bounded, and durable:** Pre-flight classification asks only about meaning or data-loss ambiguity and caps the blocking screen at three required findings, demoting the remainder to disclosed defaults. Agent questions use one typed custom tool, require rationale and a proposed default, and are counted from persisted rows. The default cap is three questions per execution.
-- **Waiting is parked, not terminal:** An accepted agent question moves `generating` to `waiting` while its tool call remains open. Waiting sessions do not consume the active concurrency limit but are bounded separately. Answers restore `generating`; abort, shutdown, or restart settles the wait explicitly instead of leaving an orphaned pending row.
+- **Waiting is parked, not terminal:** An accepted agent question moves `generating` to `waiting` while its tool call remains open. Waiting sessions do not consume the active concurrency limit but are bounded separately. Answers restore `generating`; abort, shutdown, or restart settles the wait explicitly instead of leaving an orphaned pending row. A generation run's wall clock pauses while it waits, so the time a person takes to answer does not count against `AUTOMATE_GENERATION_TIMEOUT_MS`. The tradeoff is that a parked run has no deadline until it resumes.
+- **The application tracks the repair loop but does not drive it (D07):** The agent decides when to write, test, and finalize. The application enforces what matters at its tool boundaries: path rules, size caps, the attempt count, the consent scope, and the runtime check. Attempts are visible in the transcript and never park to ask permission to try again. `finalize_script` records whether the final version's tests passed but does not refuse a failing one, because authorizing execution belongs to a later verification step. The tradeoff is that a completed run means "a final version exists", not "the code works".
+- **Database-first, digest-identified code:** The agent can only hand code in as tool arguments. The file lands in `code_file`, the digest is computed from the stored rows, and the disk projection is written from those same rows after sealing. "Which exact code was tested" is answered by a digest over the stored rows, not by the order writes happened in. The cost is a second copy on disk, which is rebuildable from the rows.
+- **The attempt limit is a database count (D14):** `AUTOMATE_MAX_GENERATION_ATTEMPTS` (default `3`, provisional) is enforced by counting `generation_attempt` rows at the tool boundary, not by an instruction in the prompt. A model that ignores its instructions still cannot take another turn, and no in-memory tally exists for a restart to reset. A refusal is a recorded outcome the loop ends on, not an error.
+- **Synthetic fixtures only (D04):** The agent's tests run against data rebuilt from the approved payload's disclosed tables: the header, the approved sample rows verbatim, and invented rows drawn from disclosed statistics. Only low-cardinality columns reuse their disclosed frequent values. `buildSyntheticFixture` takes a profile or disclosed table, never a path, and `FixtureService` has no reference to an upload's stored location. The fixture keeps the real file's stored name, format, CSV dialect, encoding, and sheet order, so a script finds its input the same way later. The accepted cost is that code can pass on synthetic rows and still fail on the real file, and the UI says so.
+- **Test output is untrusted input to the model (D03/D04):** Generated tests run unisolated, so their output could carry anything the server process can read. Raw output has one reader, which sends it to the model only through the default-deny filter, as a recorded `diagnostics` transmission. The repair loop is gated on the diagnostics scope, so declining that scope stops the loop instead of repairing on data the person did not agree to send.
+- **Transcript receipts, not copies:** The three generation events carry ids, digests, sizes, and counts. Code, filtered diagnostics, and fixture previews are fetched over REST on demand. Tool-argument elision keeps generated code out of `conversation_event`, so there is one copy of every file and reconnect replay stays small.
+- **Generic session, strategy-owned lifecycle:** `TaskSession` does not know about generation. A strategy may hand it a `RunLifecycle` for usage, the deadline, cancellation, and settlement. Generation policy stays in one module, and a text-only run is unchanged.
+- **A narrow Python seam with a placeholder behind it:** `PythonRunner` has exactly three methods, `probe`, `ensureEnvironment`, and `run`, and lives in core with no Node built-ins. `MinimalUvPythonRunner` is the placeholder behind it and implements just enough to run pytest. It uses one shared uv project with a provisional four-package set (`pandas`, `openpyxl`, `plotly`, `pytest`, pending D05). Preparation is serialized so concurrent runs prepare once. Test runs use `--no-sync --locked`, which prevents dependency drift and is not a network restriction. FEAT-108 replaces it with locked dependency policy, resource limits, and the real-data run, behind the same seam.
+- **Unisolated test execution (D03):** Generated tests run with the server process's privileges and can reach any file or host it can. The uv environment, the attempt directory, the withheld environment variables, and the fixture substitution are hygiene and are not a security boundary. What is true is narrower. The agent itself has no file, shell, or network tool. Its tests are pointed at synthetic data, so code that reads its input the way the contract says never opens the person's file during generation. Nothing prevents generated code from opening other paths.
+- **Retry is a new execution:** A guidance retry inserts a linked execution rather than mutating the failed one, so history keeps both. It reuses the consent only after re-verifying it, and it seeds the prior pre-flight answers.
 - **Streaming workbooks only:** XLSX files are read with exceljs's streaming reader, with an inflation budget, a shared-string budget, a row cap, and a parse timeout guarding against decompression bombs. The in-memory loader is never used.
 - **Bounded live transport:** Assistant deltas are coalesced before sequencing, socket buffers are capped, and heartbeat cleanup prevents abandoned clients from consuming resources indefinitely.
 - **Configurable preview concurrency:** `AUTOMATE_MAX_CONCURRENT_EXECUTIONS` defaults to one. The value is provisional pending the wider operational-limits decision.
+- **Provisional generation limits (D14):** Attempts, wall clock, per-test-run time, environment preparation time, fixture rows, and file size are configuration with named defaults, not constants. The spend cap defaults to `0`, which means off. A cap that was on by default would silently never fire for providers that report no cost, so it stays visibly off until a number is set.
 - **Safe presentation boundary:** Raw HTML is disabled for model markdown, tool input/output is text, raw provider logs are not served, and API summaries expose no session-log path. Normalized provider payloads have already crossed FEAT-102's sanitizer.
 
 ## Deployment and Runtime
 
 `pnpm dev` starts the Express process through `tsx watch` and the Vite development server together. Express defaults to `127.0.0.1:4317`; Vite serves the SPA at `127.0.0.1:5173` and proxies `/api` to the server. The application requires Node `>=24.15.0 <25`, uses a committed pnpm lockfile, and is ESM-only.
 
-Startup runs prerequisite checks, resolves `AUTOMATE_HOME` (default `~/.automate/`), creates the durable directory layout, opens SQLite, applies migrations, composes ingestion, disclosure, clarification, conversation, and provider services, reconciles interrupted executions and pending clarifications, sweeps orphaned uploads (and schedules the sweep hourly), then begins listening and attaches the execution WebSocket to the same HTTP server. `SIGINT` and `SIGTERM` cancel clarification waits and drain live sessions before detaching sockets and closing the database.
+Startup runs prerequisite checks, resolves `AUTOMATE_HOME` (default `~/.automate/`), creates the durable directory layout, opens SQLite, applies migrations, composes ingestion, disclosure, clarification, generation, conversation, and provider services, reconciles interrupted executions, pending clarifications, and running generation attempts, sweeps orphaned uploads (and schedules the sweep hourly), then begins listening and attaches the execution WebSocket to the same HTTP server. `MinimalUvPythonRunner` is the `PythonRunner` the composition root wires in. After starting the listener, it probes `uv` and Python once in the background, so the code contract can name the Python version. A missing runtime is logged as a warning, and the first `run_tests` is refused with `runtime_unavailable`. A run that ends on that refusal settles `failed` with `PYTHON_RUNTIME_UNAVAILABLE`. The message says that uv or Python 3.11 or newer is missing, or that the environment could not be prepared, and gives the install command for uv and then `uv python install 3.12`. The shared Python environment is prepared lazily by the first `run_tests`, not at startup. `SIGINT` and `SIGTERM` cancel clarification waits and drain live sessions, including in-flight `uv` and pytest process trees, before detaching sockets and closing the database.
+
+`uv` and Python 3.11 or newer are prerequisites that the application verifies but does not install. `probe()` requires `uv --version` to succeed and an installed CPython 3.11 or newer. `ensureEnvironment()` writes `env/pyproject.toml` from the dependency set. It deletes a stale `uv.lock` when that file changes and runs `uv lock` when no lock exists. Then it runs `uv sync --locked`, bounded by `AUTOMATE_UV_SYNC_TIMEOUT_MS`. The first preparation downloads packages over the network. Every spawn uses `shell: false` and an argument vector the application builds.
 
 | Setting                                                    | Runtime effect                                                                                                                                                                       |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -402,11 +691,31 @@ Startup runs prerequisite checks, resolves `AUTOMATE_HOME` (default `~/.automate
 | `AUTOMATE_MAX_WAITING_EXECUTIONS`                          | Caps parked clarification waits; provisional default `5`.                                                                                                                            |
 | `AUTOMATE_MAX_AGENT_CLARIFICATIONS`                        | Caps persisted agent questions per execution; provisional default `3`.                                                                                                               |
 | `AUTOMATE_MAX_PREFLIGHT_DECISIONS`                         | Parses a provisional limit; the current classifier uses its core default of `3`.                                                                                                     |
-| `AUTOMATE_MAX_DIAGNOSTIC_BYTES`                            | Parses a provisional limit; the current filter uses its core default of `8 KiB`.                                                                                                     |
+| `AUTOMATE_MAX_DIAGNOSTIC_BYTES`                            | Caps the filtered diagnostic text returned to the agent and recorded as a `diagnostics` transmission; provisional default `8192` bytes.                                              |
+| `AUTOMATE_MAX_GENERATION_ATTEMPTS`                         | Caps `run_tests` calls per execution, counted from `generation_attempt` rows; provisional default `3`, at most `20`.                                                                 |
+| `AUTOMATE_GENERATION_TIMEOUT_MS`                           | Wall clock for the whole generation phase, measured from the execution's start and paused while it waits for a person; provisional default `600000` (10 minutes).                    |
+| `AUTOMATE_MAX_GENERATION_COST_USD`                         | Provider spend cap per execution, from reported cost only; default `0`, which disables the check.                                                                                    |
+| `AUTOMATE_TEST_RUN_TIMEOUT_MS`                             | Wall clock for one pytest run before its process tree is killed; provisional default `120000` (2 minutes).                                                                           |
+| `AUTOMATE_UV_SYNC_TIMEOUT_MS`                              | Wall clock for each `uv lock` or `uv sync` step of environment preparation; provisional default `300000` (5 minutes).                                                                |
+| `AUTOMATE_FIXTURE_ROW_COUNT`                               | Rows per synthetic fixture table, including the approved sample rows; provisional default `200`.                                                                                     |
+| `AUTOMATE_MAX_SCRIPT_BYTES`                                | Bytes per generated file; provisional default `262144` (256 KiB).                                                                                                                    |
 | `AUTOMATE_ALLOWED_ORIGINS`                                 | Adds comma-separated browser origins accepted by the local-access guard.                                                                                                             |
 | `LOG_LEVEL`                                                | Sets Pino logging verbosity.                                                                                                                                                         |
 | `AUTOMATE_MAX_UPLOAD_BYTES` and the other ingestion limits | Bound upload size, files per task, rows, columns, sheets, parse time, workbook expansion, and staged-upload lifetime; see [ingestion limits](features/csv-xlsx-ingestion.md#limits). |
 
-Durable state lives under the application data root: `data/automate.db`, `config/agent.json`, managed Pi files under `pi/`, and raw SDK logs under `agent-sessions/<executionId>/`. Uploaded files live under `uploads/staged/` until a task claims them and under `uploads/<taskId>/` afterwards. Startup also creates `artifacts/`, `scripts/`, and `env/` for later features.
+Durable state lives under the application data root: `data/automate.db`, `config/agent.json`, managed Pi files under `pi/`, and raw SDK logs under `agent-sessions/<executionId>/`. Uploaded files live under `uploads/staged/` until a task claims them and under `uploads/<taskId>/` afterwards. Code generation fills `scripts/` and `env/`. Startup still creates `artifacts/` for later features, and nothing in code generation writes to it.
+
+```text
+~/.automate/                       (or $AUTOMATE_HOME)
++-- env/                           shared uv project for generated tests
+|   +-- pyproject.toml             written by the application from the dependency set
+|   +-- uv.lock                    created by `uv lock` on first use when absent
+|   +-- .venv/                     managed by uv
++-- scripts/{executionId}/
+    +-- fixtures/<stored_filename> synthetic stand-in data, never the real file
+    +-- attempt-{n}/               projection of one sealed code_version
+        +-- main.py, test_main.py  written from code_file rows
+        +-- output/                scratch for AUTOMATE_OUTPUT_DIR, never registered
+```
 
 `pnpm build` type-checks core and server and builds the Vite client. The repository still has no production static-file host, container configuration, authentication layer, or restricted script-execution boundary.

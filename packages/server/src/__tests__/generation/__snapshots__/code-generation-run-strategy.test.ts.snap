@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CodeGenerationRunStrategy > sends exactly the consent snapshot, the person's words, and the contract — reconstructed byte for byte 1`] = `
+"[USER REQUEST]
+Total the sales amount by region.
+
+[APPROVED FILE DESCRIPTION]
+File 1: sales.csv
+Format: csv; size: 40500 bytes; sha256: 73f22287369957e977e2f51a73c47f350587738db5c25e1f6f5e208e21f4ce86
+Encoding: utf-8
+Table: Sheet 1
+Rows: 1600; columns: 4; header: yes
+Column 1: order_id | type=integer | confidence=1 | nulls=0 | blanks=0 | distinct=high-cardinality | stats={"kind":"numeric","min":1001,"max":2600,"mean":1800.5,"stddev":462.0245303732981,"median":1800.5,"p25":1400.75,"p75":2200.25,"approximate":false}
+Column 2: region | type=string | confidence=1 | nulls=0 | blanks=0 | distinct=4 | stats={"kind":"string","minLength":4,"maxLength":5,"meanLength":4.5}
+Column 3: amount | type=decimal | confidence=1 | nulls=0 | blanks=0 | distinct=97 | stats={"kind":"numeric","min":0.5,"max":96.5,"mean":47.79500000000001,"stddev":27.978513599984925,"median":47.5,"p25":23.5,"p75":71.75,"approximate":false}
+Column 4: ref | type=string | confidence=1 | nulls=0 | blanks=0 | distinct=high-cardinality | stats={"kind":"string","minLength":6,"maxLength":21,"meanLength":8.90125}
+Sample rows:
+order_id | region | amount | ref
+1001 | South | 1.5 | ref-7919
+1002 | East | 2.5 | ref-15838
+1003 | West | 3.5 | ref-23757
+1004 | North | 4.5 | ref-31676
+1005 | South | 5.5 | ref-39595
+1006 | East | 6.5 | ref-47514
+1007 | West | 7.5 | ref-55433
+1008 | North | 8.5 | ref-63352
+1009 | South | 9.5 | ref-71271
+1010 | East | 10.5 | ref-79190
+Omissions: none.
+
+[APPLICATION CONTEXT]
+CODE CONTRACT — follow every rule below.
+1. Write Python only (Python 3.12.4) for Linux. Use only the standard library and these installed packages: pandas, openpyxl, plotly, pytest. Do not install packages, do not use the network, and do not write shell scripts.
+2. Read inputs from the directory in the environment variable AUTOMATE_INPUT_DIR, joined with these exact filenames. Never use an absolute path or any other location:
+- \`<stored>.csv\` (CSV)
+3. Write every output file into the directory in the environment variable AUTOMATE_OUTPUT_DIR, and write manifest.json there too, declaring every output: {"artifacts": [{"filename": "...", "type": "...", "title": "...", "description": "..."}]}. "filename" is a plain file name with no directory. "type" is one of: csv, plotly-html, html, image, markdown, json, text, xlsx, pdf. A plotly-html report must embed Plotly (include_plotlyjs=True, never 'cdn').
+4. Put the work in a script (usually main.py) that runs when executed directly. Write pytest tests with write_test that exercise it against the files in AUTOMATE_INPUT_DIR, then call run_tests.
+5. You have 3 test runs. Each run_tests call uses one; failures come back filtered, with unrecognized lines withheld. When run_tests refuses, or the tests pass, call finalize_script once with the entrypoint, a plain-English summary, the input columns the script needs, and every declared output. Then stop.
+6. The data available during testing is synthetic and shaped like the real file, so the code must not assume values it saw, only the schema it was given."
+`;

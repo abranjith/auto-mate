@@ -1,0 +1,4 @@
+  File "/home/person/project/job.py", line 4
+    print(customer_email
+                        ^
+SyntaxError: '(' was never closed

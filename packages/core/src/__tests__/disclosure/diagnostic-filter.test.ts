@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { filterDiagnostics } from '../../disclosure/index';
+import valueError from '../../disclosure/__fixtures__/diagnostics/value-error.txt?raw';
+import chainedTraceback from '../../disclosure/__fixtures__/diagnostics/chained-traceback.txt?raw';
+import syntaxError from '../../disclosure/__fixtures__/diagnostics/syntax-error.txt?raw';
+import ruffPytest from '../../disclosure/__fixtures__/diagnostics/ruff-pytest.txt?raw';
+
+const fixtures = { 'value-error': valueError, 'chained-traceback': chainedTraceback, 'syntax-error': syntaxError, 'ruff-pytest': ruffPytest } as const;
+const fixture = (name: keyof typeof fixtures) => fixtures[name].trimEnd();
 
 describe('diagnostic filter', () => {
   it('keeps recognized structure, basenames paths, and masks user literals', () => {
@@ -25,5 +32,23 @@ describe('diagnostic filter', () => {
     expect(filterDiagnostics('\u0000\u0001private').text).toBe('');
     const first = filterDiagnostics('ValueError: bad value \'secret\'');
     expect(filterDiagnostics(first.text).text).toBe(first.text);
+  });
+
+  it('keeps only allowlisted structure across the captured diagnostic corpus', () => {
+    const value = filterDiagnostics(fixture('value-error'));
+    expect(value.text).toContain('runner.py');
+    expect(value.text).not.toMatch(/Jane|customer_email|Users\\person/);
+
+    const chained = filterDiagnostics(fixture('chained-traceback'));
+    expect(chained.frames.map(({ file }) => file)).toEqual(['reader.py', 'main.py']);
+    expect(chained.text).not.toMatch(/customer_email|private row|home\/person/);
+
+    const syntax = filterDiagnostics(fixture('syntax-error'));
+    expect(syntax.text).toContain('SyntaxError');
+    expect(syntax.text).not.toMatch(/print\(|\^/);
+
+    const checks = filterDiagnostics(fixture('ruff-pytest'));
+    expect(checks.text).toMatch(/F821|FAILED/);
+    expect(checks.text).not.toMatch(/customer_email|private customer row|123456789/);
   });
 });

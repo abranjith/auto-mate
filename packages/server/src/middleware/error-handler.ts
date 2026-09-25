@@ -25,6 +25,13 @@ const INGESTION_STATUS: Readonly<Record<string, number>> = {
   [ERROR_CODES.TOO_MANY_COLUMNS]: 422,
   [ERROR_CODES.WORKBOOK_TOO_LARGE]: 422,
   [ERROR_CODES.NO_TABULAR_CONTENT]: 422,
+  // Generation (FEAT-106).
+  [ERROR_CODES.CODE_VERSION_NOT_FOUND]: 404,
+  [ERROR_CODES.EXECUTION_NOT_RETRYABLE]: 409,
+  [ERROR_CODES.INVALID_CODE_PATH]: 400,
+  [ERROR_CODES.CODE_TOO_LARGE]: 413,
+  [ERROR_CODES.FIXTURE_GENERATION_FAILED]: 422,
+  [ERROR_CODES.PYTHON_RUNTIME_UNAVAILABLE]: 503,
 };
 
 /** Format safe error envelopes. @param logger Fallback logger. @returns Express error middleware that sends a correlation ID. */

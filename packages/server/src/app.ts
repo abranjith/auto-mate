@@ -22,6 +22,8 @@ import type { DisclosureService } from './disclosure/disclosure-service';
 import type { ClarificationService } from './disclosure/clarification-service';
 import type { DisclosureTransmissionRepository } from './db/repositories/disclosure-transmission-repository';
 import type { ClarificationRepository } from './db/repositories/clarification-repository';
+import { generationRoute } from './routes/generation-route';
+import type { GenerationService } from './generation/index';
 
 export interface AppDependencies {
   logger: Logger;
@@ -41,6 +43,8 @@ export interface AppDependencies {
   /** File ingestion (FEAT-104); mounted with the conversation routes. */
   ingestion?: { uploads: UploadService };
   disclosure?: { service: DisclosureService; transmissions: DisclosureTransmissionRepository; consents: import('./db/repositories/disclosure-consent-repository').DisclosureConsentRepository; clarifications: ClarificationRepository; clarificationService: ClarificationService };
+  /** Code versions, attempts, fixtures, and guidance retries (FEAT-106); mounted with the conversation routes. */
+  generation?: { service: GenerationService };
   configureRoutes?: (app: Express) => void;
 }
 
@@ -95,6 +99,7 @@ export function createApp(deps: AppDependencies): Express {
       app.use(disclosureRoute({ disclosure: deps.disclosure.service, transmissions: deps.disclosure.transmissions, consents: deps.disclosure.consents }));
       app.use(clarificationRoute({ clarifications: deps.disclosure.clarifications, service: deps.disclosure.clarificationService }));
     }
+    if (deps.generation) app.use(generationRoute({ generation: deps.generation.service, config: deps.serverConfig }));
   }
   deps.configureRoutes?.(app);
   app.use((_request, _response, next) =>

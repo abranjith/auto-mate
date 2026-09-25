@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
+  type AnySQLiteColumn,
   integer,
   real,
   sqliteTable,
@@ -63,6 +64,10 @@ export const execution = sqliteTable(
     startedAt: integer('started_at', { mode: 'timestamp' }),
     completedAt: integer('completed_at', { mode: 'timestamp' }),
     durationMs: integer('duration_ms'),
+    /** The run this one was started from by a guidance retry (FEAT-106). SET NULL: deleting a failed run never deletes its replacement. */
+    retryOfExecutionId: integer('retry_of_execution_id').references((): AnySQLiteColumn => execution.id, { onDelete: 'set null' }),
+    /** The person's free-text hint that seeded this run. User input: it reaches the provider only as the user_prompt source. */
+    guidance: text('guidance'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -82,6 +87,7 @@ export const execution = sqliteTable(
       .where(
         sql`${table.status} in ('pending','generating','verifying','executing','waiting')`,
       ),
+    index('execution_retry_of').on(table.retryOfExecutionId).where(sql`${table.retryOfExecutionId} is not null`),
   ],
 );
 
@@ -104,7 +110,7 @@ export const conversationEvent = sqliteTable(
   (table) => [
     check(
       'conversation_event_kind_check',
-      sql`${table.kind} in ('user_prompt','state_changed','tool_started','tool_finished','assistant_text','turn_finished','failed','clarification_requested','clarification_answered','disclosure_sent')`,
+      sql`${table.kind} in ('user_prompt','state_changed','tool_started','tool_finished','assistant_text','turn_finished','failed','clarification_requested','clarification_answered','disclosure_sent','code_version_sealed','test_run_finished','generation_settled')`,
     ),
     uniqueIndex('conversation_event_execution_seq').on(
       table.executionId,
@@ -337,5 +343,127 @@ export const clarificationQuestion = sqliteTable(
     check('clarification_question_answer_source_check', sql`${table.answerSource} is null or ${table.answerSource} in ('user','default','seeded')`),
     uniqueIndex('clarification_question_position').on(table.clarificationId, table.position),
     index('clarification_question_finding').on(table.findingKey).where(sql`${table.findingKey} is not null`),
+  ],
+);
+
+/**
+ * One candidate script, sealed and immutable (FEAT-106). `content_digest` is
+ * the identity FEAT-107 binds verification to and FEAT-108 executes; a draft
+ * has none, and every sealed status forbids any change to its files.
+ */
+export const codeVersion = sqliteTable(
+  'code_version',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    attempt: integer('attempt').notNull(),
+    status: text('status').notNull().default('draft'),
+    contentDigest: text('content_digest'),
+    /** Relative to the data root: `scripts/{executionId}/attempt-{n}`. */
+    dirPath: text('dir_path').notNull(),
+    entrypoint: text('entrypoint').notNull().default('main.py'),
+    isFinal: integer('is_final', { mode: 'boolean' }).notNull().default(false),
+    /** Recorded, never enforced: a final version whose tests failed is a legal state that FEAT-107 judges. */
+    testsPassed: integer('tests_passed', { mode: 'boolean' }),
+    declaredInputs: text('declared_inputs'),
+    declaredOutputs: text('declared_outputs'),
+    /** The agent's own description. Model output, therefore untrusted input to the DOM. */
+    summary: text('summary'),
+    sealedAt: integer('sealed_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('code_version_status_check', sql`${table.status} in ('draft','sealed','tested_pass','tested_fail','superseded')`),
+    check('code_version_attempt_check', sql`${table.attempt} >= 1`),
+    // Sealed-ness is one fact, not two fields that can disagree.
+    check('code_version_sealed_check', sql`(${table.status} = 'draft' and ${table.contentDigest} is null and ${table.sealedAt} is null) or (${table.status} != 'draft' and ${table.contentDigest} is not null and ${table.sealedAt} is not null)`),
+    uniqueIndex('code_version_attempt').on(table.executionId, table.attempt),
+    uniqueIndex('code_version_final').on(table.executionId).where(sql`${table.isFinal} = 1`),
+    uniqueIndex('code_version_draft').on(table.executionId).where(sql`${table.status} = 'draft'`),
+    index('code_version_digest').on(table.contentDigest),
+  ],
+);
+
+/** One file of one version: the authoritative copy. The file on disk is a projection written by the application. */
+export const codeFile = sqliteTable(
+  'code_file',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    codeVersionId: integer('code_version_id').notNull().references(() => codeVersion.id, { onDelete: 'cascade' }),
+    path: text('path').notNull(),
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    byteSize: integer('byte_size').notNull(),
+    sha256: text('sha256').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('code_file_role_check', sql`${table.role} in ('script','test','support')`),
+    check('code_file_byte_size_check', sql`${table.byteSize} >= 0`),
+    uniqueIndex('code_file_path').on(table.codeVersionId, table.path),
+  ],
+);
+
+/**
+ * One `run_tests` invocation and its outcome (FEAT-106). This table IS the
+ * attempt limit: the cap is a COUNT over it, read from the database, so a
+ * restart cannot hand the model a fresh budget.
+ */
+export const generationAttempt = sqliteTable(
+  'generation_attempt',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    codeVersionId: integer('code_version_id').references(() => codeVersion.id, { onDelete: 'cascade' }),
+    attempt: integer('attempt').notNull(),
+    callId: text('call_id'),
+    status: text('status').notNull().default('running'),
+    refusalReason: text('refusal_reason'),
+    testsTotal: integer('tests_total'),
+    testsPassed: integer('tests_passed'),
+    testsFailed: integer('tests_failed'),
+    exitCode: integer('exit_code'),
+    manifestPresent: integer('manifest_present', { mode: 'boolean' }),
+    /** SHA-256 of the FILTERED text handed back to the agent; the text itself lives once, in its transmission receipt. */
+    diagnosticDigest: text('diagnostic_digest'),
+    droppedLineCount: integer('dropped_line_count'),
+    durationMs: integer('duration_ms'),
+    startedAt: integer('started_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    settledAt: integer('settled_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('generation_attempt_status_check', sql`${table.status} in ('running','passed','failed','errored','timed_out','aborted','refused')`),
+    check('generation_attempt_refusal_check', sql`${table.refusalReason} is null or ${table.refusalReason} in ('attempt_limit','time_limit','cost_limit','diagnostics_not_granted','runtime_unavailable')`),
+    check('generation_attempt_refused_check', sql`(${table.status} = 'refused') = (${table.refusalReason} is not null)`),
+    check('generation_attempt_attempt_check', sql`${table.attempt} >= 1`),
+    uniqueIndex('generation_attempt_number').on(table.executionId, table.attempt),
+    uniqueIndex('generation_attempt_version').on(table.codeVersionId).where(sql`${table.codeVersionId} is not null`),
+    uniqueIndex('generation_attempt_call').on(table.callId).where(sql`${table.callId} is not null`),
+  ],
+);
+
+/** The synthetic stand-in data one execution's tests ran against (FEAT-106). Never the real file. */
+export const syntheticFixture = sqliteTable(
+  'synthetic_fixture',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    uploadId: integer('upload_id').notNull().references(() => upload.id, { onDelete: 'cascade' }),
+    /** Relative: `scripts/{executionId}/fixtures/<stored_filename>`, the real upload's name by design. */
+    filePath: text('file_path').notNull(),
+    format: text('format').notNull(),
+    sheetCount: integer('sheet_count').notNull().default(1),
+    rowCount: integer('row_count').notNull(),
+    sampleRowCount: integer('sample_row_count').notNull(),
+    byteSize: integer('byte_size').notNull(),
+    sha256: text('sha256').notNull(),
+    seed: text('seed').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('synthetic_fixture_format_check', sql`${table.format} in ('csv','xlsx')`),
+    check('synthetic_fixture_byte_size_check', sql`${table.byteSize} >= 0`),
+    uniqueIndex('synthetic_fixture_upload').on(table.executionId, table.uploadId),
   ],
 );

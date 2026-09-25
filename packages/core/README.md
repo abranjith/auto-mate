@@ -36,3 +36,17 @@ Shared TypeBox contracts cover previews, consents, receipts, clarification batch
 - `buildDisclosurePayload`: the 64 KiB bounded payload with its recorded degradation ladder.
 
 `limits.ts` holds the D04 policy constants and the D14 provisional defaults. `contracts/upload-api.ts` holds the upload, profile, and payload schemas. `errors/ingestion-errors.ts` holds the eleven typed ingestion errors and the size and cap messages the browser reuses. See [CSV and XLSX Ingestion and Profiling](../../docs/features/csv-xlsx-ingestion.md).
+
+## Code generation
+
+`packages/core/src/generation/` is the browser-safe half of FEAT-106. Like the rest of this package, it has no Node built-ins.
+
+- `computeVersionDigest(files)` is a code version's identity: SHA-256 over the canonical JSON of `[{path, sha256}]` sorted by path. It uses the synchronous, browser-safe `sha256Hex`, and a server test asserts parity with `node:crypto`. FEAT-107 binds verification to this digest.
+- `validateCodePath(path, role)` is the one path rule the tool boundary and the repository share: relative, forward slashes, at most two levels, `.py`, pytest naming for tests only, and `output/` reserved.
+- `buildSyntheticFixture(profile, { rowCount, seed })` builds test data from a profile or disclosed table, never from a path. Every literal in its output is either a cell of the approved disclosure payload or a value it invented. It is deterministic for a given seed. It never repeats a sample value in a high-cardinality column.
+- `renderCodeContract(context)` is the only place the code-generation instructions exist. It contains no absolute path and states that test data is synthetic (`SYNTHETIC_DATA_WARNING`).
+- `summarizeAttempts` and `describeAttempt` give the plain-English wording shared by the API, the transcript, and the UI. `limits.ts` holds the provisional D14 defaults.
+
+`packages/core/src/execution/python-runner.ts` is the `PythonRunner` seam that FEAT-108 fills: `probe()`, `ensureEnvironment(signal)`, and `run(request)`, types only. A type-level test pins it at three methods. `stdout` and `stderr` in its results are raw, untrusted output, and they must pass `filterDiagnostics` before reaching any prompt.
+
+`contracts/generation-api.ts` holds the REST shapes and the four tools' parameter schemas. `errors/generation-errors.ts` holds the eleven typed generation errors. `conversation-event.ts` adds `code_version_sealed`, `test_run_finished`, and `generation_settled`, none of which carries code or diagnostic text. `AgentToolDefinition.redactArgsInEvents` names tool arguments the transcript replaces with their size. See [Code Generation and Repair](../../docs/features/code-generation-repair.md).

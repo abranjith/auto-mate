@@ -5,6 +5,8 @@ import { ToolCallCard } from './tool-call-card';
 import { TurnSummary } from './turn-summary';
 import { ClarificationEvent } from './clarification-event';
 import { DisclosureReceipt } from '../disclosure/disclosure-receipt';
+import { CodeVersionCard } from '../generation/code-version-card';
+import { TestRunEvent } from '../generation/test-run-event';
 const AssistantMessage = lazy(() =>
   import('./assistant-message').then((module) => ({
     default: module.AssistantMessage,
@@ -123,6 +125,12 @@ export function ConversationView({
               return <p key={event.seq} className={ds.eventLine}>Clarification answered.</p>;
             case 'disclosure_sent':
               return executionId ? <DisclosureReceipt key={event.seq} executionId={executionId} event={event} /> : <p key={event.seq} className={ds.eventLine}>Disclosure sent to {event.provider} {event.model}.</p>;
+            case 'code_version_sealed':
+              return <CodeVersionCard key={event.seq} event={event} />;
+            case 'test_run_finished':
+              return <TestRunEvent key={event.seq} event={event} {...(executionId ? { executionId } : {})} />;
+            case 'generation_settled':
+              return <p key={event.seq} className={ds.generationSettled}>{event.summary}</p>;
             default:
               return assertNever(event);
           }

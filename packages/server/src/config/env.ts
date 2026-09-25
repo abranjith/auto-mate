@@ -1,4 +1,4 @@
-import { ConfigurationError, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_PREFLIGHT_DECISIONS, UPLOAD_LIMIT_DEFAULTS } from '@automate/core';
+import { ConfigurationError, FIXTURE_ROW_COUNT, GENERATION_TIMEOUT_MS, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_GENERATION_ATTEMPTS, MAX_GENERATION_COST_USD, MAX_PREFLIGHT_DECISIONS, MAX_SCRIPT_BYTES, TEST_RUN_TIMEOUT_MS, UPLOAD_LIMIT_DEFAULTS, UV_SYNC_TIMEOUT_MS } from '@automate/core';
 
 export interface ServerConfig {
   host: string;
@@ -90,5 +90,48 @@ export function getIngestionConfig(env = process.env): IngestionConfig {
     maxSheets: positiveInteger(env, 'AUTOMATE_MAX_SHEETS', defaults.maxSheets),
     maxInflatedBytes: positiveInteger(env, 'AUTOMATE_MAX_INFLATED_BYTES', defaults.maxInflatedBytes),
     stagedUploadTtlHours: positiveInteger(env, 'AUTOMATE_STAGED_UPLOAD_TTL_HOURS', defaults.stagedUploadTtlHours),
+  };
+}
+
+/**
+ * Code-generation limits (FEAT-106, D07/D14). Every value is PROVISIONAL
+ * against the parts of D14 still open; the attempt default of 3 was confirmed
+ * for this row on 2026-09-22. A cost cap of 0 means the cap is OFF.
+ */
+export interface GenerationConfig {
+  /** `AUTOMATE_MAX_GENERATION_ATTEMPTS` — `run_tests` calls per execution, counted in the database. */
+  maxAttempts: number;
+  /** `AUTOMATE_GENERATION_TIMEOUT_MS` — wall clock across the whole generating phase. */
+  timeoutMs: number;
+  /** `AUTOMATE_MAX_GENERATION_COST_USD` — provider spend per execution; 0 disables the check. */
+  maxCostUsd: number;
+  /** `AUTOMATE_TEST_RUN_TIMEOUT_MS` — wall clock for one pytest run. */
+  testRunTimeoutMs: number;
+  /** `AUTOMATE_UV_SYNC_TIMEOUT_MS` — wall clock for preparing the Python environment. */
+  uvSyncTimeoutMs: number;
+  /** `AUTOMATE_FIXTURE_ROW_COUNT` — rows per synthetic fixture table. */
+  fixtureRowCount: number;
+  /** `AUTOMATE_MAX_SCRIPT_BYTES` — bytes per generated file. */
+  maxScriptBytes: number;
+}
+
+function nonNegativeNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+  const raw = env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) throw new ConfigurationError(`${name} must be a number of 0 or more.`);
+  return value;
+}
+
+/** Parse the generation limits. @param env Environment variables to read. @returns Limits with the provisional defaults. */
+export function getGenerationConfig(env = process.env): GenerationConfig {
+  return {
+    maxAttempts: positiveInteger(env, 'AUTOMATE_MAX_GENERATION_ATTEMPTS', MAX_GENERATION_ATTEMPTS, 20),
+    timeoutMs: positiveInteger(env, 'AUTOMATE_GENERATION_TIMEOUT_MS', GENERATION_TIMEOUT_MS),
+    maxCostUsd: nonNegativeNumber(env, 'AUTOMATE_MAX_GENERATION_COST_USD', MAX_GENERATION_COST_USD),
+    testRunTimeoutMs: positiveInteger(env, 'AUTOMATE_TEST_RUN_TIMEOUT_MS', TEST_RUN_TIMEOUT_MS),
+    uvSyncTimeoutMs: positiveInteger(env, 'AUTOMATE_UV_SYNC_TIMEOUT_MS', UV_SYNC_TIMEOUT_MS),
+    fixtureRowCount: positiveInteger(env, 'AUTOMATE_FIXTURE_ROW_COUNT', FIXTURE_ROW_COUNT, 100_000),
+    maxScriptBytes: positiveInteger(env, 'AUTOMATE_MAX_SCRIPT_BYTES', MAX_SCRIPT_BYTES, 16 * 1024 * 1024),
   };
 }

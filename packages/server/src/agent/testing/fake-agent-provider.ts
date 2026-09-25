@@ -8,6 +8,7 @@
  * double and the stub-backed `PiSession`, so the two cannot drift.
  */
 
+import { Value } from '@sinclair/typebox/value';
 import type {
   AgentAuthSource,
   AgentEvent,
@@ -15,12 +16,35 @@ import type {
   AgentRunResult,
   AgentSession,
   AgentSessionOptions,
+  AgentToolDefinition,
 } from '@automate/core';
+
+/**
+ * One scripted step (FEAT-106): emit an event, or call a registered tool the
+ * way the Pi adapter does — `tool_started`, `execute()`, then `tool_finished`
+ * with the JSON-encoded result, or an error result when `execute` throws or
+ * the arguments fail the tool's parameter schema.
+ */
+export type FakeAgentStep =
+  | { readonly event: AgentEvent }
+  | { readonly call: { readonly tool: string; readonly args: unknown; readonly callId?: string } }
+  | { readonly until: Promise<void> };
+
+/** A tool call the fake made, and what came back. */
+export interface FakeToolResult {
+  readonly callId: string;
+  readonly tool: string;
+  readonly args: unknown;
+  readonly output: unknown;
+  readonly isError: boolean;
+}
 
 /** One scripted run: the events to emit, then the result to return. */
 export interface FakeAgentScript {
   /** Events emitted, in order, during the run. */
   readonly events: readonly AgentEvent[];
+  /** Steps run in order after `events`, awaiting each tool call. Stops early once aborted. */
+  readonly steps?: readonly FakeAgentStep[];
   /** The terminal result the run resolves with. */
   readonly result: AgentRunResult;
   /** Optional gate keeping the fake run live until a test releases it. */
@@ -52,13 +76,48 @@ export class FakeAgentSession implements AgentSession {
     this.resolveAbort = resolve;
   });
 
-  /** @param id Session identity. @param logPath Reported log path. @param authSource Reported credential origin. @param script One entry per expected run. @example new FakeAgentSession('s1', '/tmp/s1.jsonl', 'managed', [{ events, result }]) */
+  /** Every tool call a scripted step made, in order, with its result. */
+  readonly toolResults: FakeToolResult[] = [];
+
+  /** @param id Session identity. @param logPath Reported log path. @param authSource Reported credential origin. @param script One entry per expected run. @param tools Tools registered for this session, callable by scripted steps. @param executionId Passed to each tool's `execute` context. @example new FakeAgentSession('s1', '/tmp/s1.jsonl', 'managed', [{ events, result }]) */
   constructor(
     readonly id: string,
     readonly logPath: string,
     readonly authSource: AgentAuthSource,
     private readonly script: readonly FakeAgentScript[] = [],
+    private readonly tools: readonly AgentToolDefinition[] = [],
+    private readonly executionId = '0',
   ) {}
+
+  /** Run scripted steps in order, stopping at the first one reached after an abort. */
+  private async runSteps(steps: readonly FakeAgentStep[]): Promise<void> {
+    for (const [index, step] of steps.entries()) {
+      if (this.aborted) return;
+      if ('event' in step) this.dispatch(step.event);
+      else if ('until' in step) await Promise.race([step.until, this.abortSignal]);
+      else await this.callTool(step.call.tool, step.call.args, step.call.callId ?? `fake-call-${this.runIndex}-${index + 1}`);
+    }
+  }
+
+  /** Call one registered tool exactly as the Pi adapter bridges it. */
+  private async callTool(name: string, args: unknown, callId: string): Promise<void> {
+    const at = () => new Date().toISOString();
+    this.dispatch({ type: 'tool_started', callId, tool: name, input: args, at: at() });
+    const tool = this.tools.find((candidate) => candidate.name === name);
+    let output: unknown;
+    let isError = false;
+    try {
+      if (!tool) throw new Error(`Tool ${name} is not registered for this session.`);
+      if (!Value.Check(tool.parameters, args)) throw new Error(`Invalid arguments for ${name}: ${[...Value.Errors(tool.parameters, args)].map((error) => `${error.path || '/'} ${error.message}`).join('; ')}`);
+      const result = await tool.execute(args as never, { executionId: this.executionId, callId });
+      output = { content: [{ type: 'text', text: JSON.stringify(result) }], details: result };
+    } catch (cause) {
+      isError = true;
+      output = { content: [{ type: 'text', text: cause instanceof Error ? cause.message : String(cause) }], details: {} };
+    }
+    this.toolResults.push({ callId, tool: name, args, output, isError });
+    this.dispatch({ type: 'tool_finished', callId, tool: name, output, isError, at: at() });
+  }
 
   /** Emit the next scripted batch and return its result. @param prompt The prompt text, recorded for assertions. @returns The scripted terminal result, or an aborted one after `abort()`. @throws Error when the session is closed, matching the real session's misuse behavior. @example await fake.run('go') */
   async run(prompt: string): Promise<AgentRunResult> {
@@ -67,6 +126,7 @@ export class FakeAgentSession implements AgentSession {
     const scripted = this.script[this.runIndex];
     this.runIndex += 1;
     for (const event of scripted?.events ?? []) this.dispatch(event);
+    await this.runSteps(scripted?.steps ?? []);
     if (scripted?.waitUntil)
       await Promise.race([scripted.waitUntil, this.abortSignal]);
     if (this.aborted)
@@ -134,6 +194,14 @@ export class FakeAgentProvider implements AgentProvider {
     private readonly failWith?: Error,
   ) {}
 
+  /** Scripts for sessions not yet opened, used once each in order before falling back to the default script. */
+  private readonly queued: (readonly FakeAgentScript[])[] = [];
+
+  /** Script the next session this provider opens, for tests that run more than one execution. @param script That session's runs. */
+  enqueue(script: readonly FakeAgentScript[]): void {
+    this.queued.push(script);
+  }
+
   /** Record the options and hand back a scripted session. @param options Seam session options. @returns The fake session. @throws The configured error when one was supplied. @example await fake.open(options) */
   open(options: AgentSessionOptions): Promise<AgentSession> {
     this.opened.push(options);
@@ -144,7 +212,9 @@ export class FakeAgentProvider implements AgentProvider {
       `fake-session-${this.sessions.length + 1}`,
       `${options.sessionDir}/fake-session.jsonl`,
       authSource,
-      this.script,
+      this.queued.shift() ?? this.script,
+      options.customTools ?? [],
+      options.executionId,
     );
     this.sessions.push(session);
     return Promise.resolve(session);

@@ -364,20 +364,20 @@ FEAT-105 adds **no new directories and writes no files.** Consents, receipts, qu
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Disclosure contracts, limits, canonical serialization, and typed errors in `packages/core`
-- [ ] TASK-002: Ambiguity classifier over FEAT-104 profile notes
-- [ ] TASK-003: Diagnostic filter — default-deny allowlist over raw failure output
-- [ ] TASK-004: Disclosure text renderer and the prompt-context chokepoint
-- [ ] TASK-005: Persistence — consent, transmission, and clarification tables
-- [ ] TASK-006: Disclosure preview and consent API
-- [ ] TASK-007: Gate task creation on consent and pre-flight decisions
-- [ ] TASK-008: `request_clarification` tool with a server-enforced question cap
-- [ ] TASK-009: `waiting` state, slot accounting, and recovery
-- [ ] TASK-010: Clarification answer API and prior-answer seeding
-- [ ] TASK-011: `DisclosureRunStrategy` — approved context reaching the provider, with receipts
-- [ ] TASK-012: Disclosure review screen
-- [ ] TASK-013: Clarification in the conversation, and the receipt trail
-- [ ] TASK-014: End-to-end disclosure and clarification proof
-- [ ] TASK-015: Documentation for disclosure and clarification
+- [x] TASK-001: Disclosure contracts, limits, canonical serialization, and typed errors in `packages/core`
+- [x] TASK-002: Ambiguity classifier over FEAT-104 profile notes
+- [x] TASK-003: Diagnostic filter — default-deny allowlist over raw failure output
+- [x] TASK-004: Disclosure text renderer and the prompt-context chokepoint
+- [x] TASK-005: Persistence — consent, transmission, and clarification tables
+- [x] TASK-006: Disclosure preview and consent API
+- [x] TASK-007: Gate task creation on consent and pre-flight decisions
+- [x] TASK-008: `request_clarification` tool with a server-enforced question cap
+- [x] TASK-009: `waiting` state, slot accounting, and recovery
+- [x] TASK-010: Clarification answer API and prior-answer seeding
+- [x] TASK-011: `DisclosureRunStrategy` — approved context reaching the provider, with receipts
+- [x] TASK-012: Disclosure review screen
+- [x] TASK-013: Clarification in the conversation, and the receipt trail
+- [x] TASK-014: End-to-end disclosure and clarification proof
+- [x] TASK-015: Documentation for disclosure and clarification
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

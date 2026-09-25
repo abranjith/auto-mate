@@ -1,0 +1,814 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-25T04:37:34.017Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-25T04:40:45.254Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-25T04:50:29.346Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-25T04:59:49.442Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-25T04:59:50.183Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-25T05:02:10.106Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-25T05:08:15.290Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-25T05:17:16.872Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-25T05:19:01.053Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-25T05:20:41.469Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-25T05:21:28.724Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-25T05:23:09.485Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-25T09:25:35.205Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-014",
+      "at": "2026-09-25T12:47:01.445Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-015",
+      "at": "2026-09-25T12:52:18.595Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-016",
+      "at": "2026-09-25T13:27:55.795Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-25T13:30:05.439Z",
+      "head": "722519942084afbb1d9aa7d1e887a3e4ee45237b"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "docs/features/code-generation-repair.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "docs/quickstart.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/generation-api.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/core/src/__tests__/errors/generation-errors.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/execution/python-runner.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/attempt.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/code-contract.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/code-path.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/code-version.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/synthetic-fixture.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/synthetic-profiles.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/agent/provider-types.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/core/src/contracts/generation-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/conversation/conversation-event.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/generation-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/execution/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/execution/python-runner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/attempt.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/code-contract.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/generation/code-path.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/code-version.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/sha256.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/synthetic-fixture.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260925044250_damp_otto_octavius/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/drizzle/20260925044250_damp_otto_octavius/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/server/src/__tests__/config/generation-config.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/conversation/task-session-generation.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/generation-repositories.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/fake-spawn.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/process-runner.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/uv-python-runner.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/code-generation-run-strategy.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/code-workspace.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/docs-examples.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/fixture-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/generation-budget.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/sha256-parity.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/tools/finalize-script-tool.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/tools/run-tests-tool.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/tools/write-tools.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-harness.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/agent/testing/fake-agent-provider.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/config/env.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/conversation/run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/conversation/task-session-registry.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/conversation/task-session.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/conversation/tool-elision.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/db/migrate.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/code-version-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/execution-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/generation-attempt-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/synthetic-fixture-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/disclosure/disclosure-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/disclosure/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/execution/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/process-runner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/python-dependency-set.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/testing/fake-python-runner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/uv-python-runner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/code-generation-run-strategy.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/code-workspace.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/generation/fixture-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/fixture-writer.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/generation-budget.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/generation-lifecycle.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/generation-run.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/generation-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/generation/generation-stack.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/generation/generation-tools.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/generation/presenters.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/generation/pytest-report.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/tools/finalize-script-tool.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/tools/run-tests-tool.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/tools/tool-context.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/tools/write-script-tool.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/tools/write-test-tool.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/middleware/error-handler.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/routes/generation-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/web/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/conversation-view-generation.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/generation/generation-components.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/api/generation-queries.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/conversation/tool-call-card.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/code-file-view.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/code-version-card.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/fixture-note.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-failure-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-progress.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-section.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/test-run-event.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/components/generation/test-run-result.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-106-code_generation_repair/changeset.json",
+    ".spec-lite/features/FEAT-106-code_generation_repair/spec.md"
+  ],
+  "baseline": {
+    "sha": "722519942084afbb1d9aa7d1e887a3e4ee45237b",
+    "capturedAt": "2026-09-25T04:30:36.138Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/plan_mvp.md"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/plan_mvp.md": "a235448db7f3f7c0f79bd11f4737ff468b4960ae"
+    }
+  },
+  "featureId": "FEAT-106"
+}

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConversationView } from '../components/conversation/conversation-view';
 import { ConnectionIndicator } from '../components/conversation/connection-indicator';
 import { ExecutionStatusBadge } from '../components/conversation/execution-status-badge';
@@ -12,6 +12,7 @@ import { useExecutionStream } from '../api/use-execution-stream';
 import { getTask } from '../api/task-queries';
 import { ds } from '../design-system/tokens';
 import { WaitingBanner } from '../components/conversation/waiting-banner';
+import { GenerationSection } from '../components/generation/generation-section';
 /** Follow one execution using durable history plus its live tail. */
 function LiveConversation({
   taskId,
@@ -21,6 +22,7 @@ function LiveConversation({
   executionId: number;
 }) {
   const stream = useExecutionStream(executionId);
+  const client = useQueryClient();
   return (
     <section className={ds.cardStack}>
       <header className={ds.header}>
@@ -45,6 +47,11 @@ function LiveConversation({
           {stream.execution.error ? (
             <FailurePanel error={stream.execution.error} />
           ) : null}
+          <GenerationSection
+            execution={stream.execution}
+            events={stream.events}
+            onRetried={() => void client.invalidateQueries({ queryKey: ['task', taskId] })}
+          />
         </>
       ) : null}
     </section>
@@ -61,7 +68,7 @@ function TaskConversationPage() {
   const execution = task.data?.executions.at(-1);
   if (!execution)
     return <p className={ds.statusDanger}>This task has no execution.</p>;
-  return <LiveConversation taskId={taskId} executionId={execution.id} />;
+  return <LiveConversation key={execution.id} taskId={taskId} executionId={execution.id} />;
 }
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskConversationPage,

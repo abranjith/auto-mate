@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\person\project\runner.py", line 12, in parse
+    value = row["customer_email"]
+ValueError: could not convert string to float: 'N/A — see Jane's note'

@@ -11,6 +11,20 @@ Source spec: [spec.md](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md)
 
 People attach up to five `.csv`/`.tsv`/`.xlsx` files (50 MB each) through `POST /api/uploads`. Each file is streamed to disk under a mid-stream size cap, format-sniffed from its content (legacy `.xls` is refused with re-save guidance), and profiled locally in Node in one bounded-memory pass. The profile covers encoding, delimiter, and header detection; per-column types with day/month versus month/day ambiguity flagged, never guessed; statistics; the first 10 rows; and structured findings. The only representation that may ever leave the machine is a deterministic disclosure payload capped at 64 KiB: 10 sample rows with 200-character cells, and frequent values only for columns under 1,000 distinct values, degraded in a fixed, recorded order. Nothing is transmitted by this feature. `POST /api/tasks` with `uploadIds` claims analyzed uploads in the task's own transaction. Files are kept byte-for-byte for the life of the task, and unattached uploads are swept after `AUTOMATE_STAGED_UPLOAD_TTL_HOURS`.
 
+**FEAT-105 — Disclosure Review & Clarification Behavior** _(updated: 2026-09-25 by implement)_
+Source spec: [spec.md](features/FEAT-105-disclosure_clarification/spec.md)
+
+Attachment tasks now stop at a disclosure review showing the literal bounded file description, recipient provider/model, required ambiguity decisions, applied defaults, and a separate diagnostics choice. Consent is pinned to the exact payload digest and recipient, verified again before transmission, and recorded with durable context or filtered-diagnostic receipts. Default-deny diagnostic filtering drops unknown output and masks user literals. The agent can ask up to three persisted meaning/data-loss questions through `request_clarification`; accepted questions park the execution without consuming an active slot, answers resume it, and cancellation or restart settles the wait honestly. Conversation events render questions, answers, waiting state, and expandable exact-byte receipts as text only. This is a transmission-consent boundary, not an execution-isolation boundary.
+
+---
+
+## Code Generation
+
+**FEAT-106 — Code Generation & Agent Repair Loop** _(updated: 2026-09-25 by implement)_
+Source spec: [spec.md](features/FEAT-106-code_generation_repair/spec.md)
+
+For a task with approved files, the agent writes Python and pytest tests through four application-owned tools (`write_script`, `write_test`, `run_tests`, `finalize_script`, beside `request_clarification`) and has no filesystem, shell, or network tool. Files land in the database first; each `run_tests` seals the draft into an immutable `code_version` whose SHA-256 digest covers its file set, projects it to `scripts/{executionId}/attempt-{n}/`, and runs pytest against synthetic fixtures built from the approved disclosure payload — the real upload is never opened. Attempts are capped by `AUTOMATE_MAX_GENERATION_ATTEMPTS` (default 3) counted in the database; wall clock (`AUTOMATE_GENERATION_TIMEOUT_MS`, 10 min) and an off-by-default spend cap also apply, and a refusal is recorded and rendered, never thrown. Test output reaches the model only through FEAT-105's default-deny diagnostic filter as a recorded `diagnostics` transmission; without that consent scope the loop refuses instead of repairing. A run settles `completed` with a final version (tests passing or not — FEAT-107 judges), or `failed`/`aborted` with a plain-English reason; a failed run offers a guidance retry that starts a new linked execution reusing the consent and prior pre-flight answers.
+
 ---
 
 ## Task Execution & Conversation

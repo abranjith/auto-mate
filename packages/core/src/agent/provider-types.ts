@@ -64,6 +64,12 @@ export interface AgentToolDefinition<TParameters extends TSchema = TSchema> {
   readonly name: string;
   readonly description: string;
   readonly parameters: TParameters;
+  /**
+   * Argument keys replaced by `{ elided: true, byteSize }` in the PERSISTED and broadcast `tool_started` event (FEAT-106).
+   * `execute()` still receives every argument in full; this only keeps a large or sensitive argument, such as
+   * generated code, out of the transcript when another table already holds the one authoritative copy.
+   */
+  readonly redactArgsInEvents?: readonly string[];
   execute(args: Static<TParameters>, context: { readonly executionId: string; readonly callId: string }): Promise<unknown>;
 }
 

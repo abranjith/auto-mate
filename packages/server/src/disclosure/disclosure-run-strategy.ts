@@ -30,15 +30,30 @@ export function runProviderSession(session: AgentSession, prompt: string) {
   return session.run(prompt);
 }
 
+/**
+ * Extra prompt inputs a wrapping strategy supplies (FEAT-106). They go into the SAME
+ * `assemblePromptContext` call, never a second one: application text as
+ * `application_text`, and a retry's guidance inside the `user_prompt` source.
+ */
+export interface PromptExtras {
+  readonly appText?: readonly string[];
+  readonly guidance?: string | null;
+}
+
+/** The person's words for this run: the task, then any retry guidance they typed. */
+function userWords(task: TaskRow, extras: PromptExtras): string {
+  return extras.guidance ? `${task.description}\n\n${extras.guidance}` : task.description;
+}
+
 /** Approved file context and the clarification tool, with no generation policy. */
 export class DisclosureRunStrategy implements RunStrategy {
   constructor(private readonly deps: DisclosureRunStrategyDependencies) {}
 
-  buildRun(task: TaskRow, execution: ExecutionRow) {
-    if (this.deps.uploads.listByTask(task.id).length === 0) return { prompt: task.description, customTools: [this.deps.clarificationTool] };
+  buildRun(task: TaskRow, execution: ExecutionRow, extras: PromptExtras = {}) {
+    if (this.deps.uploads.listByTask(task.id).length === 0) return { prompt: userWords(task, extras), customTools: [this.deps.clarificationTool] };
     const consent = this.deps.disclosure.verifyForTransmission(task.id, 'context');
     const answers = this.deps.clarifications.listByExecution(execution.id).filter(({ source, status }) => source === 'preflight' && status === 'answered').flatMap(({ questions }) => questions.map((question) => `${question.promptText}: ${question.answer ?? question.proposedDefault}`));
-    const context = assemblePromptContext({ userPrompt: task.description, disclosure: { text: consent.payloadSnapshot, consentId: consent.id }, appText: answers });
+    const context = assemblePromptContext({ userPrompt: userWords(task, extras), disclosure: { text: consent.payloadSnapshot, consentId: consent.id }, appText: [...answers, ...(extras.appText ?? [])] });
     const summary = { files: (JSON.parse(consent.uploadIds) as number[]).length, tables: null, columns: null, sampleRows: null, truncations: null };
     const receipt = this.deps.transmissions.record({ executionId: execution.id, consentId: consent.id, kind: 'context', payloadDigest: consent.payloadDigest, payloadSnapshot: null, byteSize: consent.byteSize, summary, provider: consent.provider, model: consent.model });
     return { prompt: context.text, systemPrompt: 'Ask through request_clarification only when ambiguity changes meaning or risks data loss. State a rationale and a proposed default. Cosmetic choices must use a disclosed default.', customTools: [this.deps.clarificationTool], events: [{ type: 'disclosure_sent' as const, transmissionId: receipt.id, kind: 'context' as const, provider: receipt.provider, model: receipt.model, byteSize: receipt.byteSize, summary, at: receipt.at.toISOString() }] };

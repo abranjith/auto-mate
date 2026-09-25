@@ -4,9 +4,11 @@ import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { RepositoryError } from '@automate/core';
 import type { DatabaseConnection } from './client';
 
-/** Apply committed migrations in-process. @param connection Open SQLite connection. @returns Nothing; modifies database schema only when needed. @throws RepositoryError on failure. */
-export function migrateDatabase(connection: DatabaseConnection): void {
-  const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../drizzle');
+/** The committed migrations shipped with the server. */
+export const MIGRATIONS_FOLDER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../drizzle');
+
+/** Apply committed migrations in-process. @param connection Open SQLite connection. @param migrationsFolder Override for tests that replay a prefix of the history. @returns Nothing; modifies database schema only when needed. @throws RepositoryError on failure. */
+export function migrateDatabase(connection: DatabaseConnection, migrationsFolder = MIGRATIONS_FOLDER): void {
   try {
     const result = migrate(connection.db, { migrationsFolder });
     if (result && typeof result === 'object') throw new Error('Migration initialization failed');

@@ -33,6 +33,8 @@ export interface TaskSessionRegistryDependencies {
   logger: Logger;
   maxConcurrentExecutions: number;
   clarifications?: ClarificationService;
+  /** Tidies application state a crash or shutdown left mid-flight, such as a test run still marked running (FEAT-106). */
+  onInterrupted?: (executionId: number) => void;
 }
 
 /** Registry enforcing one live session per execution and the configured cap. */
@@ -105,6 +107,7 @@ export class TaskSessionRegistry {
       const next = this.deps.events.maxSeq(row.id) + 1;
       this.deps.executions.markInterrupted(row.id);
       this.deps.clarifications?.markInterrupted(row.id);
+      this.deps.onInterrupted?.(row.id);
       const event: ConversationEvent = {
         seq: next,
         type: 'state_changed',
@@ -139,6 +142,7 @@ export class TaskSessionRegistry {
       if (row && !isTerminal(row.status as ExecutionStatus)) {
         const seq = this.deps.events.maxSeq(id) + 1;
         this.deps.executions.markInterrupted(id);
+        this.deps.onInterrupted?.(id);
         this.deps.events.append(id, {
           seq,
           type: 'state_changed',

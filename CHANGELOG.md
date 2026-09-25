@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — FEAT-106 Code generation and agent repair loop
+
+- For tasks with approved files, the agent now writes a Python script and its own pytest tests, runs them, reads filtered failures, and repairs. It works only through four application-owned tools: `write_script`, `write_test`, `run_tests`, and `finalize_script`. It still has no file, shell, or network tool of its own.
+- Tests run against synthetic data built from the approved file description: the approved sample rows plus rows invented from the recorded statistics. The real file is not opened during generation.
+- Each attempt is sealed as an immutable code version identified by a SHA-256 over its files. Files are written to disk from the database, never from the agent's arguments.
+- Added provisional limits: `AUTOMATE_MAX_GENERATION_ATTEMPTS` (3, counted in the database) and a 10-minute wall clock that pauses while a run waits for an answer. The optional spend cap is off by default. Per-test-run, environment-preparation, fixture-size, and file-size limits are also configurable. A refusal is recorded and shown, never thrown.
+- Test output reaches the model only through the default-deny diagnostic filter, as a recorded transmission. If failure details were not approved, the loop stops instead of repairing.
+- Added the transcript's attempt cards, test results with a withheld-line count, the synthetic-data note, a progress line, and a "Tell me what I got wrong" retry. The retry starts a new linked run that reuses the approval and earlier answers.
+- Added the `code_version`, `code_file`, `generation_attempt`, and `synthetic_fixture` tables and the `execution` retry columns. Added five generation endpoints and eleven error codes.
+- Added a minimal `uv`-backed runner behind the `PythonRunner` seam, with process-tree cancellation. It uses a provisional package set (`pandas`, `openpyxl`, `plotly`, `pytest`) pending D05. Generated code still runs without an isolation boundary, and `--no-sync --locked` prevents dependency drift only.
+
 ## Unreleased — FEAT-105 Disclosure review and clarification behavior
 
 - Added a blocking review that shows the literal bounded file description, provider, model, required decisions, applied defaults, and an explicit diagnostics scope before any file-derived context can reach a provider.

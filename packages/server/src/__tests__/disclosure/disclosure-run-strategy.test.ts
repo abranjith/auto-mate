@@ -4,7 +4,7 @@ import { assemblePromptContext } from '@automate/core';
 import { DisclosureRunStrategy } from '../../disclosure/disclosure-run-strategy';
 
 const task = { id: 4, name: 'Task', description: 'Summarize', createdAt: new Date(), updatedAt: new Date() };
-const execution = { id: 8, taskId: 4, status: 'pending', trigger: 'manual', agentSessionId: null, agentLogPath: null, provider: null, model: null, errorCode: null, errorMessage: null, usageTurns: null, usageInputTokens: null, usageOutputTokens: null, usageCostUsd: null, startedAt: null, completedAt: null, durationMs: null, createdAt: new Date() };
+const execution = { id: 8, taskId: 4, status: 'pending', trigger: 'manual', agentSessionId: null, agentLogPath: null, provider: null, model: null, errorCode: null, errorMessage: null, usageTurns: null, usageInputTokens: null, usageOutputTokens: null, usageCostUsd: null, startedAt: null, completedAt: null, durationMs: null, retryOfExecutionId: null, guidance: null, createdAt: new Date() };
 const consent = { id: 2, taskId: 4, uploadIds: '[1]', payloadDigest: 'a'.repeat(64), payloadSnapshot: 'APPROVED BYTES', byteSize: 14, provider: 'test', model: 'fake', scopeContext: true, scopeDiagnostics: true, grantedAt: new Date(), revokedAt: null, createdAt: new Date() };
 const tool = { name: 'request_clarification', description: 'ask', parameters: Type.Object({}), execute: async () => ({}) };
 

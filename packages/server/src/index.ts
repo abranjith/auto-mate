@@ -1,6 +1,6 @@
 import { createApp } from './app';
 import { getAppPaths, ensureAppDirectories } from './config/app-paths';
-import { getIngestionConfig, getServerConfig } from './config/env';
+import { getGenerationConfig, getIngestionConfig, getServerConfig } from './config/env';
 import { openDatabase } from './db/client';
 import { migrateDatabase } from './db/migrate';
 import { AppMetaRepository } from './db/repositories/app-meta-repository';
@@ -18,6 +18,8 @@ import { DisclosureConsentRepository } from './db/repositories/disclosure-consen
 import { DisclosureTransmissionRepository } from './db/repositories/disclosure-transmission-repository';
 import { ClarificationRepository } from './db/repositories/clarification-repository';
 import { ClarificationService, DisclosureRunStrategy, DisclosureService, PreflightService, createClarificationTool } from './disclosure/index';
+import { createGenerationStack } from './generation/index';
+import { MinimalUvPythonRunner } from './execution/index';
 import {
   ProfileService,
   StagedUploadSweeper,
@@ -27,6 +29,7 @@ import {
 
 const config = getServerConfig();
 const ingestionLimits = getIngestionConfig();
+const generationConfig = getGenerationConfig();
 const logger = createLogger(config.logLevel);
 
 /** Start the local preview. @returns Resolves once listening; opens storage and a loopback listener after preflight. */
@@ -71,7 +74,7 @@ async function start(): Promise<void> {
       waitingCount: () => registryRef.current?.waitingCount() ?? 0,
       publish: (executionId, event) => registryRef.current?.publish(executionId, event),
     });
-    const strategy = new DisclosureRunStrategy({
+    const inner = new DisclosureRunStrategy({
       disclosure,
       transmissions,
       uploads: uploadRows,
@@ -81,6 +84,17 @@ async function start(): Promise<void> {
       maxDiagnosticBytes: config.maxDiagnosticBytes,
       publish: (executionId, event) => registryRef.current?.publish(executionId, event),
     });
+    // FEAT-106: MinimalUvPythonRunner is the placeholder behind the PythonRunner seam until FEAT-108 replaces it.
+    const runner = new MinimalUvPythonRunner({ envDir: paths.envDir, uvSyncTimeoutMs: generationConfig.uvSyncTimeoutMs });
+    const probed: { pythonVersion: string | null } = { pythonVersion: null };
+    const generation = createGenerationStack({
+      connection, paths, logger, config: generationConfig, runner, disclosure, inner, preflight, tasks, executions,
+      uploads: uploadRows, profiles: uploadProfiles, transmissions,
+      publish: (executionId, event) => registryRef.current?.publish(executionId, event),
+      registry: () => registryRef.current!,
+      pythonVersion: () => probed.pythonVersion,
+    });
+    const strategy = generation.strategy;
     const registry = new TaskSessionRegistry({
       provider,
       executions,
@@ -90,6 +104,7 @@ async function start(): Promise<void> {
       logger,
       maxConcurrentExecutions: config.maxConcurrentExecutions,
       clarifications: clarificationService,
+      onInterrupted: (executionId) => generation.attempts.abortRunning(executionId),
       model: () => {
         const saved = configStore.load();
         return {
@@ -132,6 +147,7 @@ async function start(): Promise<void> {
       serverConfig: config,
       ingestion: { uploads },
       disclosure: { service: disclosure, transmissions, consents, clarifications, clarificationService },
+      generation: { service: generation.service },
     });
     const server = app.listen(config.port, config.host, () =>
       logger.info(
@@ -139,6 +155,8 @@ async function start(): Promise<void> {
         'server listening',
       ),
     );
+    // Probe once in the background so the code contract can name the Python version; a missing uv is a warning here and a plain-English refusal at the first run_tests.
+    runner.probe().then((info) => { probed.pythonVersion = info.pythonVersion; }, (cause: unknown) => logger.warn({ code: (cause as { code?: string }).code }, 'python runtime unavailable; generated tests will be refused until uv and Python are installed'));
     const detachSockets = attachExecutionSocket(server, {
       executions,
       events,
