@@ -1,0 +1,36 @@
+name: Live Python runtime
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/live-python-runtime.yml'
+      - 'packages/server/runtime/**'
+      - 'packages/server/src/execution/**'
+      - 'packages/server/src/__tests__/live-runtime.test.ts'
+      - 'packages/core/src/execution/**'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+jobs:
+  live-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.15.0'
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v10.0.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @automate/core build
+      - run: pnpm --filter @automate/server test live-runtime
+        env:
+          AUTOMATE_LIVE_PYTHON: '1'

@@ -1,6 +1,6 @@
 import { createApp } from './app';
 import { getAppPaths, ensureAppDirectories } from './config/app-paths';
-import { getGenerationConfig, getIngestionConfig, getServerConfig } from './config/env';
+import { getGenerationConfig, getIngestionConfig, getServerConfig, getVerificationConfig, getRuntimeConfig } from './config/env';
 import { openDatabase } from './db/client';
 import { migrateDatabase } from './db/migrate';
 import { AppMetaRepository } from './db/repositories/app-meta-repository';
@@ -19,7 +19,9 @@ import { DisclosureTransmissionRepository } from './db/repositories/disclosure-t
 import { ClarificationRepository } from './db/repositories/clarification-repository';
 import { ClarificationService, DisclosureRunStrategy, DisclosureService, PreflightService, createClarificationTool } from './disclosure/index';
 import { createGenerationStack } from './generation/index';
-import { MinimalUvPythonRunner } from './execution/index';
+import { MAX_CAPTURE_BYTES, UvPythonRunner, ProcessRunner, RuntimeProvisioner } from './execution/index';
+import { RuntimeEnvironmentRepository } from './db/repositories/runtime-environment-repository';
+import { createVerificationStack } from './verification/index';
 import {
   ProfileService,
   StagedUploadSweeper,
@@ -30,6 +32,8 @@ import {
 const config = getServerConfig();
 const ingestionLimits = getIngestionConfig();
 const generationConfig = getGenerationConfig();
+const verificationConfig = getVerificationConfig();
+const runtimeConfig = getRuntimeConfig();
 const logger = createLogger(config.logLevel);
 
 /** Start the local preview. @returns Resolves once listening; opens storage and a loopback listener after preflight. */
@@ -84,8 +88,11 @@ async function start(): Promise<void> {
       maxDiagnosticBytes: config.maxDiagnosticBytes,
       publish: (executionId, event) => registryRef.current?.publish(executionId, event),
     });
-    // FEAT-106: MinimalUvPythonRunner is the placeholder behind the PythonRunner seam until FEAT-108 replaces it.
-    const runner = new MinimalUvPythonRunner({ envDir: paths.envDir, uvSyncTimeoutMs: generationConfig.uvSyncTimeoutMs });
+    const environments = new RuntimeEnvironmentRepository(connection);
+    environments.failInterrupted();
+    const processes = new ProcessRunner({ maxCaptureBytes: Math.max(MAX_CAPTURE_BYTES, verificationConfig.maxRunOutputBytes * 2), logger });
+    const provisioner = new RuntimeProvisioner({ scriptEnvDir: paths.envDir, verifyEnvDir: paths.verifyEnvDir, environments, processes, prepareTimeoutMs: runtimeConfig.prepareTimeoutMs, pythonInstallTimeoutMs: runtimeConfig.pythonInstallTimeoutMs });
+    const runner = new UvPythonRunner({ envDir: paths.envDir, provisioner, processes, memoryLimitBytes: runtimeConfig.memoryLimitBytes, maxOutputFileBytes: runtimeConfig.maxOutputFileBytes, maxOutputTotalBytes: runtimeConfig.maxOutputTotalBytes, maxOutputFiles: runtimeConfig.maxOutputFiles, outputWatchIntervalMs: runtimeConfig.outputWatchIntervalMs });
     const probed: { pythonVersion: string | null } = { pythonVersion: null };
     const generation = createGenerationStack({
       connection, paths, logger, config: generationConfig, runner, disclosure, inner, preflight, tasks, executions,
@@ -93,6 +100,14 @@ async function start(): Promise<void> {
       publish: (executionId, event) => registryRef.current?.publish(executionId, event),
       registry: () => registryRef.current!,
       pythonVersion: () => probed.pythonVersion,
+      handOffToVerification: true,
+    });
+    // FEAT-107: verification, the approval gate, the real run, and the review. No provider session is opened here.
+    const verification = createVerificationStack({
+      connection, paths, logger, config: verificationConfig, generationConfig, runner, provisioner, executions,
+      versions: generation.versions, uploads: uploadRows, profiles: uploadProfiles,
+      workspace: generation.workspace, fixtureService: generation.fixtureService, generation: generation.service,
+      registry: () => registryRef.current!,
     });
     const strategy = generation.strategy;
     const registry = new TaskSessionRegistry({
@@ -104,7 +119,8 @@ async function start(): Promise<void> {
       logger,
       maxConcurrentExecutions: config.maxConcurrentExecutions,
       clarifications: clarificationService,
-      onInterrupted: (executionId) => generation.attempts.abortRunning(executionId),
+      onInterrupted: (executionId) => { generation.attempts.abortRunning(executionId); verification.onInterrupted(executionId); },
+      onHandOff: (row) => verification.onHandOff(row.id),
       model: () => {
         const saved = configStore.load();
         return {
@@ -148,6 +164,8 @@ async function start(): Promise<void> {
       ingestion: { uploads },
       disclosure: { service: disclosure, transmissions, consents, clarifications, clarificationService },
       generation: { service: generation.service },
+      verification: { verification: verification.verification, intents: verification.intents, approval: verification.approval, runs: verification.runs, review: verification.review, assertCapacity: () => registry.assertCapacity() },
+      runtime: { provisioner },
     });
     const server = app.listen(config.port, config.host, () =>
       logger.info(
@@ -155,8 +173,12 @@ async function start(): Promise<void> {
         'server listening',
       ),
     );
-    // Probe once in the background so the code contract can name the Python version; a missing uv is a warning here and a plain-English refusal at the first run_tests.
-    runner.probe().then((info) => { probed.pythonVersion = info.pythonVersion; }, (cause: unknown) => logger.warn({ code: (cause as { code?: string }).code }, 'python runtime unavailable; generated tests will be refused until uv and Python are installed'));
+    if (runtimeConfig.prepareOnStartup) for (const kind of ['script', 'verify'] as const) {
+      void provisioner.ensureRuntime(kind, new AbortController().signal).then(({ row, prepared }) => {
+        if (kind === 'script') probed.pythonVersion = row.pythonVersion;
+        logger.info({ kind, pythonVersion: row.pythonVersion, packageCount: JSON.parse(row.packageJson ?? '[]').length, prepared }, 'python runtime ready');
+      }, (cause: unknown) => logger.warn({ kind, code: (cause as { code?: string }).code }, 'background Python preparation failed'));
+    }
     const detachSockets = attachExecutionSocket(server, {
       executions,
       events,

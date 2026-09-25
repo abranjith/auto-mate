@@ -30,7 +30,7 @@ Omissions: none.
 
 [APPLICATION CONTEXT]
 CODE CONTRACT — follow every rule below.
-1. Write Python only (Python 3.12.4) for Linux. Use only the standard library and these installed packages: pandas, openpyxl, plotly, pytest. Do not install packages, do not use the network, and do not write shell scripts.
+1. Write Python only (Python 3.12.4) for Linux. Use only the standard library and these installed packages: pandas, openpyxl, xlsxwriter, plotly, matplotlib, jinja2, python-dateutil, pytest. Do not install packages, do not use the network, and do not write shell scripts.
 2. Read inputs from the directory in the environment variable AUTOMATE_INPUT_DIR, joined with these exact filenames. Never use an absolute path or any other location:
 - \`<stored>.csv\` (CSV)
 3. Write every output file into the directory in the environment variable AUTOMATE_OUTPUT_DIR, and write manifest.json there too, declaring every output: {"artifacts": [{"filename": "...", "type": "...", "title": "...", "description": "..."}]}. "filename" is a plain file name with no directory. "type" is one of: csv, plotly-html, html, image, markdown, json, text, xlsx, pdf. A plotly-html report must embed Plotly (include_plotlyjs=True, never 'cdn').

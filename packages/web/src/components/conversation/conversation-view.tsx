@@ -7,6 +7,7 @@ import { ClarificationEvent } from './clarification-event';
 import { DisclosureReceipt } from '../disclosure/disclosure-receipt';
 import { CodeVersionCard } from '../generation/code-version-card';
 import { TestRunEvent } from '../generation/test-run-event';
+import { describeRunStatus } from '../execution/run-result';
 const AssistantMessage = lazy(() =>
   import('./assistant-message').then((module) => ({
     default: module.AssistantMessage,
@@ -131,6 +132,17 @@ export function ConversationView({
               return <TestRunEvent key={event.seq} event={event} {...(executionId ? { executionId } : {})} />;
             case 'generation_settled':
               return <p key={event.seq} className={ds.generationSettled}>{event.summary}</p>;
+            // FEAT-107: counts and plain sentences only; findings, output, and feedback are fetched over REST.
+            case 'verification_finished':
+              return <p key={event.seq} className={event.status === 'passed' ? ds.verdictPassed : ds.verdictBlocked}>{event.summary} Checked against {event.runtimeDescription}.</p>;
+            case 'approval_decided':
+              return <p key={event.seq} className={ds.eventLine}>{event.decision === 'approved' ? `You chose to run it${event.acknowledgedWarnings ? ', having read the warnings' : ''}.` : 'You cancelled the run.'}</p>;
+            case 'run_finished':
+              return <p key={event.seq} className={event.status === 'succeeded' ? ds.verdictPassed : ds.verdictBlocked}>{describeRunStatus({ status: event.status, exitCode: event.exitCode })}{event.declaredOutputCount === null ? '' : ` It declared ${event.declaredOutputCount} output${event.declaredOutputCount === 1 ? '' : 's'} and wrote ${event.producedOutputCount ?? 0}.`}</p>;
+            case 'review_decided':
+              return <p key={event.seq} className={ds.eventLine}>{event.verdict === 'accepted' ? 'You accepted the result.' : `You said the result was wrong${event.retryExecutionId === null ? '.' : `; run ${event.retryExecutionId} is trying again with your feedback.`}`}</p>;
+            case 'runtime_prepared':
+              return <p key={event.seq} className={ds.eventLine}>Python {event.pythonVersion} is ready with {event.packageCount} packages.</p>;
             default:
               return assertNever(event);
           }

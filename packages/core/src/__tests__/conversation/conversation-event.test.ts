@@ -44,13 +44,18 @@ describe('conversation contract', () => {
       { seq: 13, type: 'test_run_finished', attemptId: 2, attempt: 4, outcome: 'refused', refusalReason: 'attempt_limit', testsTotal: null, testsPassed: null, testsFailed: null, droppedLineCount: null, attemptsRemaining: 0, attemptLimit: 3, manifestPresent: null, at },
       { seq: 14, type: 'generation_settled', outcome: 'finalized', codeVersionId: 1, digest: 'a'.repeat(64), attemptsUsed: 2, attemptLimit: 3, summary: 'Chose attempt 2 of 3.', at },
       { seq: 15, type: 'generation_settled', outcome: 'exhausted', codeVersionId: null, digest: null, attemptsUsed: 3, attemptLimit: 3, summary: 'Used all 3 attempts.', at },
+      { seq: 16, type: 'verification_finished', verificationRunId: 1, codeVersionId: 1, status: 'passed', blockingCount: 0, advisoryCount: 1, summary: 'No blocking problems found; 1 advisory finding to review.', runtimeDescription: 'Python 3.12.4 on Linux (x64)', at },
+      { seq: 17, type: 'approval_decided', approvalId: 1, decision: 'approved', acknowledgedWarnings: true, at },
+      { seq: 18, type: 'run_finished', scriptRunId: 1, status: 'succeeded', exitCode: 0, durationMs: 1200, declaredOutputCount: 2, producedOutputCount: 2, outputTruncated: false, at },
+      { seq: 19, type: 'review_decided', verdict: 'rejected', retryExecutionId: 2, at },
+      { seq: 20, type: 'runtime_prepared', kind: 'script', pythonVersion: '3.13.1', packageCount: 8, at },
     ];
     for (const event of events) {
       expect(Value.Check(ConversationEventSchema, event)).toBe(true);
       expect(JSON.parse(JSON.stringify(event))).toEqual(event);
     }
     expectTypeOf<ConversationEvent['type']>().toEqualTypeOf<
-      AgentEvent['type'] | 'user_prompt' | 'state_changed' | 'clarification_requested' | 'clarification_answered' | 'disclosure_sent' | 'code_version_sealed' | 'test_run_finished' | 'generation_settled'
+      AgentEvent['type'] | 'user_prompt' | 'state_changed' | 'clarification_requested' | 'clarification_answered' | 'disclosure_sent' | 'code_version_sealed' | 'test_run_finished' | 'generation_settled' | 'verification_finished' | 'approval_decided' | 'run_finished' | 'review_decided' | 'runtime_prepared'
     >();
   });
 

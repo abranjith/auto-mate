@@ -13,6 +13,10 @@ export interface AppPaths {
   stagedUploadsDir: string;
   scriptsDir: string;
   envDir: string;
+  /** The checker uv project (FEAT-107): ruff and bandit, kept apart from the code they check. */
+  verifyEnvDir: string;
+  /** Real-data runs (FEAT-107): `runs/{executionId}/{input,output,verify}`. */
+  runsDir: string;
   configDir: string;
   agentConfigFile: string;
   piDir: string;
@@ -40,6 +44,7 @@ export function getAppPaths(home = process.env.AUTOMATE_HOME): AppPaths {
     root, dataDir, dbFile: path.join(dataDir, 'automate.db'),
     artifactsDir: path.join(root, 'artifacts'), uploadsDir, stagedUploadsDir: path.join(uploadsDir, 'staged'),
     scriptsDir: path.join(root, 'scripts'), envDir: path.join(root, 'env'),
+    verifyEnvDir: path.join(root, 'verify-env'), runsDir: path.join(root, 'runs'),
     configDir, agentConfigFile: path.join(configDir, 'agent.json'),
     piDir, piAuthFile: path.join(piDir, 'auth.json'), piModelsFile: path.join(piDir, 'models.json'),
     piSessionStagingDir: path.join(piDir, 'sessions'), agentSessionsDir,
@@ -68,7 +73,7 @@ export function ensureAppDirectories(paths: AppPaths): void {
     mkdirSync(paths.root, { recursive: true });
     if (!statSync(paths.root).isDirectory()) throw new Error('not a directory');
     accessSync(paths.root, constants.W_OK);
-    for (const directory of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.stagedUploadsDir, paths.scriptsDir, paths.envDir, paths.configDir, paths.agentSessionsDir]) {
+    for (const directory of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.stagedUploadsDir, paths.scriptsDir, paths.envDir, paths.verifyEnvDir, paths.runsDir, paths.configDir, paths.agentSessionsDir]) {
       mkdirSync(directory, { recursive: true });
       accessSync(directory, constants.W_OK);
     }

@@ -439,22 +439,35 @@ The checker's `bandit.yaml` lives in `verify-env/` and never beside the code it 
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Verification contracts, gate policy, limits, and typed errors in `packages/core`
-- [ ] TASK-002: State machine extension — the gate's states, and which ones survive a restart
-- [ ] TASK-003: Persistence — verification tables, the approval, the run, and migration `0005`
-- [ ] TASK-004: Reconciliation, concurrency, and the parked states
-- [ ] TASK-005: The checker environment — `ruff` and `bandit`, kept away from the code they check
-- [ ] TASK-006: Static checks — `ruff` and `bandit` adapters and the hostile-config proof
-- [ ] TASK-007: Contract and integrity checks — the ones only the application can make
-- [ ] TASK-008: The independent test re-run
-- [ ] TASK-009: `VerificationService` — one pass, one verdict, bound to code and runtime
-- [ ] TASK-010: Run intent and the approval gate
-- [ ] TASK-011: The real-data run
-- [ ] TASK-012: Post-run review and the feedback retry
-- [ ] TASK-013: Cancellation across the verification, approval, and run legs
-- [ ] TASK-014: Verification, approval, run, and review REST API and transcript events
-- [ ] TASK-015: The gate on screen — report, approval, run, and review
-- [ ] TASK-016: End-to-end proof — generate, verify, approve, run, review, reject, retry
-- [ ] TASK-017: Documentation for verification, the gate, and the review
+- [x] TASK-001: Verification contracts, gate policy, limits, and typed errors in `packages/core`
+- [x] TASK-002: State machine extension — the gate's states, and which ones survive a restart
+- [x] TASK-003: Persistence — verification tables, the approval, the run, and migration `0005`
+- [x] TASK-004: Reconciliation, concurrency, and the parked states
+- [x] TASK-005: The checker environment — `ruff` and `bandit`, kept away from the code they check
+- [x] TASK-006: Static checks — `ruff` and `bandit` adapters and the hostile-config proof
+- [x] TASK-007: Contract and integrity checks — the ones only the application can make
+- [x] TASK-008: The independent test re-run
+- [x] TASK-009: `VerificationService` — one pass, one verdict, bound to code and runtime
+- [x] TASK-010: Run intent and the approval gate
+- [x] TASK-011: The real-data run
+- [x] TASK-012: Post-run review and the feedback retry
+- [x] TASK-013: Cancellation across the verification, approval, and run legs
+- [x] TASK-014: Verification, approval, run, and review REST API and transcript events
+- [x] TASK-015: The gate on screen — report, approval, run, and review
+- [x] TASK-016: End-to-end proof — generate, verify, approve, run, review, reject, retry
+- [x] TASK-017: Documentation for verification, the gate, and the review
 
 Legend: [ ] Not started | [/] In progress | [x] Completed
+
+## 9. Implementation Notes (2026-09-25)
+
+- DEVIATION (TASK-004): `waiting` does **not** survive a restart. Only `awaiting_approval` and `awaiting_review` do (`RESTART_SURVIVING_STATUSES`, `survivesRestart`). This follows the TODO.md resolution recorded during FEAT-110's breakdown: a `waiting` run's question lives in a live provider session. All three parked statuses still free the concurrency slot (`PARKED_STATUSES`, `consumesConcurrencySlot`).
+- DEVIATION (TASK-006): bandit also gets `--ini <verify-env/bandit.ini>`. Against the real bandit 1.9.4, a `.bandit` file in the checked tree still set skipped tests even with `-c`, and the hostile-config test caught it. `invalid-syntax` was added to the blocking ruff codes (`BLOCKING_RUFF_RULE_CODES`), because ruff 0.16 reports syntax errors with that code rather than `E9xx`.
+- DEVIATION (TASK-005): pinned ruff 0.16.8, not 0.16.9. 0.16.9 was one day old, inside this project's five-day release quarantine. bandit is 1.9.4.
+- DEVIATION (TASK-008/011): the test re-run passes FEAT-106's `PYTEST_ARGS` and the real run passes `[entrypoint]` to `PythonRunner.run`. The seam already prefixes `uv run --no-sync --locked -- python`, so the spec's `['run','--no-sync','--locked',…]` would have doubled it.
+- DEVIATION (TASK-011): added error code `INPUT_COPY_MISMATCH` (eleven codes, not ten) for a staged copy whose SHA-256 differs from `upload.sha256`.
+- ADDITION (TASK-003): `migrateDatabase` turns foreign keys off around drizzle's migrator. drizzle wraps migrations in `BEGIN`, where the migration's own `PRAGMA foreign_keys=OFF` is ignored, and the `execution` rebuild's `DROP TABLE` cascade-deleted every child row (proven by `migration-0005.test.ts`). The migration ends with a `pragma_foreign_key_check` guard.
+- FIX (FEAT-106, exposed by TASK-007): XLSX fixtures embedded zip timestamps and were not byte-reproducible. `fixture-writer.ts` now normalizes them (`fixture-determinism.test.ts`).
+- ADDITION (TASK-004/014): the registry is the per-execution event fan-out, and the WebSocket subscribes to it. Verification and runs are tracked as `PhaseJob`s. The generation hand-off uses `RunSettlement.status = 'verifying'` behind `handOffToVerification`.
+- CHOICE: `verification_check.is_blocking` stores whether that check blocked this pass. An `aborted`, `timed_out`, or `errored` pass is discarded and redone for the same (version, runtime) pair; `passed` and `failed` passes are reused.
+- Tests live under `src/__tests__/` mirroring the source tree (standing user preference), not beside the source as §3 lists. The server suite's timeout is 30 s: the integration suites exceed 5 s under parallel forks on Windows.

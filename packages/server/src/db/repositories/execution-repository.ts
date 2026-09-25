@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import {
   RepositoryError,
   applyTransition,
@@ -9,6 +9,11 @@ import type { DatabaseConnection } from '../client';
 import { execution } from '../schema';
 
 export type ExecutionRow = typeof execution.$inferSelect;
+/**
+ * What a restart interrupts: everything holding in-memory state. `waiting`
+ * belongs here — its question lives in a live provider session (FEAT-105).
+ * The two FEAT-107 gates do not: they are rows, and survive (`PARKED`).
+ */
 const ACTIVE: ExecutionStatus[] = [
   'pending',
   'generating',
@@ -16,6 +21,14 @@ const ACTIVE: ExecutionStatus[] = [
   'executing',
   'waiting',
 ];
+/** Parked on a person with no in-memory state; served by the `execution_parked` index. */
+const PARKED: ExecutionStatus[] = ['awaiting_approval', 'awaiting_review'];
+type TerminalStatus = Extract<ExecutionStatus, 'completed' | 'failed' | 'aborted' | 'rejected'>;
+const INTERRUPTED_MESSAGES: Partial<Record<ExecutionStatus, string>> = {
+  waiting: 'This run was interrupted while waiting for your answer. Your answers were saved — start it again and you will not be asked twice.',
+  verifying: 'This run was interrupted while its code was being checked. Start it again to retry.',
+  executing: 'This run was interrupted while the script was running on your file. Start it again to retry.',
+};
 
 /** Exclusive data-access path for execution state and provenance. */
 export class ExecutionRepository {
@@ -40,6 +53,21 @@ export class ExecutionRepository {
       const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
       if (!source) throw new RepositoryError('The execution could not be found.');
       return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, guidance }).returning().get();
+    }));
+  }
+  /**
+   * Create the new run a rejected result seeds (FEAT-107): same task, `trigger = 'feedback'`,
+   * linked back, with the person's feedback as its guidance. The consent is the task's and is
+   * reused as-is; the rejected run is never touched.
+   * @param fromExecutionId The rejected run.
+   * @param feedback What the person said was wrong.
+   * @returns The new pending execution.
+   */
+  createFeedbackRetry(fromExecutionId: number, feedback: string): ExecutionRow {
+    return this.write('created', () => this.connection.db.transaction((tx) => {
+      const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
+      if (!source) throw new RepositoryError('The execution could not be found.');
+      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'feedback', retryOfExecutionId: source.id, guidance: feedback }).returning().get();
     }));
   }
   /**
@@ -85,6 +113,46 @@ export class ExecutionRepository {
         .all(),
     );
   }
+  /** Executions waiting at the approval or review gate, most recent first. `waiting` is not parked here: it does not survive a restart. */
+  listParked(): ExecutionRow[] {
+    return this.read(() =>
+      this.connection.db
+        .select()
+        .from(execution)
+        .where(inArray(execution.status, PARKED))
+        .orderBy(desc(execution.id))
+        .all(),
+    );
+  }
+  /**
+   * Hand a run to its next phase without settling it (FEAT-107: `generating → verifying`).
+   * Usage is recorded now because the provider session is over.
+   */
+  markHandedOff(id: number, status: Extract<ExecutionStatus, 'verifying'>, usage?: AgentUsage): ExecutionRow {
+    return this.transition(id, status, {
+      usageTurns: usage?.turns ?? null,
+      usageInputTokens: usage?.inputTokens ?? null,
+      usageOutputTokens: usage?.outputTokens ?? null,
+      usageCostUsd: usage?.costUsd ?? null,
+    });
+  }
+  /**
+   * Record a person's verdict on a result: `awaiting_review → completed | rejected`.
+   * @param feedback Stored only for a rejection.
+   */
+  markReviewed(id: number, verdict: 'accepted' | 'rejected', feedback: string | null): ExecutionRow {
+    const current = this.required(id);
+    const status = verdict === 'accepted' ? 'completed' : 'rejected';
+    applyTransition(current.status as ExecutionStatus, status);
+    const reviewedAt = this.now();
+    return this.update(id, {
+      status,
+      reviewedAt,
+      reviewFeedback: verdict === 'rejected' ? feedback : null,
+      completedAt: reviewedAt,
+      durationMs: current.startedAt === null ? 0 : Math.max(0, reviewedAt.getTime() - current.startedAt.getTime()),
+    });
+  }
 
   markStarted(id: number): ExecutionRow {
     return this.transition(id, 'generating', { startedAt: this.now() });
@@ -112,7 +180,7 @@ export class ExecutionRepository {
   markSettled(
     id: number,
     value: {
-      status: Extract<ExecutionStatus, 'completed' | 'failed' | 'aborted'>;
+      status: TerminalStatus;
       usage?: AgentUsage;
       errorCode?: string;
       errorMessage?: string;
@@ -141,10 +209,7 @@ export class ExecutionRepository {
     return this.markSettled(id, {
       status: 'failed',
       errorCode: 'EXECUTION_INTERRUPTED',
-      errorMessage:
-        current.status === 'waiting'
-          ? 'This run was interrupted while waiting for your answer. Your answers were saved — start it again and you will not be asked twice.'
-          : 'This run was interrupted when the server restarted. Start it again to retry.',
+      errorMessage: INTERRUPTED_MESSAGES[current.status as ExecutionStatus] ?? 'This run was interrupted when the server restarted. Start it again to retry.',
     });
   }
 

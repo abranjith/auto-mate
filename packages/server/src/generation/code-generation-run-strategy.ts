@@ -26,7 +26,7 @@ import type { UploadProfileRepository } from '../db/repositories/upload-profile-
 import type { UploadRepository, UploadRow } from '../db/repositories/upload-repository';
 import type { DisclosureRunStrategy } from '../disclosure/disclosure-run-strategy';
 import type { DisclosureService } from '../disclosure/disclosure-service';
-import { GENERATION_DEPENDENCY_SET } from '../execution/python-dependency-set';
+import { SCRIPT_DEPENDENCY_SET } from '../execution/dependency-policy';
 import type { FixtureService } from './fixture-service';
 import { DEFAULT_BUDGET_LIMITS, GenerationBudget, type BudgetLimits } from './generation-budget';
 import { GenerationLifecycle } from './generation-lifecycle';
@@ -49,6 +49,8 @@ export interface CodeGenerationRunStrategyDependencies {
   readonly platform?: NodeJS.Platform;
   /** The Python version last probed, if known; the contract names it when it can. */
   readonly pythonVersion?: () => string | null;
+  /** FEAT-107: finalized runs hand off to verification (`generating → verifying`) rather than completing. */
+  readonly handOffToVerification?: boolean;
 }
 
 /** The role, the tools, and the clarification rule, as the system prompt. */
@@ -71,11 +73,11 @@ export class CodeGenerationRunStrategy implements RunStrategy {
     const budget = new GenerationBudget({ executionId: execution.id, attempts: this.deps.attempts, executions: this.deps.executions, limits: this.deps.limits ?? DEFAULT_BUDGET_LIMITS });
     const run = new GenerationRun(execution.id, task.id, budget);
     await this.deps.fixtures.materializeFixtures(execution.id, uploads.map(({ id }) => id), run.signal);
-    const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: GENERATION_DEPENDENCY_SET, inputFiles: uploads.map((upload) => this.inputFile(upload)), attemptLimit: budget.limits.maxAttempts });
+    const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: uploads.map((upload) => this.inputFile(upload)), attemptLimit: budget.limits.maxAttempts });
     const appText = execution.guidance ? [contract, 'The person reviewed an earlier attempt that did not succeed and added guidance; it follows their original request above. Use it.'] : [contract];
     const built = this.deps.inner.buildRun(task, execution, { appText, guidance: execution.guidance });
     this.deps.runs.open(run);
-    const lifecycle = new GenerationLifecycle({ run, runs: this.deps.runs, versions: this.deps.versions, attempts: this.deps.attempts, logger: this.deps.logger, ...(this.deps.platform ? { platform: this.deps.platform } : {}) });
+    const lifecycle = new GenerationLifecycle({ run, runs: this.deps.runs, versions: this.deps.versions, attempts: this.deps.attempts, logger: this.deps.logger, ...(this.deps.platform ? { platform: this.deps.platform } : {}), ...(this.deps.handOffToVerification ? { handOffToVerification: true } : {}) });
     return { ...built, systemPrompt: GENERATION_SYSTEM_PROMPT, customTools: [...built.customTools, ...this.deps.tools.all()], lifecycle };
   }
 

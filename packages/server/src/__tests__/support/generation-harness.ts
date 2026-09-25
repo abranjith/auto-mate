@@ -55,12 +55,14 @@ export interface HarnessOptions {
   readonly pythonRuns?: readonly FakePythonRun[];
   readonly runnerOptions?: FakePythonRunnerOptions;
   /** A runner, or a factory given the temporary data paths (for a real runner over a fake spawn). */
-  readonly runner?: PythonRunner | ((paths: TempStore['paths']) => PythonRunner);
+  readonly runner?: PythonRunner | ((paths: TempStore['paths'], connection: TempStore['connection']) => PythonRunner);
   readonly limits?: Partial<BudgetLimits>;
   readonly scopeDiagnostics?: boolean;
   /** Files to attach; defaults to one sentinel CSV. Pass `[]` for a text-only task. */
   readonly files?: readonly { readonly name: string; readonly bytes: Buffer; readonly format: 'csv' | 'xlsx' }[];
   readonly prompt?: string;
+  /** FEAT-107: finalized runs end in `verifying` and are handed to this callback instead of completing. */
+  readonly onHandOff?: (execution: ExecutionRow) => void;
 }
 
 /** Build the stack, stage and approve the files, and create the task — without starting it. */
@@ -85,17 +87,17 @@ export async function createGenerationHarness(options: HarnessOptions = {}) {
   const publish = (executionId: number, event: Parameters<TaskSessionRegistry['publish']>[1]) => registryRef.current!.publish(executionId, event);
   const clarificationService = new ClarificationService({ clarifications: repos.clarifications, executions: repos.executions, events: repos.events, maxAgentClarifications: 3, maxWaitingExecutions: 5, waitingCount: () => registryRef.current?.waitingCount() ?? 0, publish });
   const inner = new DisclosureRunStrategy({ disclosure, transmissions: repos.transmissions, uploads: repos.uploads, clarifications: repos.clarifications, executions: repos.executions, clarificationTool: createClarificationTool(clarificationService), publish });
-  const runner = typeof options.runner === 'function' ? options.runner(store.paths) : options.runner ?? new FakePythonRunner(options.pythonRuns ?? [], options.runnerOptions);
+  const runner = typeof options.runner === 'function' ? options.runner(store.paths, c) : options.runner ?? new FakePythonRunner(options.pythonRuns ?? [], options.runnerOptions);
   const runs = new GenerationRuns();
   const workspace = new CodeWorkspace({ versions: repos.versions, attempts: repos.attempts, paths: store.paths, logger });
   const fixtureService = new FixtureService({ uploads: repos.uploads, profiles: repos.profiles, fixtures: repos.fixtures, paths: store.paths, logger });
   const tools = new GenerationTools({ workspace, versions: repos.versions, attempts: repos.attempts, executions: repos.executions, runs, runner, consent: disclosure, diagnostics: inner, transmissions: repos.transmissions, fixturesDir: (id) => fixtureService.fixturesDir(id), publish, logger, uploads: repos.uploads, profiles: repos.profiles });
   const limits = { ...DEFAULT_BUDGET_LIMITS, ...options.limits };
-  const strategy = new CodeGenerationRunStrategy({ inner, disclosure, uploads: repos.uploads, profiles: repos.profiles, executions: repos.executions, versions: repos.versions, attempts: repos.attempts, fixtures: fixtureService, runs, tools, logger, limits, platform: 'linux', pythonVersion: () => '3.12.4' });
+  const strategy = new CodeGenerationRunStrategy({ inner, disclosure, uploads: repos.uploads, profiles: repos.profiles, executions: repos.executions, versions: repos.versions, attempts: repos.attempts, fixtures: fixtureService, runs, tools, logger, limits, platform: 'linux', pythonVersion: () => '3.12.4', ...(options.onHandOff ? { handOffToVerification: true } : {}) });
   const upload = uploads[0] ?? null;
   const scripts = options.scripts?.(upload) ?? [{ events: [], steps: options.steps?.(upload) ?? [], result: COMPLETED }];
   const provider = new FakeAgentProvider(scripts);
-  const registry = new TaskSessionRegistry({ provider, executions: repos.executions, events: repos.events, strategy, paths: store.paths, model: () => ({ provider: 'fake', id: model.value }), auth: () => ({ mode: 'managed' }), logger, maxConcurrentExecutions: 5, clarifications: clarificationService, onInterrupted: (id) => repos.attempts.abortRunning(id) });
+  const registry = new TaskSessionRegistry({ provider, executions: repos.executions, events: repos.events, strategy, paths: store.paths, model: () => ({ provider: 'fake', id: model.value }), auth: () => ({ mode: 'managed' }), logger, maxConcurrentExecutions: 5, clarifications: clarificationService, onInterrupted: (id) => repos.attempts.abortRunning(id), ...(options.onHandOff ? { onHandOff: (row: ExecutionRow) => options.onHandOff!(row) } : {}) });
   registryRef.current = registry;
   const preflight = new PreflightService(repos.profiles, repos.clarifications);
   const service = new GenerationService({ tasks: repos.tasks, executions: repos.executions, versions: repos.versions, attempts: repos.attempts, fixtures: repos.fixtures, fixtureService, transmissions: repos.transmissions, uploads: repos.uploads, disclosure, preflight, registry, logger, limits });

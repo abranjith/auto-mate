@@ -3,7 +3,7 @@
 // the same CSV dialect and encoding, the same sheet names and order, and
 // typed workbook cells where the profile saw typed cells.
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import ExcelJS from 'exceljs';
 import { parseNumber, type SyntheticSource, type SyntheticTable } from '@automate/core';
 
@@ -67,6 +67,40 @@ export function typedCell(cell: string, column: SyntheticSource['columns'][numbe
 
 type StreamingSheet = { addRow(values: unknown[]): { commit(): void }; commit(): Promise<void> | void };
 
+const LOCAL_HEADER = 0x04034b50;
+const CENTRAL_HEADER = 0x02014b50;
+const END_OF_CENTRAL = 0x06054b50;
+
+/**
+ * Zero every entry's DOS modification time in a zip, in place (FEAT-107).
+ *
+ * exceljs stamps each zip entry with the moment it was written, so the same
+ * workbook written twice is two different byte strings. FEAT-107 re-derives a
+ * fixture and compares its SHA-256 with the recorded one; with timestamps in
+ * the bytes, every XLSX fixture would fail that check. After this, the bytes
+ * depend on the content only. Entries are left intact otherwise.
+ *
+ * @param zip The complete archive.
+ * @returns The same buffer; unchanged when it is not a well-formed zip.
+ */
+export function normalizeZipTimestamps(zip: Buffer): Buffer {
+  let end = -1;
+  for (let offset = zip.length - 22; offset >= Math.max(0, zip.length - 65_557); offset -= 1) {
+    if (zip.readUInt32LE(offset) === END_OF_CENTRAL) { end = offset; break; }
+  }
+  if (end < 0) return zip;
+  const entries = zip.readUInt16LE(end + 10);
+  let cursor = zip.readUInt32LE(end + 16);
+  for (let index = 0; index < entries && cursor + 46 <= zip.length; index += 1) {
+    if (zip.readUInt32LE(cursor) !== CENTRAL_HEADER) return zip;
+    zip.writeUInt32LE(0x00210000, cursor + 12); // time 00:00:00, date 1980-01-01
+    const local = zip.readUInt32LE(cursor + 42);
+    if (local + 30 <= zip.length && zip.readUInt32LE(local) === LOCAL_HEADER) zip.writeUInt32LE(0x00210000, local + 10);
+    cursor += 46 + zip.readUInt16LE(cursor + 28) + zip.readUInt16LE(cursor + 30) + zip.readUInt16LE(cursor + 32);
+  }
+  return zip;
+}
+
 /**
  * Write every sheet into one workbook with exceljs's STREAMING writer only
  * (memory's rule: never build a whole workbook in memory).
@@ -86,4 +120,6 @@ export async function writeXlsx(file: string, sheets: readonly FixtureSheet[]): 
     await worksheet.commit();
   }
   await writer.commit();
+  // Same content, same bytes: a fixture must be reproducible to be verifiable (FEAT-107).
+  writeFileSync(file, normalizeZipTimestamps(readFileSync(file)));
 }

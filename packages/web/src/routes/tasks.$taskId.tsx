@@ -13,6 +13,10 @@ import { getTask } from '../api/task-queries';
 import { ds } from '../design-system/tokens';
 import { WaitingBanner } from '../components/conversation/waiting-banner';
 import { GenerationSection } from '../components/generation/generation-section';
+import { GateSection } from '../components/verification/gate-section';
+
+/** Statuses where the generic cancel control applies; the gates and the run carry their own. */
+const CANCELLABLE = ['pending', 'generating', 'verifying'];
 /** Follow one execution using durable history plus its live tail. */
 function LiveConversation({
   taskId,
@@ -41,13 +45,18 @@ function LiveConversation({
       <ConversationView events={stream.events} executionId={executionId} />
       {stream.execution ? (
         <>
-          {stream.execution.status === 'waiting' ? null : <RunControls execution={stream.execution} />}
+          {CANCELLABLE.includes(stream.execution.status) ? <RunControls execution={stream.execution} /> : null}
           <WaitingBanner execution={stream.execution} />
           <CompletedSummary execution={stream.execution} />
           {stream.execution.error ? (
             <FailurePanel error={stream.execution.error} />
           ) : null}
           <GenerationSection
+            execution={stream.execution}
+            events={stream.events}
+            onRetried={() => void client.invalidateQueries({ queryKey: ['task', taskId] })}
+          />
+          <GateSection
             execution={stream.execution}
             events={stream.events}
             onRetried={() => void client.invalidateQueries({ queryKey: ['task', taskId] })}

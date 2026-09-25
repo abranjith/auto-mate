@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "doctor": "pnpm --filter @automate/server doctor",
-    "db:generate": "pnpm --filter @automate/server db:generate"
+    "db:generate": "pnpm --filter @automate/server db:generate",
+    "runtime:lock": "node packages/server/scripts/lock-runtime.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -50,3 +50,18 @@ Shared TypeBox contracts cover previews, consents, receipts, clarification batch
 `packages/core/src/execution/python-runner.ts` is the `PythonRunner` seam that FEAT-108 fills: `probe()`, `ensureEnvironment(signal)`, and `run(request)`, types only. A type-level test pins it at three methods. `stdout` and `stderr` in its results are raw, untrusted output, and they must pass `filterDiagnostics` before reaching any prompt.
 
 `contracts/generation-api.ts` holds the REST shapes and the four tools' parameter schemas. `errors/generation-errors.ts` holds the eleven typed generation errors. `conversation-event.ts` adds `code_version_sealed`, `test_run_finished`, and `generation_settled`, none of which carries code or diagnostic text. `AgentToolDefinition.redactArgsInEvents` names tool arguments the transcript replaces with their size. See [Code Generation and Repair](../../docs/features/code-generation-repair.md).
+
+## Verification
+
+`packages/core/src/verification/` is the browser-safe half of FEAT-107.
+
+- `decideGate(checks, findings)` in `gate-policy.ts` is the single place "may this run?" is answered. Blocking: a failed test re-run; bandit HIGH severity with HIGH confidence; ruff rules starting `E9`, `F6`, `F7`, or `F82`, or the code `invalid-syntax`; a failed integrity, entrypoint, or declared-output check; a missing input file or column; and any check that could not run. Everything else is advisory. The thresholds are provisional against open D14.
+- `computeRuntimeFingerprint(detail)` and `describeRuntimeChange(before, after)` bind a result to a runtime and name what changed ("Python changed from 3.12.4 to 3.13.1").
+- `evaluateApproval(approval, required)` has the same shape as FEAT-105's `evaluateConsent`. An approval covers exactly one code digest, one runtime fingerprint, and one displayed intent. `buildIntentDigest` digests the displayed `RunIntent`, and `RUN_INTENT_CAVEATS` is the only place the gate's warnings exist.
+- `summarizeVerification` words the verdict for the API, the transcript, and the UI. `parseOutputManifest` never throws. `feedbackProblem` is the review-feedback rule. `limits.ts` holds the provisional defaults.
+
+`conversation/execution-state.ts` adds `awaiting_approval`, `awaiting_review`, and `rejected`, and fills the `verifying` and `executing` rows. It exports `PARKED_STATUSES` (no concurrency slot) and `survivesRestart` (only the two gates). `contracts/verification-api.ts` holds the REST shapes, and `errors/verification-errors.ts` the eleven typed errors. See [Verification and the Execution Gate](../../docs/features/verification-execution-gate.md).
+
+## Python runtime
+
+`packages/core/src/execution/` holds the browser-safe FEAT-108 runtime contracts and provisional D14 limits. `runtime-environment.ts` describes stored preparation status, limit breaches, and platform capabilities. `describeRuntimeCapabilities(platform)` is the single source for the POSIX memory limit and Windows memory gap shown by the server and Settings. `contracts/runtime-api.ts` validates runtime status and preparation responses. `errors/runtime-errors.ts` adds six typed `RUNTIME_*`, `LAUNCHER_INTEGRITY`, `SCRIPT_LIMIT_EXCEEDED`, and `NON_PYTHON_ENTRYPOINT` codes. `PythonRunner` remains the same three-method seam; the server supplies its locked implementation. See [Python Runtime Execution](../../docs/features/python-runtime-execution.md).

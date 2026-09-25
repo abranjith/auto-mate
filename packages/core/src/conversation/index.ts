@@ -3,6 +3,10 @@ export type { ConversationEvent, UnnumberedConversationEvent } from './conversat
 export {
   EXECUTION_STATUSES,
   TERMINAL_STATUSES,
+  PARKED_STATUSES,
+  RESTART_SURVIVING_STATUSES,
+  consumesConcurrencySlot,
+  survivesRestart,
   TRANSITIONS,
   canTransition,
   applyTransition,

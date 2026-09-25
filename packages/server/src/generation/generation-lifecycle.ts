@@ -10,7 +10,8 @@
 //   the provider failed              → failed, the provider's error
 //   diagnostics refused / no runtime → failed, and says why (no attempt passed)
 //   every attempt used, none passed  → failed, GENERATION_ATTEMPTS_EXHAUSTED
-//   a final version was chosen       → completed (FEAT-107 judges it next)
+//   a final version was chosen       → verifying (FEAT-107 judges it), or
+//                                      completed when no verifier is wired
 //   anything else                    → failed, CODE_VERSION_NOT_FINAL
 //
 // Exhaustion wins over a finalized version: D07 says a run whose attempts all
@@ -47,6 +48,8 @@ export interface GenerationLifecycleDependencies {
   readonly attempts: GenerationAttemptRepository;
   readonly logger: Pick<Logger, 'info' | 'warn'>;
   readonly platform?: NodeJS.Platform;
+  /** FEAT-107: hand a finalized version to verification instead of completing. Set by the composition root whenever verification is wired. */
+  readonly handOffToVerification?: boolean;
 }
 
 interface Decision { readonly outcome: GenerationOutcome; readonly status: RunSettlement['status']; readonly error?: { readonly code: string; readonly message: string } }
@@ -110,7 +113,7 @@ export class GenerationLifecycle implements RunLifecycle {
     if (!passed && used >= limits.maxAttempts) return { outcome: 'exhausted', status: 'failed', error: errorOf(new GenerationAttemptsExhaustedError(limits.maxAttempts, used)) };
     if (!passed && refused('time_limit')) return { outcome: 'timed_out', status: 'failed', error: errorOf(this.deps.run.budget.timeoutError()) };
     if (!passed && refused('cost_limit')) return { outcome: 'cost_limit', status: 'failed', error: errorOf(new GenerationCostLimitError(limits.maxCostUsd, this.deps.run.budget.spentUsd() ?? 0)) };
-    if (final) return { outcome: 'finalized', status: 'completed' };
+    if (final) return { outcome: 'finalized', status: this.deps.handOffToVerification ? 'verifying' : 'completed' };
     return { outcome: 'incomplete', status: 'failed', error: errorOf(new CodeVersionNotFinalError()) };
   }
 }

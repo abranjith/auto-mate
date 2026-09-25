@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased — FEAT-108 Locked Python runtime execution
+
+- Added committed script and checker `uv.lock` manifests, exact CPython 3.14.6 provisioning, persisted runtime readiness, background preparation, runtime status and prepare endpoints, and a Settings status panel. Script packages: pandas 3.0.6, openpyxl 3.1.5, xlsxwriter 3.2.9, plotly 7.1.0, matplotlib 3.11.2, jinja2 3.1.6, python-dateutil 2.9.0.post0, pytest 9.1.1. Checkers: ruff 0.16.9 and bandit 1.9.4.
+- Replaced the minimal runner with locked execution and an app-owned launcher. Added process-tree timeout and cancellation, captured-output and produced-output caps on all platforms, plus hard memory and file-size limits on macOS and Linux. Windows has no memory limit. Limit breaches are recorded on script runs and shown in the UI.
+- Added a real uv and Python suite gated by `AUTOMATE_LIVE_PYTHON=1`, with a three-platform CI matrix. Locked dependencies prevent drift, not access to files or the network; generated code still runs with this application's access to the computer.
+
+## Unreleased — FEAT-107 Independent verification and execution gate
+
+- A finalized script is now checked by the application itself before it can run, in this order:
+  - integrity of the sealed files and the reproducibility of their test data;
+  - the entry point, the declared outputs, and the input columns the script needs;
+  - `ruff` and `bandit`;
+  - the script's tests, re-run by the app against rebuilt synthetic data.
+
+  Failing tests, bandit HIGH/HIGH, ruff error-class rules (including `invalid-syntax`), missing columns, and any check that could not run all block. Everything else is shown as advisory. No model is called.
+- Results are bound to the exact code digest and a fingerprint of the runtime (Python, uv, platform, and every package). A changed runtime is checked again, and the gate names what changed.
+- Added the approval gate. It shows what will be read and written, the check results, the runtime, and three caveats. It runs only on an explicit **Run it**. The approval binds to the code, the runtime, and the digest of what was shown, and a stale page is refused.
+- Added a minimal real-data run behind the existing `PythonRunner` seam, against a verified copy of the file in `runs/{executionId}/input/`. Exit 0 with a valid manifest now parks at **Did this do what you wanted?**. Rejecting stores the feedback and starts a new linked run (`trigger = 'feedback'`).
+- New statuses `awaiting_approval`, `awaiting_review`, and `rejected`. Both gates survive a restart and free the concurrency slot. The existing abort covers checking, both gates, and the run.
+- Added the `verification_run`, `verification_check`, `verification_finding`, `execution_approval`, and `script_run` tables. Also added six endpoints, four transcript events, eleven error codes, six provisional limits, and the `verify-env/` checker environment (ruff 0.16.8, bandit 1.9.4), run with `--isolated` and an app-owned `-c`/`--ini`.
+- Fixed: migrations that rebuild a table with dependents no longer cascade-delete child rows (foreign keys are now off around the migrator). The migration also ends with a foreign-key check.
+- Fixed: XLSX synthetic fixtures are now byte-reproducible. They previously embedded the time they were written.
+- The copied input, `verify-env`, and `--isolated` are hygiene, not a security boundary. Generated code still runs without isolation and can reach other files on this computer.
+
 ## Unreleased — FEAT-106 Code generation and agent repair loop
 
 - For tasks with approved files, the agent now writes a Python script and its own pytest tests, runs them, reads filtered failures, and repairs. It works only through four application-owned tools: `write_script`, `write_test`, `run_tests`, and `finalize_script`. It still has no file, shell, or network tool of its own.

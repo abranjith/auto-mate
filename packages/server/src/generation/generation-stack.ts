@@ -42,6 +42,8 @@ export interface GenerationStackDependencies {
   readonly publish: (executionId: number, event: UnnumberedConversationEvent) => void;
   readonly registry: () => TaskSessionRegistry;
   readonly pythonVersion?: () => string | null;
+  /** FEAT-107: finalized runs hand off to verification. */
+  readonly handOffToVerification?: boolean;
 }
 
 /**
@@ -58,9 +60,9 @@ export function createGenerationStack(deps: GenerationStackDependencies) {
   const workspace = new CodeWorkspace({ versions, attempts, paths: deps.paths, logger, maxScriptBytes: config.maxScriptBytes });
   const fixtureService = new FixtureService({ uploads: deps.uploads, profiles: deps.profiles, fixtures, paths: deps.paths, logger, rowCount: config.fixtureRowCount });
   const tools = new GenerationTools({ workspace, versions, attempts, executions: deps.executions, runs, runner: deps.runner, consent: deps.disclosure, diagnostics: deps.inner, transmissions: deps.transmissions, fixturesDir: (id) => fixtureService.fixturesDir(id), publish: deps.publish, logger, uploads: deps.uploads, profiles: deps.profiles, testRunTimeoutMs: config.testRunTimeoutMs, maxScriptBytes: config.maxScriptBytes });
-  const strategy = new CodeGenerationRunStrategy({ inner: deps.inner, disclosure: deps.disclosure, uploads: deps.uploads, profiles: deps.profiles, executions: deps.executions, versions, attempts, fixtures: fixtureService, runs, tools, logger, limits: { maxAttempts: config.maxAttempts, timeoutMs: config.timeoutMs, maxCostUsd: config.maxCostUsd }, ...(deps.pythonVersion ? { pythonVersion: deps.pythonVersion } : {}) });
+  const strategy = new CodeGenerationRunStrategy({ inner: deps.inner, disclosure: deps.disclosure, uploads: deps.uploads, profiles: deps.profiles, executions: deps.executions, versions, attempts, fixtures: fixtureService, runs, tools, logger, limits: { maxAttempts: config.maxAttempts, timeoutMs: config.timeoutMs, maxCostUsd: config.maxCostUsd }, ...(deps.pythonVersion ? { pythonVersion: deps.pythonVersion } : {}), ...(deps.handOffToVerification ? { handOffToVerification: true } : {}) });
   const registry = { assertCapacity: () => deps.registry().assertCapacity(), start: (...args: Parameters<TaskSessionRegistry['start']>) => deps.registry().start(...args) };
   const service = new GenerationService({ tasks: deps.tasks, executions: deps.executions, versions, attempts, fixtures, fixtureService, transmissions: deps.transmissions, uploads: deps.uploads, disclosure: deps.disclosure, preflight: deps.preflight, registry, logger, limits: { maxAttempts: config.maxAttempts, timeoutMs: config.timeoutMs } });
-  return { strategy, service, runs, attempts, versions };
+  return { strategy, service, runs, attempts, versions, workspace, fixtureService };
 }
 export type GenerationStack = ReturnType<typeof createGenerationStack>;

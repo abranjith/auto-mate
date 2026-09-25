@@ -104,9 +104,10 @@ export class GenerationService {
    * the failed run reopens FEAT-105's gate instead of silently reusing a stale approval. Prior
    * pre-flight answers are seeded after the new run's own transaction commits.
    *
+   * @param trigger `rerun` for a person's "try again" (FEAT-106); `feedback` for a rejected result (FEAT-107), whose words are the guidance.
    * @throws ExecutionNotRetryableError while the source is still active; FEAT-105's consent errors when approval is stale.
    */
-  retry(executionId: number, guidance: string | null): { task: TaskRow; execution: ExecutionRow } {
+  retry(executionId: number, guidance: string | null, trigger: 'rerun' | 'feedback' = 'rerun'): { task: TaskRow; execution: ExecutionRow } {
     const source = this.requireExecution(executionId);
     if (!isTerminal(source.status as ExecutionStatus)) throw new ExecutionNotRetryableError(executionId, source.status);
     const task = this.deps.tasks.getById(source.taskId)!;
@@ -114,13 +115,13 @@ export class GenerationService {
     if (uploadIds.length > 0) this.deps.disclosure.verifyForTransmission(task.id, 'context');
     const answers = uploadIds.length > 0 ? this.deps.preflight.resolveDecisions(uploadIds, [], task.id) : [];
     this.deps.registry.assertCapacity();
-    const execution = this.deps.executions.createRetry(executionId, guidance);
+    const execution = trigger === 'feedback' && guidance !== null ? this.deps.executions.createFeedbackRetry(executionId, guidance) : this.deps.executions.createRetry(executionId, guidance);
     try { this.deps.preflight.persist(execution.id, answers); }
     catch (cause) {
       this.deps.executions.markSettled(execution.id, { status: 'failed', errorCode: 'REPOSITORY_ERROR', errorMessage: 'Your earlier answers could not be carried over to the retry. Try again.' });
       throw cause;
     }
-    this.deps.logger.info({ sourceExecutionId: executionId, executionId: execution.id }, 'retry created');
+    this.deps.logger.info({ sourceExecutionId: executionId, executionId: execution.id, trigger }, 'retry created');
     this.deps.registry.start(execution, task);
     return { task, execution: this.deps.executions.getById(execution.id) ?? execution };
   }

@@ -24,6 +24,8 @@ import type { DisclosureTransmissionRepository } from './db/repositories/disclos
 import type { ClarificationRepository } from './db/repositories/clarification-repository';
 import { generationRoute } from './routes/generation-route';
 import type { GenerationService } from './generation/index';
+import { verificationRoute, type VerificationRouteDependencies } from './routes/verification-route';
+import { runtimeRoute, type RuntimeRouteDependencies } from './routes/runtime-route';
 
 export interface AppDependencies {
   logger: Logger;
@@ -45,6 +47,9 @@ export interface AppDependencies {
   disclosure?: { service: DisclosureService; transmissions: DisclosureTransmissionRepository; consents: import('./db/repositories/disclosure-consent-repository').DisclosureConsentRepository; clarifications: ClarificationRepository; clarificationService: ClarificationService };
   /** Code versions, attempts, fixtures, and guidance retries (FEAT-106); mounted with the conversation routes. */
   generation?: { service: GenerationService };
+  /** Verification, the approval gate, the real run, and the review (FEAT-107); mounted with the conversation routes. */
+  verification?: Omit<VerificationRouteDependencies, 'config'>;
+  runtime?: Omit<RuntimeRouteDependencies, 'config'>;
   configureRoutes?: (app: Express) => void;
 }
 
@@ -61,6 +66,7 @@ export function createApp(deps: AppDependencies): Express {
         ? guard(request, response, next)
         : next(),
     );
+    if (deps.runtime) app.use(runtimeRoute({ ...deps.runtime, config: deps.serverConfig }));
   }
   app.use(
     agentRoute({
@@ -100,6 +106,7 @@ export function createApp(deps: AppDependencies): Express {
       app.use(clarificationRoute({ clarifications: deps.disclosure.clarifications, service: deps.disclosure.clarificationService }));
     }
     if (deps.generation) app.use(generationRoute({ generation: deps.generation.service, config: deps.serverConfig }));
+    if (deps.verification) app.use(verificationRoute({ ...deps.verification, config: deps.serverConfig }));
   }
   deps.configureRoutes?.(app);
   app.use((_request, _response, next) =>

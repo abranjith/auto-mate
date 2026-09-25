@@ -103,14 +103,39 @@ export class FixtureService {
     });
   }
 
+  /**
+   * Re-derive a recorded fixture into another directory (FEAT-107), from the
+   * same profile, the RECORDED seed, and the RECORDED row count — never from
+   * the current configuration and never from the upload's stored bytes.
+   * Verification compares the result's digest with the recorded one: a
+   * mismatch means the recorded test result describes a run nobody can repeat.
+   *
+   * @param fixture The recorded fixture row.
+   * @param directory Absolute destination; the file keeps the upload's stored filename.
+   * @returns The written file's digest, size, and absolute path.
+   * @throws FixtureGenerationError when the upload or its profile is gone.
+   */
+  async rebuild(fixture: Pick<SyntheticFixtureRow, 'uploadId' | 'seed' | 'rowCount'>, directory: string): Promise<{ sha256: string; byteSize: number; file: string; rowCount: number }> {
+    mkdirSync(directory, { recursive: true });
+    const written = await this.writeFixture(fixture.uploadId, 1, directory, fixture.seed, fixture.rowCount);
+    return { sha256: written.sha256, byteSize: written.byteSize, file: resolveWithin(directory, written.storedFilename), rowCount: written.rowCount };
+  }
+
   private async materializeOne(executionId: number, uploadId: number, position: number, directory: string): Promise<NewSyntheticFixture> {
+    const upload = this.deps.uploads.getById(uploadId);
+    if (!upload || upload.profileStatus !== 'profiled') throw new FixtureGenerationError(position);
+    const seed = fixtureSeed(upload.sha256, executionId);
+    const written = await this.writeFixture(uploadId, position, directory, seed, this.deps.rowCount ?? FIXTURE_ROW_COUNT);
+    return { uploadId, filePath: `${fixturesDirPath(executionId)}/${upload.storedFilename}`, format: written.format, sheetCount: written.sheetCount, rowCount: written.rowCount, sampleRowCount: written.sampleRowCount, byteSize: written.byteSize, sha256: written.sha256, seed };
+  }
+
+  /** The one code path that turns a profile, a seed, and a row count into fixture bytes. */
+  private async writeFixture(uploadId: number, position: number, directory: string, seed: string, rowCount: number) {
     const upload = this.deps.uploads.getById(uploadId);
     if (!upload || upload.profileStatus !== 'profiled') throw new FixtureGenerationError(position);
     const source = this.deps.profiles.getDisclosureSource(uploadId);
     if (!source || source.profiles.length === 0) throw new FixtureGenerationError(position, 'its analysis has no tables');
     const payload = buildDisclosurePayload(source.upload, source.profiles);
-    const seed = fixtureSeed(upload.sha256, executionId);
-    const rowCount = this.deps.rowCount ?? FIXTURE_ROW_COUNT;
     const sheets: FixtureSheet[] = payload.tables.map((table) => ({ sheetName: table.sheetName, isHidden: table.isHidden, hasHeader: table.hasHeader, source: table, table: buildSyntheticFixture(table, { rowCount, seed: `${seed}:${table.sheetIndex}` }) }));
     if (sheets.length === 0) throw new FixtureGenerationError(position, 'none of its tables could be described');
     const file = resolveWithin(directory, upload.storedFilename);
@@ -118,7 +143,7 @@ export class FixtureService {
     if (format === 'csv') writeCsv(file, sheets[0]!, dialectOf(source.profiles[0]!), upload.encoding);
     else await writeXlsx(file, sheets);
     const bytes = readFileSync(file);
-    return { uploadId, filePath: `${fixturesDirPath(executionId)}/${upload.storedFilename}`, format, sheetCount: sheets.length, rowCount, sampleRowCount: Math.min(...sheets.map(({ table }) => table.sampleRowCount)), byteSize: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), seed };
+    return { storedFilename: upload.storedFilename, format, sheetCount: sheets.length, rowCount, sampleRowCount: Math.min(...sheets.map(({ table }) => table.sampleRowCount)), byteSize: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
   }
 }
 

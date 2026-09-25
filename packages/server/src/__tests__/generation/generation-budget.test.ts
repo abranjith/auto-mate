@@ -6,11 +6,9 @@ import { CodeVersionRepository } from '../../db/repositories/code-version-reposi
 import { ExecutionRepository } from '../../db/repositories/execution-repository';
 import { GenerationAttemptRepository } from '../../db/repositories/generation-attempt-repository';
 import { TaskRepository } from '../../db/repositories/task-repository';
-import { MinimalUvPythonRunner } from '../../execution/uv-python-runner';
-import { ProcessRunner } from '../../execution/process-runner';
 import { createTempStore, type TempStore } from '../support/ingestion-fixtures';
 import { createGenerationHarness, writeSteps, type GenerationHarness } from '../support/generation-harness';
-import { fakeSpawn } from '../execution/fake-spawn';
+import { lockedUvRunner } from '../support/locked-uv-runner';
 
 let store: TempStore;
 beforeEach(() => { store = createTempStore('automate-budget-'); });
@@ -143,21 +141,18 @@ describe('limits and cancellation across every leg', () => {
     expect(harness.transcript().filter(({ type }) => type === 'generation_settled')).toMatchObject([{ outcome: 'timed_out' }]);
   });
 
-  /** A real MinimalUvPythonRunner over a fake spawn, so tree kills are observable without starting a process. */
-  function uvRunner(envDir: string, behave: Parameters<typeof fakeSpawn>[0]) {
-    const fake = fakeSpawn(behave);
-    return { fake, runner: new MinimalUvPythonRunner({ envDir, platform: 'win32', processes: new ProcessRunner({ spawn: fake.spawn, platform: 'win32' }), baseEnv: {} }) };
-  }
+  /** A locked runner over fake spawn, so tree kills are observable without starting a process. */
+  const uvRunner = lockedUvRunner;
 
   it('kills the pytest process tree when a person aborts during a test run, settling the attempt and the execution aborted', async () => {
     let built!: ReturnType<typeof uvRunner>;
-    const harness = track(await createGenerationHarness({ runner: (paths) => (built = uvRunner(paths.envDir, (_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'python' ? { stdout: 'cpython-3.12.4-windows-x86_64-none\n' } : args[0] === 'run' ? { hang: true } : { exitCode: 0 }))).runner, steps: (upload) => [...writeSteps(upload!.storedFilename), { call: { tool: 'run_tests', args: {} } }] }));
+    const harness = track(await createGenerationHarness({ runner: (paths, connection) => (built = uvRunner(paths, connection, (_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'run' ? { hang: true } : { exitCode: 0 }))).runner, steps: (upload) => [...writeSteps(upload!.storedFilename), { call: { tool: 'run_tests', args: {} } }] }));
     writeFileSync(path.join(harness.store.paths.envDir, 'uv.lock'), 'lock');
     const settled = harness.run();
-    await waitFor(() => built.fake.calls.some(({ args }) => args[0] === 'run'));
+    await waitFor(() => built.fake.calls.some(({ args }) => args.includes('pytest')));
     await harness.registry.abort(harness.execution.id);
     expect((await settled).status).toBe('aborted');
-    const pytest = built.fake.calls.find(({ args }) => args[0] === 'run')!;
+    const pytest = built.fake.calls.find(({ args }) => args.includes('pytest'))!;
     expect(built.fake.calls.some(({ command, args }) => command === 'taskkill' && args.join(' ') === `/pid ${pytest.pid} /T /F`)).toBe(true);
     expect(harness.repos.attempts.listByExecution(harness.execution.id)).toMatchObject([{ status: 'aborted' }]);
     expect(harness.transcript().filter(({ type }) => type === 'generation_settled')).toMatchObject([{ outcome: 'aborted' }]);
@@ -165,9 +160,9 @@ describe('limits and cancellation across every leg', () => {
 
   it('cancels an in-flight uv sync when a person aborts during environment preparation', async () => {
     let built!: ReturnType<typeof uvRunner>;
-    const harness = track(await createGenerationHarness({ runner: (paths) => (built = uvRunner(paths.envDir, (_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'python' ? { stdout: 'cpython-3.12.4\n' } : args[0] === 'sync' || args[0] === 'lock' ? { hang: true } : { exitCode: 0 }))).runner, steps: (upload) => [...writeSteps(upload!.storedFilename), { call: { tool: 'run_tests', args: {} } }] }));
+    const harness = track(await createGenerationHarness({ runner: (paths, connection) => (built = uvRunner(paths, connection, (_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'sync' ? { hang: true } : { exitCode: 0 }))).runner, steps: (upload) => [...writeSteps(upload!.storedFilename), { call: { tool: 'run_tests', args: {} } }] }));
     const settled = harness.run();
-    await waitFor(() => built.fake.calls.some(({ args }) => args[0] === 'lock' || args[0] === 'sync'));
+    await waitFor(() => built.fake.calls.some(({ args }) => args[0] === 'sync'));
     await harness.registry.abort(harness.execution.id);
     expect((await settled).status).toBe('aborted');
     expect(built.fake.calls.some(({ command }) => command === 'taskkill')).toBe(true);

@@ -1,4 +1,4 @@
-import { ConfigurationError, FIXTURE_ROW_COUNT, GENERATION_TIMEOUT_MS, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_GENERATION_ATTEMPTS, MAX_GENERATION_COST_USD, MAX_PREFLIGHT_DECISIONS, MAX_SCRIPT_BYTES, TEST_RUN_TIMEOUT_MS, UPLOAD_LIMIT_DEFAULTS, UV_SYNC_TIMEOUT_MS } from '@automate/core';
+import { ConfigurationError, LINT_TIMEOUT_MS, MAX_REVIEW_FEEDBACK_CHARS, MAX_RUN_OUTPUT_BYTES, SCRIPT_RUN_TIMEOUT_MS, SCRIPT_MEMORY_LIMIT_BYTES, SCRIPT_MAX_OUTPUT_FILE_BYTES, SCRIPT_MAX_OUTPUT_TOTAL_BYTES, SCRIPT_MAX_OUTPUT_FILES, OUTPUT_WATCH_INTERVAL_MS, RUNTIME_PREPARE_TIMEOUT_MS, PYTHON_INSTALL_TIMEOUT_MS, SECURITY_TIMEOUT_MS, VERIFICATION_TIMEOUT_MS, FIXTURE_ROW_COUNT, GENERATION_TIMEOUT_MS, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_GENERATION_ATTEMPTS, MAX_GENERATION_COST_USD, MAX_PREFLIGHT_DECISIONS, MAX_SCRIPT_BYTES, TEST_RUN_TIMEOUT_MS, UPLOAD_LIMIT_DEFAULTS, UV_SYNC_TIMEOUT_MS } from '@automate/core';
 
 export interface ServerConfig {
   host: string;
@@ -133,5 +133,77 @@ export function getGenerationConfig(env = process.env): GenerationConfig {
     uvSyncTimeoutMs: positiveInteger(env, 'AUTOMATE_UV_SYNC_TIMEOUT_MS', UV_SYNC_TIMEOUT_MS),
     fixtureRowCount: positiveInteger(env, 'AUTOMATE_FIXTURE_ROW_COUNT', FIXTURE_ROW_COUNT, 100_000),
     maxScriptBytes: positiveInteger(env, 'AUTOMATE_MAX_SCRIPT_BYTES', MAX_SCRIPT_BYTES, 16 * 1024 * 1024),
+  };
+}
+
+/**
+ * Verification, run, and review limits (FEAT-107, D07/D14). Every value is
+ * PROVISIONAL against open D14. The verification test re-run reuses FEAT-106's
+ * `AUTOMATE_TEST_RUN_TIMEOUT_MS`; the script-run timeout is the one FEAT-108
+ * is most likely to replace, since it owns resource limits.
+ */
+export interface VerificationConfig {
+  /** `AUTOMATE_VERIFICATION_TIMEOUT_MS` — wall clock across one whole verification pass. */
+  verificationTimeoutMs: number;
+  /** `AUTOMATE_LINT_TIMEOUT_MS` — wall clock for one ruff run. */
+  lintTimeoutMs: number;
+  /** `AUTOMATE_SECURITY_TIMEOUT_MS` — wall clock for one bandit run. */
+  securityTimeoutMs: number;
+  /** `AUTOMATE_SCRIPT_RUN_TIMEOUT_MS` — wall clock for the real-data run. */
+  scriptRunTimeoutMs: number;
+  /** `AUTOMATE_MAX_RUN_OUTPUT_BYTES` — bytes of stdout and of stderr kept from one real run, head and tail. */
+  maxRunOutputBytes: number;
+  /** `AUTOMATE_MAX_REVIEW_FEEDBACK_CHARS` — characters a person may write when rejecting a result. */
+  maxReviewFeedbackChars: number;
+}
+
+/** Parse the verification limits. @param env Environment variables to read. @returns Limits with the provisional defaults. */
+export function getVerificationConfig(env = process.env): VerificationConfig {
+  return {
+    verificationTimeoutMs: positiveInteger(env, 'AUTOMATE_VERIFICATION_TIMEOUT_MS', VERIFICATION_TIMEOUT_MS),
+    lintTimeoutMs: positiveInteger(env, 'AUTOMATE_LINT_TIMEOUT_MS', LINT_TIMEOUT_MS),
+    securityTimeoutMs: positiveInteger(env, 'AUTOMATE_SECURITY_TIMEOUT_MS', SECURITY_TIMEOUT_MS),
+    scriptRunTimeoutMs: positiveInteger(env, 'AUTOMATE_SCRIPT_RUN_TIMEOUT_MS', SCRIPT_RUN_TIMEOUT_MS),
+    maxRunOutputBytes: positiveInteger(env, 'AUTOMATE_MAX_RUN_OUTPUT_BYTES', MAX_RUN_OUTPUT_BYTES, 64 * 1024 * 1024),
+    // Capped at the default: the request schema rejects longer feedback before this is read.
+    maxReviewFeedbackChars: positiveInteger(env, 'AUTOMATE_MAX_REVIEW_FEEDBACK_CHARS', MAX_REVIEW_FEEDBACK_CHARS, MAX_REVIEW_FEEDBACK_CHARS),
+  };
+}
+
+/** FEAT-108 preview defaults; each cap is provisional against open D14. */
+export interface RuntimeConfig {
+  readonly prepareOnStartup: boolean;
+  readonly scriptRunTimeoutMs: number;
+  readonly memoryLimitBytes: number;
+  readonly maxOutputFileBytes: number;
+  readonly maxOutputTotalBytes: number;
+  readonly maxOutputFiles: number;
+  readonly outputWatchIntervalMs: number;
+  readonly prepareTimeoutMs: number;
+  readonly pythonInstallTimeoutMs: number;
+}
+
+function nonNegativeInteger(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+  const raw = env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 0) throw new ConfigurationError(`${name} must be a non-negative integer.`);
+  return value;
+}
+
+/** Parse the nine runtime controls with their provisional defaults. */
+export function getRuntimeConfig(env = process.env): RuntimeConfig {
+  const startup = env.AUTOMATE_RUNTIME_PREPARE_ON_STARTUP?.trim().toLowerCase();
+  if (startup && startup !== 'true' && startup !== 'false') throw new ConfigurationError('AUTOMATE_RUNTIME_PREPARE_ON_STARTUP must be true or false.');
+  return {
+    prepareOnStartup: startup !== 'false',
+    scriptRunTimeoutMs: positiveInteger(env, 'AUTOMATE_SCRIPT_RUN_TIMEOUT_MS', SCRIPT_RUN_TIMEOUT_MS),
+    memoryLimitBytes: nonNegativeInteger(env, 'AUTOMATE_SCRIPT_MEMORY_LIMIT_BYTES', SCRIPT_MEMORY_LIMIT_BYTES),
+    maxOutputFileBytes: nonNegativeInteger(env, 'AUTOMATE_SCRIPT_MAX_OUTPUT_FILE_BYTES', SCRIPT_MAX_OUTPUT_FILE_BYTES),
+    maxOutputTotalBytes: nonNegativeInteger(env, 'AUTOMATE_SCRIPT_MAX_OUTPUT_TOTAL_BYTES', SCRIPT_MAX_OUTPUT_TOTAL_BYTES),
+    maxOutputFiles: nonNegativeInteger(env, 'AUTOMATE_SCRIPT_MAX_OUTPUT_FILES', SCRIPT_MAX_OUTPUT_FILES),
+    outputWatchIntervalMs: positiveInteger(env, 'AUTOMATE_OUTPUT_WATCH_INTERVAL_MS', OUTPUT_WATCH_INTERVAL_MS),
+    prepareTimeoutMs: positiveInteger(env, 'AUTOMATE_RUNTIME_PREPARE_TIMEOUT_MS', RUNTIME_PREPARE_TIMEOUT_MS),
+    pythonInstallTimeoutMs: positiveInteger(env, 'AUTOMATE_PYTHON_INSTALL_TIMEOUT_MS', PYTHON_INSTALL_TIMEOUT_MS),
   };
 }

@@ -31,6 +31,10 @@ export {
 } from './generation/index';
 export type { CodeVersionStatus, CodeFileRole, DigestInput, AttemptSummaryInput, AttemptSummaryOptions, SyntheticColumn, SyntheticSource, SyntheticTable, SyntheticOptions, CodeContractContext, ContractInputFile } from './generation/index';
 export type { PythonRunner, PythonRunRequest, PythonRunResult, PythonRunOutcome, PythonRuntimeInfo } from './execution/index';
+export * from './execution/runtime-limits';
+export * from './execution/runtime-environment';
+export * from './contracts/runtime-api';
+export * from './errors/runtime-errors';
 export {
   ARTIFACT_TYPES,
   ATTEMPT_STATUSES,
@@ -179,6 +183,10 @@ export {
   ConversationEventSchema,
   EXECUTION_STATUSES,
   TERMINAL_STATUSES,
+  PARKED_STATUSES,
+  RESTART_SURVIVING_STATUSES,
+  consumesConcurrencySlot,
+  survivesRestart,
   TRANSITIONS,
   canTransition,
   applyTransition,
@@ -329,3 +337,7 @@ export type {
   DisclosureUpload,
   DisclosureOptions,
 } from './ingestion/index';
+// FEAT-107: independent verification, the approval gate, the real-data run, and the post-run review.
+export * from './verification/index';
+export * from './contracts/verification-api';
+export * from './errors/verification-errors';

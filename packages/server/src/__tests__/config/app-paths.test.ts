@@ -19,7 +19,7 @@ describe('application paths', () => {
     const paths = getAppPaths(root);
     ensureAppDirectories(paths);
     ensureAppDirectories(paths);
-    for (const dir of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.scriptsDir, paths.envDir]) expect(existsSync(dir)).toBe(true);
+    for (const dir of [paths.dataDir, paths.artifactsDir, paths.uploadsDir, paths.scriptsDir, paths.envDir, paths.verifyEnvDir, paths.runsDir]) expect(existsSync(dir)).toBe(true);
   });
   it('rejects a file as root', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'automate-')); temporary.push(root);

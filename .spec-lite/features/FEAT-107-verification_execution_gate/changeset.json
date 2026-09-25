@@ -1,0 +1,874 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-25T16:11:53.922Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-25T16:13:42.909Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-25T16:20:22.716Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-25T16:30:06.655Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-25T16:30:07.505Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-25T16:30:08.335Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-25T16:36:18.596Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-25T16:36:19.443Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-25T16:41:50.031Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-25T16:48:04.511Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-25T16:48:05.515Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-25T16:55:54.989Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-25T16:55:55.865Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-014",
+      "at": "2026-09-25T16:55:56.748Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-015",
+      "at": "2026-09-25T17:00:52.577Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-016",
+      "at": "2026-09-25T17:08:06.162Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-017",
+      "at": "2026-09-25T19:37:56.960Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-25T19:40:13.047Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "docs/features/verification-execution-gate.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "docs/quickstart.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/execution-state.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/verification/gate-policy.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/verification/verification-contracts.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/verification-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/conversation/conversation-event.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/conversation/execution-state.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/conversation/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/verification-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/approval.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/gate-policy.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/manifest.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/review.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/run-intent.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/runtime-fingerprint.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/verification.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260925161513_equal_synch/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/drizzle/20260925161513_equal_synch/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "packages/server/src/__tests__/cancellation.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/config/app-paths.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/config/verification-config.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/conversation/task-session-registry.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/verification-repositories.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/input-stager.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/script-run-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/verification/bandit-clean.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/verification/bandit-findings.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/verification/ruff-clean.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/verification/ruff-findings.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation-e2e.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/fixture-determinism.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0005.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/verification-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/verification-harness.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/approval-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/checks/contract-integrity.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/checks/static-checks.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/checks/test-check.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/docs-examples.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/review-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/runtime-probe.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/verification-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/verify-env.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/verify-execute-review-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/config/app-paths.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/config/env.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/conversation/run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/conversation/task-session-registry.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/conversation/task-session.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/db/migrate.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/approval-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/constraint.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/execution-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/script-run-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/verification-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/execution/input-stager.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/execution/output-cap.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/execution/script-run-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/execution/uv-python-runner.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/code-generation-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/generation/fixture-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/fixture-writer.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/generation-lifecycle.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/generation/generation-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/generation/generation-stack.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/middleware/error-handler.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/routes/verification-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/verification/approval-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/verification/checks/check-result.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/checks/contract-checks.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/verification/checks/integrity-check.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/verification/checks/lint-check.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/checks/security-check.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/checks/static-check.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/checks/test-check.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/verification/execution-state-writer.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/verification/presenters.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/review-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/verification/run-intent-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/verification/runtime-probe.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/testing/fake-runtime-probe.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/verification-pass.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/verification-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/verification/verification-stack.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/verification/verify-env.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/ws/execution-socket.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/vitest.config.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-016"
+    },
+    {
+      "path": "packages/web/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/api/verification-queries.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/conversation/execution-status-badge.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/execution/run-progress.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/execution/run-result.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/review/review-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/verification/finding-list.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/verification/gate-section.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/verification/run-intent-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/verification/runtime-note.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/components/verification/verification-report.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-015"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-017"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-107-verification_execution_gate/changeset.json",
+    ".spec-lite/features/FEAT-107-verification_execution_gate/spec.md",
+    ".spec-lite/memory.md",
+    ".spec-lite/plan_mvp.md"
+  ],
+  "baseline": {
+    "sha": "77d01c8075043df33d95c2894712d6d1d56eb7ef",
+    "capturedAt": "2026-09-25T16:04:51.733Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/memory.md",
+      ".spec-lite/plan_mvp.md",
+      ".spec-lite/features/FEAT-111-save_and_rerun/spec.md"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/memory.md": "f7fb2364c630f79c2f26b5ed26e59bc8d3948d1f",
+      ".spec-lite/plan_mvp.md": "c44e5aacf410347d3131890bf769bbc6db35a60b",
+      ".spec-lite/features/FEAT-111-save_and_rerun/spec.md": "372170f74d61c49f699989945fae9d39effbebe5"
+    }
+  },
+  "featureId": "FEAT-107"
+}

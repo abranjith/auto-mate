@@ -13,13 +13,15 @@ export interface FakeBehavior {
   readonly error?: Error;
   /** Stay alive until killed. */
   readonly hang?: boolean;
+  /** Stay alive until this settles, then exit with `exitCode` — unless killed first. */
+  readonly until?: Promise<unknown>;
 }
 export interface FakeSpawnCall { readonly command: string; readonly args: readonly string[]; readonly options: SpawnOptionsLike; readonly pid: number }
 
 class FakeChild extends EventEmitter implements SpawnedProcess {
   readonly stdout = new PassThrough();
   readonly stderr = new PassThrough();
-  private closed = false;
+  closed = false;
   constructor(readonly pid: number) { super(); }
   close(code: number | null): void {
     if (this.closed) return;
@@ -34,7 +36,7 @@ class FakeChild extends EventEmitter implements SpawnedProcess {
  * Build a fake spawn whose processes follow `behave`.
  *
  * @param behave Decides each spawned process's behavior from its command line.
- * @returns The spawn function, every call it received, and a `kill` that ends a hanging process as a tree kill would.
+ * @returns The spawn function, every call it received, a `kill` that ends a hanging process as a tree kill would, and `live` — the pids of processes that have not exited.
  */
 export function fakeSpawn(behave: (command: string, args: readonly string[]) => FakeBehavior = () => ({ exitCode: 0 })) {
   const calls: FakeSpawnCall[] = [];
@@ -52,9 +54,11 @@ export function fakeSpawn(behave: (command: string, args: readonly string[]) => 
       const chunks = typeof behavior.stdout === 'string' ? [Buffer.from(behavior.stdout)] : behavior.stdout ?? [];
       for (const chunk of chunks) child.stdout.write(chunk);
       if (behavior.stderr) child.stderr.write(behavior.stderr);
-      if (!behavior.hang) child.close(behavior.exitCode ?? 0);
+      if (behavior.until) void behavior.until.then(() => child.close(behavior.exitCode ?? 0));
+      else if (!behavior.hang) child.close(behavior.exitCode ?? 0);
     });
     return child;
   };
-  return { spawn, calls, kill };
+  const live = () => [...children.values()].filter((child) => !child.closed).map(({ pid }) => pid);
+  return { spawn, calls, kill, live };
 }

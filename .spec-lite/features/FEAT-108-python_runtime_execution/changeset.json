@@ -1,0 +1,928 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-25T19:46:07.311Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-25T19:52:20.821Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-25T20:33:10.693Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-25T20:33:15.586Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-25T20:33:20.488Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-25T20:33:25.426Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-25T20:33:30.312Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-25T20:33:35.264Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-25T20:33:40.115Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-25T20:33:44.997Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-25T20:33:50.057Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-014",
+      "at": "2026-09-25T20:33:54.986Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-25T20:50:54.179Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-25T20:50:58.914Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-25T20:55:55.261Z",
+      "head": "77d01c8075043df33d95c2894712d6d1d56eb7ef"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/live-python-runtime.yml",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/features/code-generation-repair.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/features/python-runtime-execution.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/quickstart.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/runtime-limits.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/runtime-maintenance.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "package.json",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/execution/runtime-environment.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/verification/verification-contracts.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/contracts/runtime-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/verification-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/conversation/conversation-event.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/runtime-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/execution/runtime-environment.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/execution/runtime-limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260925194955_safe_blackheart/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/drizzle/20260925194955_safe_blackheart/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/runtime/launcher/automate_launch.py",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/runtime/script-env/.python-version",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/runtime/script-env/pyproject.toml",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/runtime/script-env/uv.lock",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/runtime/verify-env/.python-version",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/runtime/verify-env/pyproject.toml",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/runtime/verify-env/uv.lock",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/scripts/lock-runtime.mjs",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/cancellation-matrix.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/runtime-environment-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution-invariants.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/dependency-policy.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/fake-spawn.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/output-watchdog.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/runtime-docs.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/runtime-provisioner.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/script-run-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/uv-python-runner.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/runtime/unsafe-exec.fixture",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/runtime/unsafe-shell.fixture",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/runtime/unsafe-uv.fixture",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation-e2e.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/code-generation-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/docs-examples.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/generation-budget.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/live-runtime.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0005.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0006.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/runtime-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/locked-uv-runner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/verification-harness.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/verify-env.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/config/env.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/runtime-environment-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/script-run-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/execution/dependency-policy.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/execution/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/launcher-deploy.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/output-watchdog.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/process-runner.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/python-dependency-set.ts",
+      "status": "D",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/runtime-provisioner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/script-run-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/uv-python-runner.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/generation/code-generation-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/routes/runtime-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/verification/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/verification/verification-stack.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/verification/verify-env.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/runtime/runtime-panel.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/__tests__/routes/settings.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/api/runtime-queries.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/components/execution/run-result.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/components/runtime/runtime-limits-note.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/components/runtime/runtime-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/routes/settings.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-108-python_runtime_execution/changeset.json",
+    ".spec-lite/features/FEAT-108-python_runtime_execution/spec.md",
+    ".spec-lite/memory.md",
+    ".spec-lite/plan_mvp.md"
+  ],
+  "baseline": {
+    "sha": "77d01c8075043df33d95c2894712d6d1d56eb7ef",
+    "capturedAt": "2026-09-25T19:43:54.595Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/feature-summary.md",
+      ".spec-lite/features/FEAT-107-verification_execution_gate/spec.md",
+      ".spec-lite/memory.md",
+      ".spec-lite/plan_mvp.md",
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture.md",
+      "docs/quickstart.md",
+      "docs/usage.md",
+      "packages/core/README.md",
+      "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "packages/core/src/__tests__/conversation/execution-state.test.ts",
+      "packages/core/src/conversation/conversation-event.ts",
+      "packages/core/src/conversation/execution-state.ts",
+      "packages/core/src/conversation/index.ts",
+      "packages/core/src/errors/error-codes.ts",
+      "packages/core/src/index.ts",
+      "packages/server/README.md",
+      "packages/server/src/__tests__/config/app-paths.test.ts",
+      "packages/server/src/__tests__/conversation/task-session-registry.test.ts",
+      "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts",
+      "packages/server/src/__tests__/generation-e2e.test.ts",
+      "packages/server/src/__tests__/migrate.test.ts",
+      "packages/server/src/__tests__/support/generation-harness.ts",
+      "packages/server/src/app.ts",
+      "packages/server/src/config/app-paths.ts",
+      "packages/server/src/config/env.ts",
+      "packages/server/src/conversation/run-strategy.ts",
+      "packages/server/src/conversation/task-session-registry.ts",
+      "packages/server/src/conversation/task-session.ts",
+      "packages/server/src/db/migrate.ts",
+      "packages/server/src/db/repositories/execution-repository.ts",
+      "packages/server/src/db/schema.ts",
+      "packages/server/src/execution/uv-python-runner.ts",
+      "packages/server/src/generation/code-generation-run-strategy.ts",
+      "packages/server/src/generation/fixture-service.ts",
+      "packages/server/src/generation/fixture-writer.ts",
+      "packages/server/src/generation/generation-lifecycle.ts",
+      "packages/server/src/generation/generation-service.ts",
+      "packages/server/src/generation/generation-stack.ts",
+      "packages/server/src/index.ts",
+      "packages/server/src/middleware/error-handler.ts",
+      "packages/server/src/ws/execution-socket.ts",
+      "packages/server/vitest.config.ts",
+      "packages/web/README.md",
+      "packages/web/src/components/conversation/conversation-view.tsx",
+      "packages/web/src/components/conversation/execution-status-badge.tsx",
+      "packages/web/src/components/generation/generation-section.tsx",
+      "packages/web/src/design-system/tokens.ts",
+      "packages/web/src/routes/tasks.$taskId.tsx",
+      ".spec-lite/features/FEAT-107-verification_execution_gate/changeset.json",
+      ".spec-lite/features/FEAT-111-save_and_rerun/spec.md",
+      "docs/features/verification-execution-gate.md",
+      "packages/core/src/__tests__/verification/gate-policy.test.ts",
+      "packages/core/src/__tests__/verification/verification-contracts.test.ts",
+      "packages/core/src/contracts/verification-api.ts",
+      "packages/core/src/errors/verification-errors.ts",
+      "packages/core/src/verification/approval.ts",
+      "packages/core/src/verification/gate-policy.ts",
+      "packages/core/src/verification/index.ts",
+      "packages/core/src/verification/limits.ts",
+      "packages/core/src/verification/manifest.ts",
+      "packages/core/src/verification/review.ts",
+      "packages/core/src/verification/run-intent.ts",
+      "packages/core/src/verification/runtime-fingerprint.ts",
+      "packages/core/src/verification/verification.ts",
+      "packages/server/drizzle/20260925161513_equal_synch/migration.sql",
+      "packages/server/drizzle/20260925161513_equal_synch/snapshot.json",
+      "packages/server/src/__tests__/cancellation.test.ts",
+      "packages/server/src/__tests__/config/verification-config.test.ts",
+      "packages/server/src/__tests__/db/repositories/verification-repositories.test.ts",
+      "packages/server/src/__tests__/execution/input-stager.test.ts",
+      "packages/server/src/__tests__/execution/script-run-service.test.ts",
+      "packages/server/src/__tests__/fixtures/verification/bandit-clean.json",
+      "packages/server/src/__tests__/fixtures/verification/bandit-findings.json",
+      "packages/server/src/__tests__/fixtures/verification/ruff-clean.json",
+      "packages/server/src/__tests__/fixtures/verification/ruff-findings.json",
+      "packages/server/src/__tests__/generation/fixture-determinism.test.ts",
+      "packages/server/src/__tests__/migration-0005.test.ts",
+      "packages/server/src/__tests__/support/verification-fixtures.ts",
+      "packages/server/src/__tests__/support/verification-harness.ts",
+      "packages/server/src/__tests__/verification-route.test.ts",
+      "packages/server/src/__tests__/verification/approval-service.test.ts",
+      "packages/server/src/__tests__/verification/checks/contract-integrity.test.ts",
+      "packages/server/src/__tests__/verification/checks/static-checks.test.ts",
+      "packages/server/src/__tests__/verification/checks/test-check.test.ts",
+      "packages/server/src/__tests__/verification/docs-examples.test.ts",
+      "packages/server/src/__tests__/verification/review-service.test.ts",
+      "packages/server/src/__tests__/verification/runtime-probe.test.ts",
+      "packages/server/src/__tests__/verification/verification-service.test.ts",
+      "packages/server/src/__tests__/verification/verify-env.test.ts",
+      "packages/server/src/__tests__/verify-execute-review-e2e.test.ts",
+      "packages/server/src/db/repositories/approval-repository.ts",
+      "packages/server/src/db/repositories/constraint.ts",
+      "packages/server/src/db/repositories/script-run-repository.ts",
+      "packages/server/src/db/repositories/verification-repository.ts",
+      "packages/server/src/execution/input-stager.ts",
+      "packages/server/src/execution/output-cap.ts",
+      "packages/server/src/execution/script-run-service.ts",
+      "packages/server/src/routes/verification-route.ts",
+      "packages/server/src/verification/approval-service.ts",
+      "packages/server/src/verification/checks/check-result.ts",
+      "packages/server/src/verification/checks/contract-checks.ts",
+      "packages/server/src/verification/checks/integrity-check.ts",
+      "packages/server/src/verification/checks/lint-check.ts",
+      "packages/server/src/verification/checks/security-check.ts",
+      "packages/server/src/verification/checks/static-check.ts",
+      "packages/server/src/verification/checks/test-check.ts",
+      "packages/server/src/verification/execution-state-writer.ts",
+      "packages/server/src/verification/index.ts",
+      "packages/server/src/verification/presenters.ts",
+      "packages/server/src/verification/review-service.ts",
+      "packages/server/src/verification/run-intent-service.ts",
+      "packages/server/src/verification/runtime-probe.ts",
+      "packages/server/src/verification/testing/fake-runtime-probe.ts",
+      "packages/server/src/verification/verification-pass.ts",
+      "packages/server/src/verification/verification-service.ts",
+      "packages/server/src/verification/verification-stack.ts",
+      "packages/server/src/verification/verify-env.ts",
+      "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "packages/web/src/api/verification-queries.ts",
+      "packages/web/src/components/execution/run-progress.tsx",
+      "packages/web/src/components/execution/run-result.tsx",
+      "packages/web/src/components/review/review-panel.tsx",
+      "packages/web/src/components/verification/finding-list.tsx",
+      "packages/web/src/components/verification/gate-section.tsx",
+      "packages/web/src/components/verification/run-intent-panel.tsx",
+      "packages/web/src/components/verification/runtime-note.tsx",
+      "packages/web/src/components/verification/verification-report.tsx"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/feature-summary.md": "6f6e8a828d91c789dc752c9503e9fcbd12227ce0",
+      ".spec-lite/features/FEAT-107-verification_execution_gate/spec.md": "8f76b6ad42625b9169c40ffcc2a957a8b9232ab5",
+      ".spec-lite/memory.md": "94a6e12a924561c550729fc88d755c795e502158",
+      ".spec-lite/plan_mvp.md": "4fff893c3af01789b098871b91d391beea4c907b",
+      "CHANGELOG.md": "cab30fbb295f1d7488286c690482487fb2a1d99a",
+      "README.md": "3cb9c9f3f24340a2778f2c8a13cefce8868e2277",
+      "docs/architecture.md": "ae3b7c7e5024939bd9d2f3a8c8c891bfa3cfd45a",
+      "docs/quickstart.md": "437dc5d98f380919507d499d5cc5bf44ca451e21",
+      "docs/usage.md": "2537f2dea5b6b36ebaa1f522402cbf5e57bf7ec1",
+      "packages/core/README.md": "3cc422e399686f648655a12dbff7dff275fdc63b",
+      "packages/core/src/__tests__/conversation/conversation-event.test.ts": "b61b2774f50bbd05c8ef2078a1310e7b8c3cde75",
+      "packages/core/src/__tests__/conversation/execution-state.test.ts": "c45a079a1818d3ff5706fbb5609b1d1a0ad1cd8b",
+      "packages/core/src/conversation/conversation-event.ts": "9ca1712703373d54de59d1e11bcd15978e14db51",
+      "packages/core/src/conversation/execution-state.ts": "f6dd349e7a4178e97edca8078866ccf5ff56c226",
+      "packages/core/src/conversation/index.ts": "bb9855bc921d7f375b2a796438fb0a5829a5bd78",
+      "packages/core/src/errors/error-codes.ts": "0c4a48e365f9989579bb47efdeb5b2995071ccad",
+      "packages/core/src/index.ts": "687a96263c2cc9e728054e92a15ef913a48b2dd5",
+      "packages/server/README.md": "e18e24cea62d9792704ca1276a2e13115f3d5e80",
+      "packages/server/src/__tests__/config/app-paths.test.ts": "9a73aebf64b01663de2da27c671ec52dd490e3ad",
+      "packages/server/src/__tests__/conversation/task-session-registry.test.ts": "3f62fda50c303a5d8dad738972d174671a21942d",
+      "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts": "396bf0ba51e12dbe7e2bfaff4a0dff74104cdaee",
+      "packages/server/src/__tests__/generation-e2e.test.ts": "58387e38d64216ab1c516467d1823c3718e6aa5a",
+      "packages/server/src/__tests__/migrate.test.ts": "b3ec1d81f851126bf075860c26f11e293f76ce13",
+      "packages/server/src/__tests__/support/generation-harness.ts": "604b0e6177b4d82806365373a0ad45e81deb2361",
+      "packages/server/src/app.ts": "c2ca4b1e11e1a9855e4f2d123a3e6fc7457e4df4",
+      "packages/server/src/config/app-paths.ts": "e22e0362a40be22dc804281593becaf3376f155c",
+      "packages/server/src/config/env.ts": "b62a7c06ee1b1a980070bb10b243c5ac9dccca0c",
+      "packages/server/src/conversation/run-strategy.ts": "0b5ebf7c81bd93810de9785052aa5a7830e4bb82",
+      "packages/server/src/conversation/task-session-registry.ts": "5f5fbfd0bc793203366f8eef4860ef7ab49ccc40",
+      "packages/server/src/conversation/task-session.ts": "742e9a874b22ed7ad7ed2e535ad7b986ec2432a5",
+      "packages/server/src/db/migrate.ts": "2f8c2405c571dede393f670dc35d829350c2a61c",
+      "packages/server/src/db/repositories/execution-repository.ts": "eb7644aa64aff3d6bac45dc2b86e8cce84cd9200",
+      "packages/server/src/db/schema.ts": "52d9bd5c7d6c532e398844fce58173d186eb051a",
+      "packages/server/src/execution/uv-python-runner.ts": "b613faac2fc14465c17005526da657938c4f6d2f",
+      "packages/server/src/generation/code-generation-run-strategy.ts": "d06ff3b06c7cd612ae98a0c0b3adb47a00c41e3d",
+      "packages/server/src/generation/fixture-service.ts": "b449e9dc50e314dc6a128b36122451c2a42eff1c",
+      "packages/server/src/generation/fixture-writer.ts": "2e8c1062e1bd0ea4256acfdf515b506815fcc244",
+      "packages/server/src/generation/generation-lifecycle.ts": "f1143a629ea997c7add994be9f3205564cd90c97",
+      "packages/server/src/generation/generation-service.ts": "e90f77733f9a536b3025c1dcd252165866ef0350",
+      "packages/server/src/generation/generation-stack.ts": "b2e7a01532f1044bb3fe7729dbe66fa571fa3f04",
+      "packages/server/src/index.ts": "9285a6fef6d3630ef4c5c7fcdef64c2ac14c5ba4",
+      "packages/server/src/middleware/error-handler.ts": "3cde57602e6a5cfa7a3dd9c8389314bcafab185b",
+      "packages/server/src/ws/execution-socket.ts": "24beafe6695f138b3b9ea08091a54b217d10210e",
+      "packages/server/vitest.config.ts": "d6c6031cab6ea098f73a9659e5a9750f73f04778",
+      "packages/web/README.md": "bf5f608ad61dab04182b9aa44962aab0f4a0e142",
+      "packages/web/src/components/conversation/conversation-view.tsx": "9454ecce367b4fd3982d25197530965e343957a7",
+      "packages/web/src/components/conversation/execution-status-badge.tsx": "20a45fc466ad0161bb84784f0c935d659711ddcc",
+      "packages/web/src/components/generation/generation-section.tsx": "c5d7de40e7bbf468ae61d310aaab785c174c9526",
+      "packages/web/src/design-system/tokens.ts": "6a5ef4d1457cf204216445b87fb9b72fc4bb69ca",
+      "packages/web/src/routes/tasks.$taskId.tsx": "ded7dc54e0c996861c8ee2246dfe56007e66eb5d",
+      ".spec-lite/features/FEAT-107-verification_execution_gate/changeset.json": "ba50f410612f528559e4a05500ac649c91ed869e",
+      ".spec-lite/features/FEAT-111-save_and_rerun/spec.md": "372170f74d61c49f699989945fae9d39effbebe5",
+      "docs/features/verification-execution-gate.md": "d6b96725de50b67a5fe9b4e9dfa72758709f9d5b",
+      "packages/core/src/__tests__/verification/gate-policy.test.ts": "f9700a903a64ef2e1a81871a3d7d78149a245082",
+      "packages/core/src/__tests__/verification/verification-contracts.test.ts": "70adc51fc0e58b6183590db6b2a7c2ec48cfbbb2",
+      "packages/core/src/contracts/verification-api.ts": "70b6fd616f3e62b7f871a181492394b8e64ea6f3",
+      "packages/core/src/errors/verification-errors.ts": "812e3fd33199321255cacf4efdf48551cbfbd629",
+      "packages/core/src/verification/approval.ts": "35234a8b62ba58aa13ffac7ab604c1cae196dc70",
+      "packages/core/src/verification/gate-policy.ts": "0ad45df6f100dd9d4c924d0c6b064025686cbf1c",
+      "packages/core/src/verification/index.ts": "8b6f2c8990b5d6ba9440c949982b3b1dcbc992c5",
+      "packages/core/src/verification/limits.ts": "2ed06e0cb781eaff57a11a0c00e300ab0a222b64",
+      "packages/core/src/verification/manifest.ts": "aeb9f5ece9645839cf976afaac820118529893a6",
+      "packages/core/src/verification/review.ts": "8d7c2164f552e377396dae6106d3c6d816f391c6",
+      "packages/core/src/verification/run-intent.ts": "b564b95e0a436582386142c6a40e8a7197421506",
+      "packages/core/src/verification/runtime-fingerprint.ts": "f8531a1fa50fb03c214c6dd6615c71c72f30ae93",
+      "packages/core/src/verification/verification.ts": "ec040ca671374d30eba66187bde027c93932de1a",
+      "packages/server/drizzle/20260925161513_equal_synch/migration.sql": "ae5728aa8289785dd645343ee446ff062175119e",
+      "packages/server/drizzle/20260925161513_equal_synch/snapshot.json": "75621e815d65cf9a44c9a09e7a96e0dc9d2bdcb1",
+      "packages/server/src/__tests__/cancellation.test.ts": "f6903604364637695685f3f4aed4f598023bac70",
+      "packages/server/src/__tests__/config/verification-config.test.ts": "fc51a0d0204e40eb0e61e05390e8572cbcfd1a6a",
+      "packages/server/src/__tests__/db/repositories/verification-repositories.test.ts": "769d1b19db22f6e140887179aad5984a651042d9",
+      "packages/server/src/__tests__/execution/input-stager.test.ts": "b301c0247c5797b9c91d4cac0fb823bff86735b6",
+      "packages/server/src/__tests__/execution/script-run-service.test.ts": "d3dfc0487ed8a78c59c83c295d0952c7862cf547",
+      "packages/server/src/__tests__/fixtures/verification/bandit-clean.json": "6f2ae147e78078cb32fd9c0c0c13cea2bbf88476",
+      "packages/server/src/__tests__/fixtures/verification/bandit-findings.json": "9f159db5e1cd4bd6f8968fddcaf03d80f49d614f",
+      "packages/server/src/__tests__/fixtures/verification/ruff-clean.json": "fe51488c7066f6687ef680d6bfaa4f7768ef205c",
+      "packages/server/src/__tests__/fixtures/verification/ruff-findings.json": "9ef962e91707415848f49c25e22be21bd9dca020",
+      "packages/server/src/__tests__/generation/fixture-determinism.test.ts": "d91b8e0df4a8df22a050995da85affd1d775d1de",
+      "packages/server/src/__tests__/migration-0005.test.ts": "6817faa90da70345f9a95f0474fc905f8daa0cba",
+      "packages/server/src/__tests__/support/verification-fixtures.ts": "e553db7100f83bbe950788b8ec048a131a965f8a",
+      "packages/server/src/__tests__/support/verification-harness.ts": "38f4c62a66c34c06e12c159327594d672091cd07",
+      "packages/server/src/__tests__/verification-route.test.ts": "d661a2a0a03d588e8d9248780aeb6a10ebe34041",
+      "packages/server/src/__tests__/verification/approval-service.test.ts": "a96ee3d99e90e59d749fc0b81049d63cbb49b52d",
+      "packages/server/src/__tests__/verification/checks/contract-integrity.test.ts": "82739672803c438640e134e6781b6de345264be2",
+      "packages/server/src/__tests__/verification/checks/static-checks.test.ts": "4000d8ef8ac895da3333c00a5c227c4574f0782e",
+      "packages/server/src/__tests__/verification/checks/test-check.test.ts": "b00ad85f5c2a0a091480e92361e969acb974eb02",
+      "packages/server/src/__tests__/verification/docs-examples.test.ts": "0689389971b26f6ad5679080aa864bc03db53548",
+      "packages/server/src/__tests__/verification/review-service.test.ts": "9fc27359af5cf74ca5f78ba5e8901da3e6fe875a",
+      "packages/server/src/__tests__/verification/runtime-probe.test.ts": "3b375b0137dc56dcbc8a44d9b39b92352431b086",
+      "packages/server/src/__tests__/verification/verification-service.test.ts": "4fa13614d9da1130db79754abbce04250fca45f2",
+      "packages/server/src/__tests__/verification/verify-env.test.ts": "f8890b1a3f87c4b2b85fa476b7f60b971dbea8bf",
+      "packages/server/src/__tests__/verify-execute-review-e2e.test.ts": "e160885bd3e03c36c0d10f096a1ad3c8a3213b18",
+      "packages/server/src/db/repositories/approval-repository.ts": "ddd28f69206724343e23b9db98ac2550991b73b8",
+      "packages/server/src/db/repositories/constraint.ts": "0d77518ab89f437470a0c829f8ab5cfb667dbd3c",
+      "packages/server/src/db/repositories/script-run-repository.ts": "219aaf3f48d3370cd78f1d32339bf3f738014ab7",
+      "packages/server/src/db/repositories/verification-repository.ts": "c7cc31dad7efd0523c51751f183dfb287ed73a9a",
+      "packages/server/src/execution/input-stager.ts": "17bf5f833731c9def61b41129a2f8376a24d4b5f",
+      "packages/server/src/execution/output-cap.ts": "0666e535c8c72bd0338a3a5a2b3808c6e00b491b",
+      "packages/server/src/execution/script-run-service.ts": "1f76b69e5fbee800bccdc5e2b969c9986602247f",
+      "packages/server/src/routes/verification-route.ts": "8d99a9f0e754cd3412d47fb320a03c58a5c888cb",
+      "packages/server/src/verification/approval-service.ts": "f91fa146ebc56d5f5e9da52f002bffa0638b5562",
+      "packages/server/src/verification/checks/check-result.ts": "bfd3594e5d6601082bacebdeb71fc191547ff306",
+      "packages/server/src/verification/checks/contract-checks.ts": "534f9020c264c7c6d0f6fb062ea4badf7811cbe6",
+      "packages/server/src/verification/checks/integrity-check.ts": "3a0782737f1fbb6e7895b272d738490639347ddc",
+      "packages/server/src/verification/checks/lint-check.ts": "0fb41c9e30f088b5af852aa8163e51ba973a4b0d",
+      "packages/server/src/verification/checks/security-check.ts": "ff89fcbcac5d26fa5c67d569f078607e4118e66c",
+      "packages/server/src/verification/checks/static-check.ts": "5780eae0ad1e187374d5dfcd60174a9142702980",
+      "packages/server/src/verification/checks/test-check.ts": "284364911f54260cad4614fd6f36cef683e59e0c",
+      "packages/server/src/verification/execution-state-writer.ts": "504ae87651463b5dc7e8f79b630650f2682269a3",
+      "packages/server/src/verification/index.ts": "31aad3bd182d94e2bad697d7c2983a35eebb1885",
+      "packages/server/src/verification/presenters.ts": "29dc6f9b5a4530741609bcfee375eb1e6041fb7f",
+      "packages/server/src/verification/review-service.ts": "e99fc2edcb445307e553383e93f6bc47984ce838",
+      "packages/server/src/verification/run-intent-service.ts": "94c6019b80745b84c467546063e1d886b23e6d80",
+      "packages/server/src/verification/runtime-probe.ts": "394215fdd95140df625aff8a2b28e3360fd3d336",
+      "packages/server/src/verification/testing/fake-runtime-probe.ts": "3173b403ea676420b55284ae762bfc2c9d54c020",
+      "packages/server/src/verification/verification-pass.ts": "a46c273dc270f099cbdc19676fa44e7852a2b8ba",
+      "packages/server/src/verification/verification-service.ts": "fcff1efc051575f473e737f2cef812340c46eca9",
+      "packages/server/src/verification/verification-stack.ts": "85c5d54fa2302dd6090a5d275061fb8b7864bb34",
+      "packages/server/src/verification/verify-env.ts": "8e125c0eef3b7f8016ae99c2686a5e00baebca9b",
+      "packages/web/src/__tests__/components/verification/verification-components.test.tsx": "04fcd2a8ac38ab1d30cfa9f3d7369bf8717151cf",
+      "packages/web/src/api/verification-queries.ts": "6a1c024726cf786d3b529c176468f98e2960dc6a",
+      "packages/web/src/components/execution/run-progress.tsx": "46439dec28cab614c3b4f821334f6ec98dec41b4",
+      "packages/web/src/components/execution/run-result.tsx": "7cd4f315b5994ace24cc3300dfc069d0a93d6306",
+      "packages/web/src/components/review/review-panel.tsx": "8c48304fda58cded70067f8e0e13bf29333aa5b1",
+      "packages/web/src/components/verification/finding-list.tsx": "be9e246f69df49bd8af0c36e01cadcc2f8f5b92d",
+      "packages/web/src/components/verification/gate-section.tsx": "df2d2e8a76413613675dccd6b269af9cb74c93f2",
+      "packages/web/src/components/verification/run-intent-panel.tsx": "7f401640425cfe90c719019aa75627ca4717fcdf",
+      "packages/web/src/components/verification/runtime-note.tsx": "83016c4f2f27b9320eba8524ca93bb2ef8e7e29d",
+      "packages/web/src/components/verification/verification-report.tsx": "1f84f3c2e3a1429c6355937add271065b3589490"
+    }
+  },
+  "featureId": "FEAT-108"
+}

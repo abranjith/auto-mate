@@ -354,19 +354,19 @@ Every uv invocation this application makes, and the reason for each flag. `depen
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Runtime limits, environment contracts, and typed errors in `packages/core`
-- [ ] TASK-002: The locked runtime manifests — D05 as committed artifacts
-- [ ] TASK-003: Persistence — `runtime_environment`, the run's limit columns, and migration `0006`
-- [ ] TASK-004: `RuntimeProvisioner` — pin the interpreter, sync the lock, detect drift
-- [ ] TASK-005: `UvPythonRunner` — the real implementation behind an unchanged seam
-- [ ] TASK-006: The launcher and POSIX resource limits
-- [ ] TASK-007: The output watchdog and limit-driven termination
-- [ ] TASK-008: The run leg on the real runtime
-- [ ] TASK-009: Background preparation, the runtime status API, and the transcript event
-- [ ] TASK-010: The complete cancellation matrix
-- [ ] TASK-011: Python-only, enforced structurally
-- [ ] TASK-012: The runtime on screen
-- [ ] TASK-013: Live runtime proof — real uv, real Python, real processes, both platforms
-- [ ] TASK-014: Documentation, and the three claims this feature must not overstate
+- [x] TASK-001: Runtime limits, environment contracts, and typed errors in `packages/core`
+  - [x] TASK-002: The locked runtime manifests — D05 as committed artifacts
+- [x] TASK-003: Persistence — `runtime_environment`, the run's limit columns, and migration `0006`
+  - [x] TASK-004: `RuntimeProvisioner` — pin the interpreter, sync the lock, detect drift
+  - [x] TASK-005: `UvPythonRunner` — the real implementation behind an unchanged seam
+  - [x] TASK-006: The launcher and POSIX resource limits
+  - [x] TASK-007: The output watchdog and limit-driven termination
+  - [x] TASK-008: The run leg on the real runtime
+  - [x] TASK-009: Background preparation, the runtime status API, and the transcript event
+  - [x] TASK-010: The complete cancellation matrix
+  - [x] TASK-011: Python-only, enforced structurally
+  - [x] TASK-012: The runtime on screen
+  - [x] TASK-013: Live runtime proof — real uv, real Python, real processes, both platforms — **DEVIATION (accepted by user 2026-09-25): verified on Windows only (6 passed, POSIX memory case skipped by design); the macOS/Linux run of `.github/workflows/live-python-runtime.yml` is a follow-up tracked in `.spec-lite/TODO.md`**
+  - [x] TASK-014: Documentation, and the three claims this feature must not overstate
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

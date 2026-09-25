@@ -6,6 +6,7 @@ import { ConnectionTest } from '../components/settings/connection-test';
 import { CredentialStatus } from '../components/settings/credential-status';
 import { ModelSelector } from '../components/settings/model-selector';
 import { ds } from '../design-system/tokens';
+import { RuntimePanel } from '../components/runtime/runtime-panel';
 
 /** Reduce a stored config to the fields the API accepts, so server-owned fields are never sent back. */
 function toUpdate(config: AgentConfig): AgentConfigUpdate {
@@ -77,6 +78,7 @@ function Settings() {
       {...(test.isError ? { errorMessage: messageFor(test.error) } : {})}
       onTest={() => test.mutate()}
     />
+    <RuntimePanel />
   </div>;
 }
 

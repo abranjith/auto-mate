@@ -16,7 +16,8 @@ export function GenerationSection({ execution, events, onRetried, loadAttempts =
   const [attempts, setAttempts] = useState<GenerationAttemptListResponse>();
   const [now, setNow] = useState(() => Date.now());
   const generation = isGenerationRun(events);
-  const active = !isTerminal(execution.status);
+  // Generation is active only while the agent works; verification and the gates have their own section (FEAT-107).
+  const active = !isTerminal(execution.status) && ['pending', 'generating', 'waiting'].includes(execution.status);
   const milestones = events.filter((event) => GENERATION_KINDS.has(event.type)).length;
   useEffect(() => {
     if (!generation) return;

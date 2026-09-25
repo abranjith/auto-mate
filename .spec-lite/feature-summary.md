@@ -4,6 +4,28 @@
 
 > Current implemented behavior only. Change history lives in source control.
 
+## Verification & Execution
+
+**FEAT-108 — Locked Python Runtime Execution** _(updated: 2026-09-25 by implement)_
+Source spec: [spec.md](features/FEAT-108-python_runtime_execution/spec.md)
+
+Auto-Mate ships two committed uv environments and pins CPython 3.14.6. It prepares them in the background or when requested, records resolved packages and a runtime fingerprint, exposes readiness through the local API and Settings, and retries failed preparations. A run awaits readiness before its approval gate, then uses a digest-checked launcher and the existing three-method `PythonRunner` seam. Script runs record the lock digest, output bytes, and any limit breach. Wall-clock and output caps apply on every platform; macOS/Linux also set hard address-space and file-size limits. Windows has no memory cap. These measures prevent dependency drift and bound some resource use; generated code still has this application's file and network access. The opt-in live suite exercises real uv and Python, and CI is configured for Windows, macOS, and Linux.
+
+**FEAT-107 — Independent Verification & Execution Gate** _(updated: 2026-09-25 by implement)_
+Source spec: [spec.md](features/FEAT-107-verification_execution_gate/spec.md)
+
+A finalized script hands off from generation to `verifying`. The app then runs seven checks itself, with no model call:
+- integrity of the sealed files and reproducible test data;
+- the entrypoint, the declared outputs, and the required input columns against the file's profile;
+- `ruff --isolated` and `bandit` with an app-owned config and ini, run from `~/.automate/verify-env/`;
+- the tests, re-run against rebuilt synthetic data.
+
+Failing tests, bandit HIGH/HIGH, ruff `E9`/`F6`/`F7`/`F82`/`invalid-syntax`, missing columns, failed contract or integrity checks, and any check that could not run all block, and the run settles `failed` with a readable verdict. Everything else is advisory. Results bind to the code digest and a runtime fingerprint, so a runtime change forces re-checking.
+
+A passing run parks at `awaiting_approval`. The gate shows reads, writes, checks, the runtime, and three fixed caveats, and runs only on **Run it**. The approval binds to the code, the runtime, and the displayed intent's digest; `openGated` re-compares them before anything spawns. The script runs against a verified copy of the file in `runs/{id}/input/`. Exit 0 with a complete manifest parks at `awaiting_review`: accepting completes the run, and rejecting stores the feedback and starts a linked `feedback` retry. Both gates survive a restart and hold no concurrency slot. Six endpoints under `/api/executions/:id/…` serve the flow, and the existing abort cancels every leg. The input copy and checker setup are hygiene, not isolation.
+
+---
+
 ## Data Ingestion & Disclosure
 
 **FEAT-104 — CSV/XLSX Ingestion & Profiling** _(updated: 2026-09-24 by implement)_

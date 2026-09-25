@@ -12,8 +12,9 @@
 // ---------------------------------------------------------------------------
 
 import { spawn } from 'node:child_process';
-import { MAX_DIAGNOSTIC_BYTES } from '@automate/core';
+import { MAX_DIAGNOSTIC_BYTES, type LimitBreach } from '@automate/core';
 import type { Logger } from 'pino';
+import { watchOutput, type OutputWatchLimits } from './output-watchdog';
 
 /** The slice of a child process this module uses; `ChildProcess` satisfies it. */
 export interface SpawnedProcess {
@@ -39,6 +40,7 @@ export interface ProcessRequest {
   readonly env?: NodeJS.ProcessEnv;
   readonly timeoutMs: number;
   readonly signal?: AbortSignal;
+  readonly outputWatch?: { readonly dir: string; readonly limits: OutputWatchLimits };
 }
 export interface ProcessResult {
   readonly exitCode: number | null;
@@ -49,6 +51,7 @@ export interface ProcessResult {
   readonly aborted: boolean;
   readonly spawnError: Error | null;
   readonly durationMs: number;
+  readonly limitBreached?: LimitBreach | null;
 }
 export interface ProcessRunnerOptions {
   readonly spawn?: SpawnFn;
@@ -106,7 +109,7 @@ export class ProcessRunner {
   /** Run a command to completion. @param request Command, arguments, limits. @returns Exit code, bounded output, and how it ended; never rejects for a failing command. */
   run(request: ProcessRequest): Promise<ProcessResult> {
     const started = this.clock();
-    const empty = { exitCode: null, stdout: '', stderr: '', droppedBytes: 0, timedOut: false, durationMs: 0 };
+    const empty = { exitCode: null, stdout: '', stderr: '', droppedBytes: 0, timedOut: false, durationMs: 0, limitBreached: null };
     if (request.signal?.aborted) return Promise.resolve({ ...empty, aborted: true, spawnError: null });
     let child: SpawnedProcess;
     try {
@@ -127,16 +130,21 @@ export class ProcessRunner {
       let timedOut = false;
       let aborted = false;
       let settled = false;
-      const kill = () => this.killTree(child);
-      const timer = setTimeout(() => { timedOut = true; kill(); }, request.timeoutMs);
-      const onAbort = () => { aborted = true; kill(); };
+      let limitBreached: LimitBreach | null = null;
+      let killed = false;
+      const watcher = new AbortController();
+      const kill = () => { if (killed || settled) return; killed = true; this.killTree(child); };
+      const timer = setTimeout(() => { if (killed) return; timedOut = true; limitBreached = 'time'; kill(); }, request.timeoutMs);
+      const onAbort = () => { if (killed) return; aborted = true; kill(); };
       request.signal?.addEventListener('abort', onAbort, { once: true });
+      if (request.outputWatch) void watchOutput(request.outputWatch.dir, request.outputWatch.limits, watcher.signal).then((breach) => { if (!breach || killed || settled) return; limitBreached = breach; kill(); }).catch((cause: unknown) => this.options.logger?.warn({ cause: cause instanceof Error ? cause.message : String(cause) }, 'output watch failed'));
       const finish = (exitCode: number | null, spawnError: Error | null) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        watcher.abort();
         request.signal?.removeEventListener('abort', onAbort);
-        resolve({ exitCode, stdout: out.text(), stderr: err.text(), droppedBytes: out.dropped + err.dropped, timedOut, aborted, spawnError, durationMs: Math.max(0, Math.round(this.clock() - started)) });
+        resolve({ exitCode, stdout: out.text(), stderr: err.text(), droppedBytes: out.dropped + err.dropped, timedOut, aborted, spawnError, limitBreached, durationMs: Math.max(0, Math.round(this.clock() - started)) });
       };
       child.once('error', (error) => finish(null, error));
       child.once('close', (code) => finish(code, null));

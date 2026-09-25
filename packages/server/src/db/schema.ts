@@ -68,6 +68,10 @@ export const execution = sqliteTable(
     retryOfExecutionId: integer('retry_of_execution_id').references((): AnySQLiteColumn => execution.id, { onDelete: 'set null' }),
     /** The person's free-text hint that seeded this run. User input: it reaches the provider only as the user_prompt source. */
     guidance: text('guidance'),
+    /** The person's words on what was wrong with a reviewed result (FEAT-107). User input: it reaches the provider only as the user_prompt source of the feedback retry. */
+    reviewFeedback: text('review_feedback'),
+    /** When a person accepted or rejected the result (FEAT-107). */
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -75,11 +79,11 @@ export const execution = sqliteTable(
   (table) => [
     check(
       'execution_status_check',
-      sql`${table.status} in ('pending','generating','verifying','executing','waiting','completed','failed','aborted')`,
+      sql`${table.status} in ('pending','generating','verifying','awaiting_approval','executing','awaiting_review','waiting','completed','failed','aborted','rejected')`,
     ),
     check(
       'execution_trigger_check',
-      sql`${table.trigger} in ('manual','rerun')`,
+      sql`${table.trigger} in ('manual','rerun','feedback')`,
     ),
     index('execution_task_id').on(table.taskId),
     index('execution_active')
@@ -87,6 +91,8 @@ export const execution = sqliteTable(
       .where(
         sql`${table.status} in ('pending','generating','verifying','executing','waiting')`,
       ),
+    // Two questions, two indexes: `execution_active` is what a restart interrupts; `execution_parked` is what waits on a person and survives one.
+    index('execution_parked').on(table.status).where(sql`${table.status} in ('awaiting_approval','awaiting_review')`),
     index('execution_retry_of').on(table.retryOfExecutionId).where(sql`${table.retryOfExecutionId} is not null`),
   ],
 );
@@ -110,7 +116,7 @@ export const conversationEvent = sqliteTable(
   (table) => [
     check(
       'conversation_event_kind_check',
-      sql`${table.kind} in ('user_prompt','state_changed','tool_started','tool_finished','assistant_text','turn_finished','failed','clarification_requested','clarification_answered','disclosure_sent','code_version_sealed','test_run_finished','generation_settled')`,
+      sql`${table.kind} in ('user_prompt','state_changed','tool_started','tool_finished','assistant_text','turn_finished','failed','clarification_requested','clarification_answered','disclosure_sent','code_version_sealed','test_run_finished','generation_settled','verification_finished','approval_decided','run_finished','review_decided','runtime_prepared')`,
     ),
     uniqueIndex('conversation_event_execution_seq').on(
       table.executionId,
@@ -467,3 +473,189 @@ export const syntheticFixture = sqliteTable(
     uniqueIndex('synthetic_fixture_upload').on(table.executionId, table.uploadId),
   ],
 );
+
+/**
+ * One independent check pass over one sealed code version on one runtime
+ * (FEAT-107). This row answers "what was checked, and what does it apply to?":
+ * `content_digest` is a deliberate denormalized copy of the bytes checked and
+ * `runtime_fingerprint` the runtime they were checked on. The unique index is
+ * the schema-level statement of plan §6 — one result per code and runtime.
+ */
+export const verificationRun = sqliteTable(
+  'verification_run',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    codeVersionId: integer('code_version_id').notNull().references(() => codeVersion.id, { onDelete: 'cascade' }),
+    contentDigest: text('content_digest').notNull(),
+    runtimeFingerprint: text('runtime_fingerprint').notNull(),
+    /** The JSON the fingerprint was computed from, so a change can be named rather than hashed. */
+    runtimeDetail: text('runtime_detail').notNull(),
+    status: text('status').notNull().default('running'),
+    blockingCount: integer('blocking_count').notNull().default(0),
+    advisoryCount: integer('advisory_count').notNull().default(0),
+    summary: text('summary'),
+    durationMs: integer('duration_ms'),
+    startedAt: integer('started_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    settledAt: integer('settled_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('verification_run_status_check', sql`${table.status} in ('running','passed','failed','errored','timed_out','aborted')`),
+    check('verification_run_counts_check', sql`${table.blockingCount} >= 0 and ${table.advisoryCount} >= 0`),
+    // Settled-ness is one fact, not two fields that can disagree.
+    check('verification_run_settled_check', sql`(${table.status} = 'running' and ${table.settledAt} is null) or (${table.status} != 'running' and ${table.settledAt} is not null)`),
+    uniqueIndex('verification_run_scope').on(table.codeVersionId, table.runtimeFingerprint),
+    index('verification_run_execution').on(table.executionId),
+  ],
+);
+
+/** One check within a pass. Every key appears on every settled pass: an absent row and a passed check must never look alike. */
+export const verificationCheck = sqliteTable(
+  'verification_check',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    verificationRunId: integer('verification_run_id').notNull().references(() => verificationRun.id, { onDelete: 'cascade' }),
+    checkKey: text('check_key').notNull(),
+    status: text('status').notNull(),
+    /** Resolved from the gate policy at write time, so a later policy change never rewrites why a run was allowed. */
+    isBlocking: integer('is_blocking', { mode: 'boolean' }).notNull(),
+    summary: text('summary').notNull(),
+    detail: text('detail'),
+    durationMs: integer('duration_ms'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('verification_check_key_check', sql`${table.checkKey} in ('integrity','contract_entrypoint','contract_inputs','contract_outputs','lint','security','tests')`),
+    check('verification_check_status_check', sql`${table.status} in ('passed','failed','skipped','errored')`),
+    uniqueIndex('verification_check_key').on(table.verificationRunId, table.checkKey),
+  ],
+);
+
+/** One concrete thing a check found. `message` is tool output about model-written code: untrusted input to the DOM. */
+export const verificationFinding = sqliteTable(
+  'verification_finding',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    checkId: integer('check_id').notNull().references(() => verificationCheck.id, { onDelete: 'cascade' }),
+    ruleCode: text('rule_code').notNull(),
+    severity: text('severity').notNull(),
+    confidence: text('confidence'),
+    /** Relative to the version directory, never absolute. */
+    filePath: text('file_path'),
+    line: integer('line'),
+    column: integer('column'),
+    message: text('message').notNull(),
+    isBlocking: integer('is_blocking', { mode: 'boolean' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('verification_finding_severity_check', sql`${table.severity} in ('high','medium','low','info')`),
+    check('verification_finding_confidence_check', sql`${table.confidence} is null or ${table.confidence} in ('high','medium','low')`),
+    index('verification_finding_check').on(table.checkId),
+    index('verification_finding_blocking').on(table.checkId).where(sql`${table.isBlocking} = 1`),
+  ],
+);
+
+/**
+ * A person's pre-run authorization (FEAT-107): the row that makes the gate a
+ * fact rather than a screen. It binds to the code digest, the runtime
+ * fingerprint, and the digest of the exact intent displayed.
+ */
+export const executionApproval = sqliteTable(
+  'execution_approval',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    codeVersionId: integer('code_version_id').notNull().references(() => codeVersion.id, { onDelete: 'cascade' }),
+    verificationRunId: integer('verification_run_id').notNull().references(() => verificationRun.id, { onDelete: 'cascade' }),
+    contentDigest: text('content_digest').notNull(),
+    runtimeFingerprint: text('runtime_fingerprint').notNull(),
+    intentDigest: text('intent_digest').notNull(),
+    decision: text('decision').notNull(),
+    acknowledgedWarnings: integer('acknowledged_warnings', { mode: 'boolean' }).notNull().default(false),
+    decidedAt: integer('decided_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('execution_approval_decision_check', sql`${table.decision} in ('approved','cancelled')`),
+    // One authorization per execution, so "who said this could run?" has exactly one answer.
+    uniqueIndex('execution_approval_granted').on(table.executionId).where(sql`${table.decision} = 'approved'`),
+    index('execution_approval_execution').on(table.executionId),
+  ],
+);
+
+/**
+ * The real-data run (FEAT-107). `approval_id` NOT NULL is the gate at the
+ * schema level: a run row cannot exist without the approval that authorized
+ * it. `stdout`/`stderr` may contain values from the person's real file —
+ * stored per memory's logging rule, never logged, and never put in a prompt
+ * except through FEAT-105's `recordDiagnosticTransmission`.
+ */
+export const scriptRun = sqliteTable(
+  'script_run',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    codeVersionId: integer('code_version_id').notNull().references(() => codeVersion.id, { onDelete: 'cascade' }),
+    approvalId: integer('approval_id').notNull().references(() => executionApproval.id, { onDelete: 'cascade' }),
+    contentDigest: text('content_digest').notNull(),
+    /** Re-probed immediately before the run, never copied from the approval. */
+    runtimeFingerprint: text('runtime_fingerprint').notNull(),
+    /** Relative to the data root: `runs/{executionId}`. */
+    dirPath: text('dir_path').notNull(),
+    inputManifest: text('input_manifest').notNull(),
+    status: text('status').notNull().default('running'),
+    exitCode: integer('exit_code'),
+    stdout: text('stdout'),
+    stderr: text('stderr'),
+    outputTruncated: integer('output_truncated', { mode: 'boolean' }).notNull().default(false),
+    manifestPresent: integer('manifest_present', { mode: 'boolean' }),
+    /** The verbatim declaration the script wrote. Generated-code output: untrusted. */
+    manifestJson: text('manifest_json'),
+    declaredOutputCount: integer('declared_output_count'),
+    producedOutputCount: integer('produced_output_count'),
+    outputByteCount: integer('output_byte_count'),
+    limitBreached: text('limit_breached'),
+    runtimeLockDigest: text('runtime_lock_digest'),
+    durationMs: integer('duration_ms'),
+    startedAt: integer('started_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    settledAt: integer('settled_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('script_run_status_check', sql`${table.status} in ('running','succeeded','failed','errored','timed_out','aborted')`),
+    check('script_run_settled_check', sql`(${table.status} = 'running' and ${table.settledAt} is null) or (${table.status} != 'running' and ${table.settledAt} is not null)`),
+    check('script_run_limit_breached_check', sql`${table.limitBreached} is null or ${table.limitBreached} in ('time','memory','output_bytes','output_files')`),
+    check('script_run_time_status_check', sql`${table.limitBreached} is not 'time' or ${table.status} = 'timed_out'`),
+    uniqueIndex('script_run_execution').on(table.executionId),
+  ],
+);
+
+/** One prepared, fingerprinted runtime scope. Historical rows survive task deletion. */
+export const runtimeEnvironment = sqliteTable('runtime_environment', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  kind: text('kind').notNull(),
+  specDigest: text('spec_digest').notNull(),
+  lockDigest: text('lock_digest').notNull(),
+  pythonVersion: text('python_version').notNull(),
+  uvVersion: text('uv_version').notNull(),
+  platform: text('platform').notNull(),
+  arch: text('arch').notNull(),
+  status: text('status').notNull().default('preparing'),
+  fingerprint: text('fingerprint'),
+  packageJson: text('package_json'),
+  launcherDigest: text('launcher_digest'),
+  failureReason: text('failure_reason'),
+  durationMs: integer('duration_ms'),
+  preparedAt: integer('prepared_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  check('runtime_environment_kind_check', sql`${table.kind} in ('script','verify')`),
+  check('runtime_environment_status_check', sql`${table.status} in ('preparing','ready','failed','aborted')`),
+  check('runtime_environment_settled_check', sql`(${table.status} = 'preparing' and ${table.preparedAt} is null) or (${table.status} != 'preparing' and ${table.preparedAt} is not null)`),
+  check('runtime_environment_ready_check', sql`(${table.status} = 'ready' and ${table.fingerprint} is not null and ${table.packageJson} is not null) or (${table.status} != 'ready' and ${table.fingerprint} is null and ${table.packageJson} is null)`),
+  uniqueIndex('runtime_environment_scope').on(table.kind, table.specDigest, table.lockDigest, table.platform, table.arch),
+  index('runtime_environment_fingerprint').on(table.fingerprint),
+  index('runtime_environment_ready').on(table.kind).where(sql`${table.status} = 'ready'`),
+]);

@@ -9,6 +9,7 @@ vi.mock('../../api/agent-queries', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/agent-queries')>();
   return { ...actual, useAgentConfig: vi.fn(), useProviderCatalog: vi.fn(), useUpdateAgentConfig: vi.fn(), useTestConnection: vi.fn() };
 });
+vi.mock('../../components/runtime/runtime-panel', () => ({ RuntimePanel: () => null }));
 
 const mockedConfig = vi.mocked(useAgentConfig);
 const mockedCatalog = vi.mocked(useProviderCatalog);

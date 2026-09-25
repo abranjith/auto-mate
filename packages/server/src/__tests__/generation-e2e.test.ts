@@ -5,11 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { computeVersionDigest, type ConversationEvent } from '@automate/core';
 import type { FakeAgentStep } from '../agent/testing/fake-agent-provider';
-import { MinimalUvPythonRunner } from '../execution/uv-python-runner';
-import { ProcessRunner } from '../execution/process-runner';
 import { createGenerationHarness, finalizeStep, writeSteps, MAIN_PY, type GenerationHarness, type HarnessOptions } from './support/generation-harness';
 import { HIGH_CARDINALITY_SENTINEL, ROW_11_SENTINEL, TRACEBACK_SENTINEL, sentinelCsv } from './support/generation-fixtures';
 import { fakeSpawn } from './execution/fake-spawn';
+import { lockedUvRunner } from './support/locked-uv-runner';
 
 const harnesses: GenerationHarness[] = [];
 afterEach(async () => { await Promise.all(harnesses.splice(0).map((harness) => harness.dispose())); });
@@ -100,26 +99,26 @@ describe('generation end to end', () => {
   });
 
   it('refuses honestly with the install hint when uv is unavailable', async () => {
-    const h = await harness({ runner: (paths) => new MinimalUvPythonRunner({ envDir: paths.envDir, platform: 'win32', processes: new ProcessRunner({ spawn: fakeSpawn(() => ({ error: new Error('spawn uv ENOENT') })).spawn, platform: 'win32' }) }), steps: (upload) => [...writeSteps(upload!.storedFilename), RUN] });
+    const h = await harness({ runner: (paths, connection) => lockedUvRunner(paths, connection, () => ({ error: new Error('spawn uv ENOENT') })).runner, steps: (upload) => [...writeSteps(upload!.storedFilename), RUN] });
     const row = await h.run();
     expect(row).toMatchObject({ status: 'failed', errorCode: 'PYTHON_RUNTIME_UNAVAILABLE' });
     expect(row.errorMessage).toContain('uv or Python 3.11 or newer is not available');
-    expect(row.errorMessage).toContain('uv python install 3.12');
+    expect(row.errorMessage).toContain('uv python install 3.14.6');
     expect(JSON.stringify(h.provider.sessions[0]!.toolResults)).toContain('winget install astral-sh.uv');
   });
 
   it('kills the pytest process tree on abort, settling the attempt and the execution aborted', async () => {
     let fake!: ReturnType<typeof fakeSpawn>;
     const h = await harness({
-      runner: (paths) => { fake = fakeSpawn((_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'python' ? { stdout: 'cpython-3.12.4\n' } : args[0] === 'run' ? { hang: true } : { exitCode: 0 })); return new MinimalUvPythonRunner({ envDir: paths.envDir, platform: 'win32', processes: new ProcessRunner({ spawn: fake.spawn, platform: 'win32' }), baseEnv: {} }); },
+      runner: (paths, connection) => { const built = lockedUvRunner(paths, connection, (_, args) => (args[0] === '--version' ? { stdout: 'uv 0.11.32\n' } : args[0] === 'run' ? { hang: true } : { exitCode: 0 })); fake = built.fake; return built.runner; },
       steps: (upload) => [...writeSteps(upload!.storedFilename), RUN],
     });
     writeFileSync(path.join(h.store.paths.envDir, 'uv.lock'), 'lock');
     const settled = h.run();
-    for (let tries = 0; tries < 500 && !fake.calls.some(({ args }) => args[0] === 'run'); tries += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    for (let tries = 0; tries < 500 && !fake.calls.some(({ args }) => args.includes('pytest')); tries += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     await h.registry.abort(h.execution.id);
     expect((await settled).status).toBe('aborted');
-    const pytest = fake.calls.find(({ args }) => args[0] === 'run')!;
+    const pytest = fake.calls.find(({ args }) => args.includes('pytest'))!;
     expect(fake.calls.some(({ command, args }) => command === 'taskkill' && args[1] === String(pytest.pid))).toBe(true);
     expect(h.repos.attempts.listByExecution(h.execution.id)).toMatchObject([{ status: 'aborted' }]);
   });
@@ -188,8 +187,14 @@ describe('generation static guards', () => {
     return source.split('\n').filter((line) => patterns.some((pattern) => pattern.test(line)));
   }
 
-  it('no generation or execution module resolves an upload\'s stored path', () => {
-    for (const file of [...productionFiles(path.join(serverSrc, 'generation')), ...productionFiles(path.join(serverSrc, 'execution'))]) expect(uploadPathReaches(readFileSync(file, 'utf8')), file).toEqual([]);
+  it('no generation or execution module resolves an upload\'s stored path — except FEAT-107\'s input stager', () => {
+    // FEAT-107: `execution/input-stager.ts` is the ONE sanctioned reader of an upload's bytes. It copies them
+    // for an approved real run and never builds a prompt; only the script-run service may import it.
+    const stager = path.join(serverSrc, 'execution', 'input-stager.ts');
+    for (const file of [...productionFiles(path.join(serverSrc, 'generation')), ...productionFiles(path.join(serverSrc, 'execution'))].filter((item) => item !== stager)) expect(uploadPathReaches(readFileSync(file, 'utf8')), file).toEqual([]);
+    expect(uploadPathReaches(readFileSync(stager, 'utf8'))).not.toEqual([]);
+    const importers = productionFiles(serverSrc).filter((file) => !file.includes(`${path.sep}__tests__${path.sep}`) && /from '[./]+(?:execution\/)?input-stager'/.test(readFileSync(file, 'utf8')));
+    expect(importers.map((file) => path.relative(serverSrc, file).replace(/\\/g, '/'))).toEqual(['execution/script-run-service.ts']);
   });
 
   it('fails when a deliberate readFile(upload.filePath) is added to the generation path', () => {

@@ -1,0 +1,1 @@
+spawn('uv', ['run', 'python', 'x.py'], { shell: true });

@@ -199,7 +199,9 @@ export class TaskSession {
     for (const event of settlement.events) this.record(event);
     if (settlement.error && failure === null) this.record({ type: 'failed', error: settlement.error, at: this.now() });
     const current = this.currentStatus();
-    const row = this.deps.executions.markSettled(this.executionId, { status: settlement.status, usage: result.usage, ...(settlement.error ? { errorCode: settlement.error.code, errorMessage: settlement.error.message } : {}) });
+    const row = settlement.status === 'verifying'
+      ? this.deps.executions.markHandedOff(this.executionId, settlement.status, result.usage)
+      : this.deps.executions.markSettled(this.executionId, { status: settlement.status, usage: result.usage, ...(settlement.error ? { errorCode: settlement.error.code, errorMessage: settlement.error.message } : {}) });
     this.state(current, settlement.status);
     return row;
   }

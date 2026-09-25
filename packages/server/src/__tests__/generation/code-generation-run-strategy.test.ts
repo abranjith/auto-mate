@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { assemblePromptContext, renderCodeContract } from '@automate/core';
-import { GENERATION_DEPENDENCY_SET } from '../../execution/python-dependency-set';
+import { SCRIPT_DEPENDENCY_SET } from '../../execution/dependency-policy';
 import { GENERATION_SYSTEM_PROMPT } from '../../generation/code-generation-run-strategy';
 import { createGenerationHarness, type GenerationHarness, type HarnessOptions } from '../support/generation-harness';
 import { HIGH_CARDINALITY_SENTINEL, ROW_11_SENTINEL } from '../support/generation-fixtures';
@@ -15,7 +15,7 @@ async function harness(options: HarnessOptions = {}) {
   return created;
 }
 const fixturesDir = (h: GenerationHarness) => path.join(h.store.paths.scriptsDir, String(h.execution.id), 'fixtures');
-const contractFor = (h: GenerationHarness) => renderCodeContract({ platform: 'linux', pythonVersion: '3.12.4', dependencies: GENERATION_DEPENDENCY_SET, inputFiles: [{ filename: h.upload!.storedFilename, format: 'csv', sheets: [] }], attemptLimit: 3 });
+const contractFor = (h: GenerationHarness) => renderCodeContract({ platform: 'linux', pythonVersion: '3.12.4', dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: [{ filename: h.upload!.storedFilename, format: 'csv', sheets: [] }], attemptLimit: 3 });
 
 describe('CodeGenerationRunStrategy', () => {
   it('sends exactly the consent snapshot, the person\'s words, and the contract — reconstructed byte for byte', async () => {

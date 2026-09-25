@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getGenerationConfig, type GenerationConfig } from '../../config/env';
-import { GENERATION_DEPENDENCY_SET } from '../../execution/python-dependency-set';
+import { SCRIPT_DEPENDENCY_SET } from '../../execution/dependency-policy';
 
 // The documented limits and package list are generated from the code here, so
 // a change to either that invalidates the docs fails the build.
@@ -24,10 +24,10 @@ const VARIABLES: Readonly<Record<keyof GenerationConfig, string>> = {
 
 describe('docs-examples: generation', () => {
   it('lists exactly the provisional dependency set, in order, on the feature page and in the server README', () => {
-    const listed = GENERATION_DEPENDENCY_SET.map((name) => `\`${name}\``);
+    const listed = SCRIPT_DEPENDENCY_SET.map(({ name }) => `\`${name}\``);
     const phrase = `${listed.slice(0, -1).join(', ')}, and ${listed.at(-1)}`;
     expect(read(FEATURE_PAGE)).toContain(phrase);
-    expect(read(SERVER_README)).toContain(GENERATION_DEPENDENCY_SET.map((name) => `\`${name}\``).join(', '));
+    expect(read(SERVER_README)).toContain(SCRIPT_DEPENDENCY_SET.map(({ name }) => `\`${name}\``).join(', '));
   });
 
   it('documents every generation variable with its current default, marked provisional', () => {

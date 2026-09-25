@@ -34,7 +34,7 @@ it('applies and seeds the initial migration exactly once', () => {
     const count = connection.client
       .prepare('SELECT count(*) AS count FROM __drizzle_migrations')
       .get() as { count: number };
-    expect(count.count).toBe(5);
+    expect(count.count).toBe(7);
     const objects = connection.client
       .prepare(
         "SELECT name FROM sqlite_master WHERE name IN ('task','execution','conversation_event','conversation_event_execution_seq','execution_task_id','execution_active') ORDER BY name",
@@ -70,7 +70,7 @@ it('creates the ingestion tables and indexes in one additional migration (FEAT-1
     const staged = connection.client.prepare("SELECT sql FROM sqlite_master WHERE name = 'upload_staged'").get() as { sql: string };
     expect(staged.sql).toMatch(/WHERE .*task_id.* is null/i);
     const applied = connection.client.prepare('SELECT count(*) AS count FROM __drizzle_migrations').get() as { count: number };
-    expect(applied.count).toBe(5);
+    expect(applied.count).toBe(7);
   } finally {
     connection.close();
   }
@@ -95,7 +95,7 @@ it('creates the generation tables and indexes in one additional migration (FEAT-
     const partial = connection.client.prepare("SELECT sql FROM sqlite_master WHERE name = 'code_version_final'").get() as { sql: string };
     expect(partial.sql).toMatch(/WHERE .*is_final.* = 1/i);
     const applied = connection.client.prepare('SELECT count(*) AS count FROM __drizzle_migrations').get() as { count: number };
-    expect(applied.count).toBe(5);
+    expect(applied.count).toBe(7);
   } finally {
     connection.close();
   }
@@ -110,7 +110,7 @@ it('keeps every conversation event, its seq, kind, and payload across the FEAT-1
   const before = path.join(root, 'migrations-before-feat-106');
   mkdirSync(before);
   const folders = readdirSync(migrations).filter((name) => statSync(path.join(migrations, name)).isDirectory()).sort();
-  for (const folder of folders.slice(0, -1)) cpSync(path.join(migrations, folder), path.join(before, folder), { recursive: true });
+  for (const folder of folders.filter((name) => name < '20260925044250_damp_otto_octavius')) cpSync(path.join(migrations, folder), path.join(before, folder), { recursive: true });
   const connection = openDatabase(paths);
   try {
     migrateDatabase(connection, before);

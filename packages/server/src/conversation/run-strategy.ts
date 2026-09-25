@@ -11,9 +11,13 @@ export interface RunEnding {
   readonly failure: AgentError | null;
 }
 
-/** The terminal state a lifecycle decides, and the events that explain it. */
+/**
+ * The state a lifecycle decides, and the events that explain it. `verifying`
+ * is a HAND-OFF, not a settlement (FEAT-107): the provider session is over,
+ * but the run continues in the registry's next phase.
+ */
 export interface RunSettlement {
-  readonly status: 'completed' | 'failed' | 'aborted';
+  readonly status: 'completed' | 'failed' | 'aborted' | 'verifying';
   readonly error?: { readonly code: string; readonly message: string };
   readonly events: readonly UnnumberedConversationEvent[];
 }

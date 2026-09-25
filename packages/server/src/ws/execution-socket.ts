@@ -131,8 +131,11 @@ export function attachExecutionSocket(
       }
       socket.ping();
     }, heartbeatMs);
-    const live = deps.registry.get(executionId);
-    const unsubscribe = live?.subscribe((event: ConversationEvent) => {
+    // Subscribe to the registry, not a session: the provider session ends at
+    // `verifying`, but verification, approval, the run, and the review keep
+    // publishing events to this execution (FEAT-107).
+    const live = deps.registry.isLive(executionId);
+    const unsubscribe = deps.registry.subscribe(executionId, (event: ConversationEvent) => {
       if (!send(socket, { type: 'event', event }, maxBufferedBytes)) return;
       if (event.type !== 'state_changed') return;
       const latest = deps.executions.getById(executionId);
@@ -150,7 +153,7 @@ export function attachExecutionSocket(
     );
     socket.once('close', () => {
       clearInterval(heartbeat);
-      unsubscribe?.();
+      unsubscribe();
       deps.logger.info({ executionId }, 'websocket disconnected');
     });
     deps.logger.info({ executionId }, 'websocket connected');
