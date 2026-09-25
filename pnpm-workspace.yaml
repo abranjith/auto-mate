@@ -13,3 +13,8 @@ minimumReleaseAgeExclude:
   - '@earendil-works/pi-coding-agent@0.87.1'
   - '@earendil-works/pi-telemetry@0.87.1'
   - '@earendil-works/pi-tui@0.87.1'
+overrides:
+  # exceljs 4.4.0 pulls uuid@8, inside advisory range <11.1.1 (missing buffer
+  # bounds check). exceljs only uses the named v4 export, which uuid 14 keeps.
+  # If re-pinned, stay at or above 11.1.1 — 11.1.0 is still affected.
+  uuid: 14.0.2

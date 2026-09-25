@@ -44,6 +44,6 @@ describe('execution state machine', () => {
     ]);
     expect(TRANSITIONS.verifying).toEqual([]);
     expect(TRANSITIONS.executing).toEqual([]);
-    expect(TRANSITIONS.waiting).toEqual([]);
+    expect(TRANSITIONS.waiting).toEqual(['generating', 'failed', 'aborted']);
   });
 });

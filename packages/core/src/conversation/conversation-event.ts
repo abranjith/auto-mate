@@ -61,6 +61,9 @@ const variants: TSchema[] = [
     to: Type.Union(EXECUTION_STATUSES.map((status) => Type.Literal(status))),
     at: At,
   }),
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('clarification_requested'), clarificationId: Type.Integer({ minimum: 1 }), at: At }),
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('clarification_answered'), clarificationId: Type.Integer({ minimum: 1 }), at: At }),
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('disclosure_sent'), transmissionId: Type.Integer({ minimum: 1 }), kind: Type.Union([Type.Literal('context'), Type.Literal('diagnostics')]), provider: Type.String(), model: Type.String(), byteSize: Type.Integer({ minimum: 0 }), summary: UnknownJson, at: At }),
 ];
 
 export const ConversationEventSchema = Type.Union(variants);
@@ -73,7 +76,14 @@ export type ConversationEvent = { readonly seq: number } & (
       readonly to: ExecutionStatus;
       readonly at: string;
     }
+  | { readonly type: 'clarification_requested'; readonly clarificationId: number; readonly at: string }
+  | { readonly type: 'clarification_answered'; readonly clarificationId: number; readonly at: string }
+  | { readonly type: 'disclosure_sent'; readonly transmissionId: number; readonly kind: 'context' | 'diagnostics'; readonly provider: string; readonly model: string; readonly byteSize: number; readonly summary: unknown; readonly at: string }
 );
 export type ConversationEventFromSchema = Static<
   typeof ConversationEventSchema
 >;
+/** Any persisted event before the repository assigns its sequence number. */
+export type UnnumberedConversationEvent = {
+  [Kind in ConversationEvent['type']]: Omit<Extract<ConversationEvent, { readonly type: Kind }>, 'seq'>;
+}[ConversationEvent['type']];

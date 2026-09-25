@@ -51,4 +51,45 @@ export const ds = {
     'rounded-full border border-[var(--border)] px-3 py-1 text-sm font-medium',
   failurePanel:
     'rounded-lg border border-[var(--danger)] p-4 text-[var(--danger)]',
+  // File attachment (FEAT-104).
+  srOnly: 'sr-only',
+  dropZone:
+    'flex flex-col gap-2 rounded-lg border-2 border-dashed border-[var(--border)] bg-[var(--surface)] p-4 focus-within:outline-2 focus-within:outline-[var(--accent)]',
+  dropZoneActive:
+    'flex flex-col gap-2 rounded-lg border-2 border-dashed border-[var(--accent)] bg-[var(--surface-raised)] p-4 focus-within:outline-2 focus-within:outline-[var(--accent)]',
+  fileInput:
+    'text-sm text-[var(--text)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--accent)] file:px-3 file:py-1 file:text-[var(--accent-foreground)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
+  fileList: 'm-0 flex list-none flex-col gap-2 p-0',
+  fileItem:
+    'flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3',
+  fileItemHeader: 'flex flex-wrap items-center justify-between gap-2',
+  fileName: 'break-all font-medium',
+  progress: 'h-2 w-full accent-[var(--accent)]',
+  btnSmall:
+    'rounded-md border border-[var(--border)] px-2 py-1 text-sm text-[var(--text)] hover:bg-[var(--surface-raised)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] disabled:opacity-50',
+  // Data preview (FEAT-104): every cell is text, never markup.
+  profilePanel:
+    'flex flex-col gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-4',
+  localNotice: 'text-sm text-[var(--success)]',
+  tabList: 'flex flex-wrap gap-1 border-b border-[var(--border)]',
+  tab: 'rounded-t-md px-3 py-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
+  tabActive:
+    'rounded-t-md border-b-2 border-[var(--accent)] px-3 py-1 text-sm font-semibold text-[var(--text)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
+  tableScroll:
+    'max-h-96 max-w-full overflow-auto rounded-lg border border-[var(--border)]',
+  dataTable: 'min-w-full border-collapse text-left text-sm',
+  tableHead: 'sticky top-0 bg-[var(--surface-raised)]',
+  tableHeaderCell:
+    'whitespace-nowrap border-b border-[var(--border)] px-3 py-2 font-semibold',
+  tableCell:
+    'max-w-xs whitespace-pre-wrap break-words border-b border-[var(--border)] px-3 py-2 align-top',
+  formulaLike: 'font-mono text-[var(--text-muted)]',
+  truncatedCell: 'text-[var(--text-muted)]',
+  noteList: 'm-0 flex list-disc flex-col gap-2 pl-5',
+  noteItem: 'text-sm leading-relaxed',
+  inlineCode: 'rounded bg-[var(--surface)] px-1 font-mono text-sm',
+  disclosurePanel: 'mt-4 flex flex-col gap-4 rounded-xl border border-[var(--accent)] bg-[var(--surface-raised)] p-6',
+  clarificationCard: 'rounded-lg border border-[var(--accent)] bg-[var(--surface)] p-4 flex flex-col gap-3',
+  waitingBanner: 'rounded-lg border border-[var(--accent)] bg-[var(--surface-raised)] p-4',
+  receipt: 'rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm',
 } as const;

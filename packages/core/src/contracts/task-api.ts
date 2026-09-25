@@ -4,12 +4,23 @@ import {
   type ConversationEvent,
 } from '../conversation/conversation-event';
 import { EXECUTION_STATUSES } from '../conversation/execution-state';
+import { UPLOAD_LIMIT_DEFAULTS } from '../ingestion/limits';
+import { DisclosureAckSchema, PreflightDecisionSchema } from './disclosure-api';
 
 const StatusSchema = Type.Union(
   EXECUTION_STATUSES.map((status) => Type.Literal(status)),
 );
 export const CreateTaskRequestSchema = Type.Object({
   prompt: Type.String({ minLength: 1, maxLength: 8000, pattern: '.*\\S.*' }),
+  /** Staged uploads to attach inside the transaction that creates the task (FEAT-104). */
+  uploadIds: Type.Optional(
+    Type.Array(Type.Integer({ minimum: 1 }), {
+      maxItems: UPLOAD_LIMIT_DEFAULTS.maxFilesPerTask,
+      uniqueItems: true,
+    }),
+  ),
+  disclosureAck: Type.Optional(DisclosureAckSchema),
+  preflightDecisions: Type.Optional(Type.Array(PreflightDecisionSchema)),
 });
 export const TaskSchema = Type.Object({
   id: Type.Integer(),

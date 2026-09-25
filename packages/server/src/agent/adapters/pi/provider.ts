@@ -12,7 +12,7 @@
  * always one of the typed `AgentStartupError` subclasses.
  */
 
-import { createAgentSession, type AgentSessionEvent, type CreateAgentSessionOptions, type ToolDefinition } from '@earendil-works/pi-coding-agent';
+import { createAgentSession, defineTool, type AgentSessionEvent, type CreateAgentSessionOptions, type ToolDefinition } from '@earendil-works/pi-coding-agent';
 import {
   AgentAuthUnavailableError, AgentModelNotFoundError, AgentSessionStartFailedError, createSanitizer,
   type AgentAuthSource, type AgentError, type AgentEvent, type AgentProvider, type AgentRunResult,
@@ -145,7 +145,20 @@ export class PiAgentProvider implements AgentProvider {
 
     const thinkingLevel = normalizeThinkingLevel(options.model.thinking);
     const sessionFile = await createAgentSessionFile({ sessionDir: options.sessionDir, cwd: options.cwd });
-    const customTools = [...(this.options.customTools ?? [])];
+    const seamTools = options.customTools ?? [];
+    const customTools = [
+      ...(this.options.customTools ?? []),
+      ...seamTools.map((tool) => defineTool({
+        name: tool.name,
+        label: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+        execute: async (callId, params) => {
+          const output = await tool.execute(params, { executionId: options.executionId, callId });
+          return { content: [{ type: 'text' as const, text: JSON.stringify(output) }], details: output };
+        },
+      })),
+    ];
 
     const sessionOptions: CreateAgentSessionOptions = {
       cwd: options.cwd,

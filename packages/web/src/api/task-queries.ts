@@ -12,17 +12,18 @@ import {
   ExecutionSummarySchema,
   TaskResponseSchema,
   type ConversationEventPage,
+  type CreateTaskRequest,
   type CreateTaskResponse,
   type ExecutionSummary,
   type TaskResponse,
 } from '@automate/core';
 import { getJson, sendJson } from './api-client';
 
-/** Create a task and immediately receive its first execution. */
+/** Create a task and immediately receive its first execution; attached upload ids are claimed atomically. */
 export function useCreateTask(): UseMutationResult<
   CreateTaskResponse,
   AutoMateError,
-  { prompt: string }
+  CreateTaskRequest
 > {
   return useMutation({
     mutationFn: (body) =>

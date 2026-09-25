@@ -1,0 +1,668 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-24T02:53:35.451Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-24T03:00:02.925Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-24T03:05:03.884Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-24T03:11:32.686Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-24T03:15:39.581Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-24T03:18:40.891Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-24T11:50:09.739Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-24T13:32:55.561Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-24T13:38:16.397Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-24T22:27:25.483Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-24T22:28:13.981Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-24T22:32:04.934Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-24T22:36:23.877Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-24T22:42:45.427Z",
+      "head": "4790fb092a7e01d7fcda50d41a48f3888fe769b7"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "docs/features/csv-xlsx-ingestion.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/task-api.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/upload-api.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/errors/ingestion-errors.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/column-accumulator.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/csv-dialect.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/disclosure-payload.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/encoding.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/file-format.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/header-detection.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/profile-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/table-profiler.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/__tests__/ingestion/type-inference.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/contracts/task-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/upload-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/ingestion-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/ingestion/column-accumulator.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/ingestion/csv-dialect.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/ingestion/disclosure-payload.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/core/src/ingestion/encoding.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/ingestion/file-format.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/ingestion/header-detection.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/ingestion/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/ingestion/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/ingestion/seeded-random.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/ingestion/table-profiler.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/core/src/ingestion/type-inference.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/drizzle/20260924031220_crazy_senator_kelly/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/drizzle/20260924031220_crazy_senator_kelly/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/package.json",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/config/ingestion-config.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/upload-repositories.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/ingestion/corpus.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion-boundary.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/csv-reader.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/profile-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/staged-upload-sweeper.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/upload-file-store.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/upload-intake.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/__tests__/ingestion/xlsx-reader.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/ingestion-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/workbook-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/upload-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/config/app-paths.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/config/env.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/db/repositories/task-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/db/repositories/upload-profile-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/db/repositories/upload-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/ingestion/csv-reader.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/ingestion/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/ingestion/profile-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/ingestion/staged-upload-sweeper.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/ingestion/upload-file-store.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/ingestion/upload-intake.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/ingestion/upload-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-008"
+    },
+    {
+      "path": "packages/server/src/ingestion/xlsx-reader.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/middleware/error-handler.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/routes/task-route.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/server/src/routes/upload-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/web/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/web/src/__tests__/api/upload-mutations.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/conversation-view.test.tsx",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/task-composer.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/ingestion/file-drop-zone.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/ingestion/profile-panel.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/ingestion/upload-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/api/task-queries.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/api/upload-mutations.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/conversation/task-composer.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/column-table.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/file-drop-zone.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/profile-notes.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/profile-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/sample-rows-table.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/sheet-tabs.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/upload-list.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/upload-progress.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/components/ingestion/use-attachments.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-010"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-013"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/features/FEAT-104-csv_xlsx_ingestion_profiling/changeset.json",
+    ".spec-lite/features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md",
+    ".spec-lite/plan_mvp.md",
+    "pnpm-lock.yaml"
+  ],
+  "baseline": {
+    "sha": "4790fb092a7e01d7fcda50d41a48f3888fe769b7",
+    "capturedAt": "2026-09-24T02:41:03.242Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/memory.md",
+      ".spec-lite/plan_mvp.md",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/spec.md"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/memory.md": "2621f41eac7b307de2cfefcd219c04bdd91df246",
+      ".spec-lite/plan_mvp.md": "0b971d903c5cfac9a642c01645288cab519ff751",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/spec.md": "d759d4cb66efccad4adfc45024996a7162d0437a"
+    }
+  },
+  "featureId": "FEAT-104"
+}

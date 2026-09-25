@@ -1,5 +1,5 @@
 export { ConversationEventSchema } from './conversation-event';
-export type { ConversationEvent } from './conversation-event';
+export type { ConversationEvent, UnnumberedConversationEvent } from './conversation-event';
 export {
   EXECUTION_STATUSES,
   TERMINAL_STATUSES,

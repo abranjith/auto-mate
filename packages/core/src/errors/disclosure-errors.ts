@@ -1,0 +1,12 @@
+import { AutoMateError } from './automate-error';
+import { ERROR_CODES } from './error-codes';
+
+export class DisclosureConsentRequiredError extends AutoMateError { constructor(message = 'Review exactly what will be sent and approve it before starting this task.') { super(ERROR_CODES.DISCLOSURE_CONSENT_REQUIRED, message); } }
+export class DisclosureConsentStaleError extends AutoMateError { constructor(oldProvider: string, oldModel: string, newProvider: string, newModel: string, reason = 'the approved file description changed') { super(ERROR_CODES.DISCLOSURE_CONSENT_STALE, oldProvider !== newProvider || oldModel !== newModel ? `The recipient changed from ${oldProvider} ${oldModel} to ${newProvider} ${newModel} since you approved this. Refresh the preview and approve again.` : `The consent is stale because ${reason}. Refresh the preview and approve again.`); } }
+export class DisclosureScopeNotGrantedError extends AutoMateError { constructor(scope: string) { super(ERROR_CODES.DISCLOSURE_SCOPE_NOT_GRANTED, `Sending ${scope} was not approved. Review the disclosure choices before trying again.`); } }
+export class PreflightDecisionRequiredError extends AutoMateError { constructor(findings: readonly string[]) { super(ERROR_CODES.PREFLIGHT_DECISION_REQUIRED, `Choose an answer for every required decision before starting: ${findings.join(', ')}.`); } }
+export class ClarificationNotFoundError extends AutoMateError { constructor(id: number) { super(ERROR_CODES.CLARIFICATION_NOT_FOUND, `Clarification ${id} was not found.`); } }
+export class ClarificationNotPendingError extends AutoMateError { constructor(id: number) { super(ERROR_CODES.CLARIFICATION_NOT_PENDING, `Clarification ${id} is no longer waiting for an answer.`); } }
+export class ClarificationInvalidAnswerError extends AutoMateError { constructor(message: string) { super(ERROR_CODES.CLARIFICATION_INVALID_ANSWER, message); } }
+export class ClarificationLimitReachedError extends AutoMateError { constructor(limit: number) { super(ERROR_CODES.CLARIFICATION_LIMIT_REACHED, `This execution has reached its limit of ${limit} clarification questions. Continue with the proposed defaults.`); } }
+export class WaitingCapacityReachedError extends AutoMateError { constructor(limit: number) { super(ERROR_CODES.WAITING_CAPACITY_REACHED, `There are already ${limit} runs waiting for answers. Continue with the proposed defaults.`); } }

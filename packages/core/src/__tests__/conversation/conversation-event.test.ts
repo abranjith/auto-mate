@@ -31,18 +31,21 @@ const agentEvents: AgentEvent[] = [
 ];
 
 describe('conversation contract', () => {
-  it('validates and round-trips all seven event kinds', () => {
+  it('validates and round-trips every event kind', () => {
     const events: ConversationEvent[] = [
       ...agentEvents.map((event, index) => ({ ...event, seq: index + 1 })),
       { seq: 6, type: 'user_prompt', text: 'go', at },
       { seq: 7, type: 'state_changed', from: 'pending', to: 'generating', at },
+      { seq: 8, type: 'clarification_requested', clarificationId: 1, at },
+      { seq: 9, type: 'clarification_answered', clarificationId: 1, at },
+      { seq: 10, type: 'disclosure_sent', transmissionId: 1, kind: 'context', provider: 'test', model: 'fake', byteSize: 12, summary: {}, at },
     ];
     for (const event of events) {
       expect(Value.Check(ConversationEventSchema, event)).toBe(true);
       expect(JSON.parse(JSON.stringify(event))).toEqual(event);
     }
     expectTypeOf<ConversationEvent['type']>().toEqualTypeOf<
-      AgentEvent['type'] | 'user_prompt' | 'state_changed'
+      AgentEvent['type'] | 'user_prompt' | 'state_changed' | 'clarification_requested' | 'clarification_answered' | 'disclosure_sent'
     >();
   });
 

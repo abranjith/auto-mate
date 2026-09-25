@@ -1,6 +1,6 @@
 export type {
   AgentProvider, AgentSession, AgentSessionOptions, AgentModelSelection, AgentAuthSelection,
-  AgentAuthSource, AgentEvent, AgentRunResult, AgentUsage, AgentError,
+  AgentAuthSource, AgentEvent, AgentRunResult, AgentUsage, AgentError, AgentToolDefinition,
 } from './provider-types';
 export { createSanitizer } from './sanitize';
 export type { Sanitizer, SanitizerOptions } from './sanitize';

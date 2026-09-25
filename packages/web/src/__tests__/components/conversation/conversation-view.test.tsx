@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ConversationEvent } from '@automate/core';
 import { ConversationView } from '../../../components/conversation/conversation-view';
+// Warm the lazily loaded markdown renderer once, so `findBy*` below measures
+// rendering, not the first transform of its module graph — which can exceed
+// the 1 s query timeout when the full workspace suite loads the CPU.
+beforeAll(() => import('../../../components/conversation/assistant-message'), 30_000);
 afterEach(cleanup);
 const at = '2026-09-22T00:00:00.000Z';
 const events: ConversationEvent[] = [

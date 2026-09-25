@@ -24,10 +24,10 @@ export const TRANSITIONS: Readonly<
   Record<ExecutionStatus, readonly ExecutionStatus[]>
 > = {
   pending: ['generating', 'failed', 'aborted'],
-  generating: ['completed', 'failed', 'aborted'],
+  generating: ['waiting', 'completed', 'failed', 'aborted'],
   verifying: [], // FEAT-107
   executing: [], // FEAT-108
-  waiting: [], // FEAT-105
+  waiting: ['generating', 'failed', 'aborted'],
   completed: [],
   failed: [],
   aborted: [],

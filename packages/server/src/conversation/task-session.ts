@@ -8,6 +8,7 @@ import {
   type AgentSession,
   type ConversationEvent,
   type ExecutionStatus,
+  type UnnumberedConversationEvent,
 } from '@automate/core';
 import type { Logger } from 'pino';
 import type { AppPaths } from '../config/app-paths';
@@ -18,6 +19,7 @@ import type {
 } from '../db/repositories/execution-repository';
 import type { TaskRow } from '../db/repositories/task-repository';
 import type { RunStrategy } from './run-strategy';
+import { openProviderSession, runProviderSession } from '../disclosure/disclosure-run-strategy';
 import { TextCoalescer } from './text-coalescer';
 
 type ApplicationEvent =
@@ -106,14 +108,16 @@ export class TaskSession {
         text: this.deps.task.description,
         at: this.clock().toISOString(),
       });
-      const built = this.deps.strategy.buildRun(this.deps.task);
-      const session = await this.deps.provider.open({
+      const built = this.deps.strategy.buildRun(this.deps.task, this.deps.execution);
+      for (const event of built.events ?? []) this.record(event);
+      const session = await openProviderSession(this.deps.provider, {
         executionId: String(this.executionId),
         sessionDir: this.deps.paths.sessionDirFor(String(this.executionId)),
         cwd: this.deps.paths.root,
         model: this.deps.model,
         auth: this.deps.auth,
         systemPrompt: built.systemPrompt ?? '',
+        customTools: built.customTools,
       });
       this.agentSession = session;
       if (this.aborting) await session.abort();
@@ -127,9 +131,10 @@ export class TaskSession {
         if (event.type === 'failed') failure = event.error;
         this.consume(event);
       });
-      const result = await session.run(built.prompt);
+      const result = await runProviderSession(session, built.prompt);
       this.coalescer.flush();
       const final = result.outcome;
+      current = (this.deps.executions.getById(this.executionId)?.status ?? current) as ExecutionStatus;
       const settled = this.deps.executions.markSettled(this.executionId, {
         status: final,
         usage: result.usage,
@@ -141,6 +146,7 @@ export class TaskSession {
       return settled;
     } catch (cause) {
       this.coalescer.flush();
+      current = (this.deps.executions.getById(this.executionId)?.status ?? current) as ExecutionStatus;
       const code =
         cause instanceof AutoMateError
           ? cause.code
@@ -184,7 +190,13 @@ export class TaskSession {
       at: this.clock().toISOString(),
     });
   }
-  private record(event: AgentEvent | ApplicationEvent): void {
+  /** Persist and broadcast an application event through the same ordered path as provider events. */
+  appendApplicationEvent(event: UnnumberedConversationEvent): void {
+    this.coalescer.flush();
+    this.record(event);
+  }
+
+  private record(event: AgentEvent | ApplicationEvent | UnnumberedConversationEvent): void {
     const numbered = { ...event, seq: this.nextSeq } as ConversationEvent;
     this.nextSeq += 1;
     this.deps.events.append(this.executionId, numbered);

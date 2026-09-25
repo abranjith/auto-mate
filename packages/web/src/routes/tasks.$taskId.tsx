@@ -11,6 +11,7 @@ import {
 import { useExecutionStream } from '../api/use-execution-stream';
 import { getTask } from '../api/task-queries';
 import { ds } from '../design-system/tokens';
+import { WaitingBanner } from '../components/conversation/waiting-banner';
 /** Follow one execution using durable history plus its live tail. */
 function LiveConversation({
   taskId,
@@ -35,10 +36,11 @@ function LiveConversation({
         </div>
       </header>
       {stream.error ? <p className={ds.statusDanger}>{stream.error}</p> : null}
-      <ConversationView events={stream.events} />
+      <ConversationView events={stream.events} executionId={executionId} />
       {stream.execution ? (
         <>
-          <RunControls execution={stream.execution} />
+          {stream.execution.status === 'waiting' ? null : <RunControls execution={stream.execution} />}
+          <WaitingBanner execution={stream.execution} />
           <CompletedSummary execution={stream.execution} />
           {stream.execution.error ? (
             <FailurePanel error={stream.execution.error} />

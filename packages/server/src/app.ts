@@ -14,6 +14,14 @@ import {
   type ExecutionRouteDependencies,
 } from './routes/execution-route';
 import { originGuard } from './middleware/origin-guard';
+import { uploadRoute } from './routes/upload-route';
+import type { UploadService } from './ingestion/index';
+import { disclosureRoute } from './routes/disclosure-route';
+import { clarificationRoute } from './routes/clarification-route';
+import type { DisclosureService } from './disclosure/disclosure-service';
+import type { ClarificationService } from './disclosure/clarification-service';
+import type { DisclosureTransmissionRepository } from './db/repositories/disclosure-transmission-repository';
+import type { ClarificationRepository } from './db/repositories/clarification-repository';
 
 export interface AppDependencies {
   logger: Logger;
@@ -26,10 +34,13 @@ export interface AppDependencies {
   agent?: Pick<AgentRouteDependencies, 'probe' | 'runSmoke' | 'configStore'>;
   conversation?: Pick<
     TaskRouteDependencies,
-    'tasks' | 'executions' | 'registry'
+    'tasks' | 'executions' | 'registry' | 'disclosure' | 'preflight' | 'consents'
   > &
     Pick<ExecutionRouteDependencies, 'events'>;
   serverConfig?: ServerConfig;
+  /** File ingestion (FEAT-104); mounted with the conversation routes. */
+  ingestion?: { uploads: UploadService };
+  disclosure?: { service: DisclosureService; transmissions: DisclosureTransmissionRepository; consents: import('./db/repositories/disclosure-consent-repository').DisclosureConsentRepository; clarifications: ClarificationRepository; clarificationService: ClarificationService };
   configureRoutes?: (app: Express) => void;
 }
 
@@ -61,10 +72,29 @@ export function createApp(deps: AppDependencies): Express {
     }),
   );
   if (deps.conversation && deps.serverConfig) {
-    app.use(taskRoute({ ...deps.conversation, config: deps.serverConfig }));
+    app.use(
+      taskRoute({
+        ...deps.conversation,
+        config: deps.serverConfig,
+        ...(deps.ingestion ? { uploads: deps.ingestion.uploads } : {}),
+        ...(deps.disclosure ? { disclosure: deps.disclosure.service } : {}),
+      }),
+    );
+    if (deps.ingestion)
+      app.use(
+        uploadRoute({
+          uploads: deps.ingestion.uploads,
+          tasks: deps.conversation.tasks,
+          config: deps.serverConfig,
+        }),
+      );
     app.use(
       executionRoute({ ...deps.conversation, config: deps.serverConfig }),
     );
+    if (deps.disclosure) {
+      app.use(disclosureRoute({ disclosure: deps.disclosure.service, transmissions: deps.disclosure.transmissions, consents: deps.disclosure.consents }));
+      app.use(clarificationRoute({ clarifications: deps.disclosure.clarifications, service: deps.disclosure.clarificationService }));
+    }
   }
   deps.configureRoutes?.(app);
   app.use((_request, _response, next) =>

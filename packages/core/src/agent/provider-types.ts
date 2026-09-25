@@ -1,3 +1,5 @@
+import type { Static, TSchema } from '@sinclair/typebox';
+
 // ---------------------------------------------------------------------------
 // The Auto-Mate agent provider seam (FEAT-102, plan_mvp.md §2).
 //
@@ -53,6 +55,16 @@ export interface AgentSessionOptions {
   readonly auth: AgentAuthSelection;
   /** The complete system prompt. No ambient prompt source is consulted. */
   readonly systemPrompt: string;
+  /** Application-owned tools available to this session. */
+  readonly customTools?: readonly AgentToolDefinition[];
+}
+
+/** SDK-free custom tool definition accepted by provider adapters. */
+export interface AgentToolDefinition<TParameters extends TSchema = TSchema> {
+  readonly name: string;
+  readonly description: string;
+  readonly parameters: TParameters;
+  execute(args: Static<TParameters>, context: { readonly executionId: string; readonly callId: string }): Promise<unknown>;
 }
 
 /** Provider and model coordinates plus optional reasoning effort. */

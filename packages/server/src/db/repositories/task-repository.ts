@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { RepositoryError } from '@automate/core';
+import { AutoMateError, RepositoryError } from '@automate/core';
 import type { DatabaseConnection } from '../client';
 import { execution, task } from '../schema';
 
@@ -30,8 +30,14 @@ export class TaskRepository {
     }
   }
 
-  /** Create the task and its first execution atomically. */
-  createWithExecution(description: string): {
+  /**
+   * Create the task and its first execution atomically.
+   *
+   * @param description The person's words, verbatim.
+   * @param withinTransaction Runs inside the same transaction once the task exists (FEAT-104 attaches uploads here); throwing rolls everything back.
+   * @returns The task and its execution.
+   */
+  createWithExecution(description: string, withinTransaction?: (taskId: number, executionId: number) => void): {
     task: TaskRow;
     execution: typeof execution.$inferSelect;
   } {
@@ -47,9 +53,11 @@ export class TaskRepository {
           .values({ taskId: createdTask.id })
           .returning()
           .get();
+        withinTransaction?.(createdTask.id, createdExecution.id);
         return { task: createdTask, execution: createdExecution };
       });
     } catch (cause) {
+      if (cause instanceof AutoMateError) throw cause;
       throw new RepositoryError('The task could not be created.', cause);
     }
   }

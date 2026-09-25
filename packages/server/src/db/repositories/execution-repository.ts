@@ -59,6 +59,10 @@ export class ExecutionRepository {
   markStarted(id: number): ExecutionRow {
     return this.transition(id, 'generating', { startedAt: this.now() });
   }
+  /** Move an active execution across an explicitly allowed state edge. */
+  transitionStatus(id: number, status: ExecutionStatus): ExecutionRow {
+    return this.transition(id, status, {});
+  }
   markSessionOpened(
     id: number,
     value: {
@@ -103,11 +107,14 @@ export class ExecutionRepository {
     });
   }
   markInterrupted(id: number): ExecutionRow {
+    const current = this.required(id);
     return this.markSettled(id, {
       status: 'failed',
       errorCode: 'EXECUTION_INTERRUPTED',
       errorMessage:
-        'This run was interrupted when the server restarted. Start it again to retry.',
+        current.status === 'waiting'
+          ? 'This run was interrupted while waiting for your answer. Your answers were saved — start it again and you will not be asked twice.'
+          : 'This run was interrupted when the server restarted. Start it again to retry.',
     });
   }
 

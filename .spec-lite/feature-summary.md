@@ -4,7 +4,21 @@
 
 > Current implemented behavior only. Change history lives in source control.
 
+## Data Ingestion & Disclosure
+
+**FEAT-104 — CSV/XLSX Ingestion & Profiling** _(updated: 2026-09-24 by implement)_
+Source spec: [spec.md](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md)
+
+People attach up to five `.csv`/`.tsv`/`.xlsx` files (50 MB each) through `POST /api/uploads`. Each file is streamed to disk under a mid-stream size cap, format-sniffed from its content (legacy `.xls` is refused with re-save guidance), and profiled locally in Node in one bounded-memory pass. The profile covers encoding, delimiter, and header detection; per-column types with day/month versus month/day ambiguity flagged, never guessed; statistics; the first 10 rows; and structured findings. The only representation that may ever leave the machine is a deterministic disclosure payload capped at 64 KiB: 10 sample rows with 200-character cells, and frequent values only for columns under 1,000 distinct values, degraded in a fixed, recorded order. Nothing is transmitted by this feature. `POST /api/tasks` with `uploadIds` claims analyzed uploads in the task's own transaction. Files are kept byte-for-byte for the life of the task, and unattached uploads are swept after `AUTOMATE_STAGED_UPLOAD_TTL_HOURS`.
+
+---
+
 ## Task Execution & Conversation
+
+**FEAT-104 — Composer File Attachment** _(updated: 2026-09-24 by implement)_
+Source spec: [spec.md](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md)
+
+The New task composer accepts dropped or chosen CSV/XLSX files. It pre-checks extension, size, and count with the server's exact messages, shows determinate upload progress and then "Analyzing…", and blocks **Start task** until every file settles. A lazily loaded preview renders each file's sheets, columns, statistics, sample rows as plain text only, and plain-English findings, stating that nothing has been sent. Failed files show the server's message with **Retry**; **Remove** deletes a staged upload. Text-only tasks work as before.
 
 **FEAT-103 — Task Description & Conversation Surface** _(updated: 2026-09-23 by implement)_
 Source spec: [spec.md](features/FEAT-103-task_conversation_surface/spec.md)

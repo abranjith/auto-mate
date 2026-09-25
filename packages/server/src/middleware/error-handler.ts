@@ -8,7 +8,24 @@ const CLIENT_ERROR_CODES: ReadonlySet<string> = new Set([
   ERROR_CODES.AGENT_MODEL_NOT_FOUND,
   ERROR_CODES.AGENT_CONFIG_INVALID,
   ERROR_CODES.INVALID_STATE_TRANSITION,
+  ERROR_CODES.UPLOAD_LIMIT_REACHED,
+  ERROR_CODES.FILE_EMPTY,
+  ERROR_CODES.CLARIFICATION_INVALID_ANSWER,
 ]);
+
+/** Ingestion outcomes with a more specific status than "bad request" (FEAT-104). */
+const INGESTION_STATUS: Readonly<Record<string, number>> = {
+  [ERROR_CODES.UPLOAD_NOT_FOUND]: 404,
+  [ERROR_CODES.UPLOAD_ALREADY_ATTACHED]: 409,
+  [ERROR_CODES.UPLOAD_TOO_LARGE]: 413,
+  [ERROR_CODES.UNSUPPORTED_FILE_FORMAT]: 415,
+  // The file arrived intact but could not be understood as a table.
+  [ERROR_CODES.PARSE_FAILED]: 422,
+  [ERROR_CODES.PARSE_TIMEOUT]: 422,
+  [ERROR_CODES.TOO_MANY_COLUMNS]: 422,
+  [ERROR_CODES.WORKBOOK_TOO_LARGE]: 422,
+  [ERROR_CODES.NO_TABULAR_CONTENT]: 422,
+};
 
 /** Format safe error envelopes. @param logger Fallback logger. @returns Express error middleware that sends a correlation ID. */
 export function errorHandler(logger: Logger): ErrorRequestHandler {
@@ -22,12 +39,20 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
     const notFound =
       code === ERROR_CODES.NOT_FOUND ||
       code === ERROR_CODES.TASK_NOT_FOUND ||
-      code === ERROR_CODES.EXECUTION_NOT_FOUND;
+      code === ERROR_CODES.EXECUTION_NOT_FOUND ||
+      code === ERROR_CODES.CLARIFICATION_NOT_FOUND;
     const conflict =
       code === ERROR_CODES.EXECUTION_NOT_RUNNING ||
       code === ERROR_CODES.EXECUTION_INTERRUPTED ||
-      code === ERROR_CODES.EXECUTION_LIMIT_REACHED;
-    const status = CLIENT_ERROR_CODES.has(code)
+      code === ERROR_CODES.EXECUTION_LIMIT_REACHED ||
+      code === ERROR_CODES.DISCLOSURE_CONSENT_REQUIRED ||
+      code === ERROR_CODES.DISCLOSURE_CONSENT_STALE ||
+      code === ERROR_CODES.DISCLOSURE_SCOPE_NOT_GRANTED ||
+      code === ERROR_CODES.PREFLIGHT_DECISION_REQUIRED ||
+      code === ERROR_CODES.CLARIFICATION_NOT_PENDING ||
+      code === ERROR_CODES.CLARIFICATION_LIMIT_REACHED ||
+      code === ERROR_CODES.WAITING_CAPACITY_REACHED;
+    const status = INGESTION_STATUS[code] ?? (CLIENT_ERROR_CODES.has(code)
       ? 400
       : notFound
         ? 404
@@ -35,7 +60,7 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
           ? 403
           : conflict
             ? 409
-            : 500;
+            : 500);
     if (status >= 500)
       (response.locals.log ?? logger).error(
         { err: error, correlationId },

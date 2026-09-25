@@ -34,7 +34,7 @@ it('applies and seeds the initial migration exactly once', () => {
     const count = connection.client
       .prepare('SELECT count(*) AS count FROM __drizzle_migrations')
       .get() as { count: number };
-    expect(count.count).toBe(2);
+    expect(count.count).toBe(4);
     const objects = connection.client
       .prepare(
         "SELECT name FROM sqlite_master WHERE name IN ('task','execution','conversation_event','conversation_event_execution_seq','execution_task_id','execution_active') ORDER BY name",
@@ -46,6 +46,31 @@ it('applies and seeds the initial migration exactly once', () => {
         .prepare("INSERT INTO app_meta (key, value) VALUES (NULL, 'invalid')")
         .run(),
     ).toThrow();
+  } finally {
+    connection.close();
+  }
+});
+
+it('creates the ingestion tables and indexes in one additional migration (FEAT-104)', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'automate-'));
+  roots.push(root);
+  const paths = getAppPaths(root);
+  ensureAppDirectories(paths);
+  const connection = openDatabase(paths);
+  try {
+    migrateDatabase(connection);
+    migrateDatabase(connection);
+    const names = connection.client
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE name IN ('upload','upload_profile','upload_column','upload_task_id','upload_staged','upload_profile_sheet','upload_column_position','upload_column_name') ORDER BY name",
+      )
+      .all()
+      .map((row) => (row as { name: string }).name);
+    expect(names).toEqual(['upload', 'upload_column', 'upload_column_name', 'upload_column_position', 'upload_profile', 'upload_profile_sheet', 'upload_staged', 'upload_task_id']);
+    const staged = connection.client.prepare("SELECT sql FROM sqlite_master WHERE name = 'upload_staged'").get() as { sql: string };
+    expect(staged.sql).toMatch(/WHERE .*task_id.* is null/i);
+    const applied = connection.client.prepare('SELECT count(*) AS count FROM __drizzle_migrations').get() as { count: number };
+    expect(applied.count).toBe(4);
   } finally {
     connection.close();
   }

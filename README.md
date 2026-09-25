@@ -83,7 +83,7 @@ Server startup creates the following under `~/.automate/` (your user home direct
 ├── pi/                agent credential store and model definitions
 ├── agent-sessions/    raw agent session logs, one directory per execution
 ├── artifacts/         reserved for later outputs
-├── uploads/           reserved for later inputs
+├── uploads/           attached input files: staged/ until a task claims them, then <taskId>/
 ├── scripts/           reserved for later generated scripts
 └── env/               reserved for a later Python environment
 ```
@@ -98,6 +98,7 @@ Set `AUTOMATE_HOME` before starting the server to use another writable data root
 - [Project bootstrap feature](docs/features/project-bootstrap.md) — FEAT-101 behavior and limitations.
 - [AI provider configuration](docs/features/provider-configuration.md) — FEAT-102 provider settings, credentials, the agent seam, and troubleshooting.
 - [Task conversation surface](docs/features/task-conversation-surface.md) — FEAT-103 task creation, live conversation, replay, cancellation, APIs, and recovery.
+- [CSV and XLSX ingestion](docs/features/csv-xlsx-ingestion.md) — FEAT-104 file attachment, local profiling, exactly what the disclosure payload contains, limits, and retention.
 - [Core package](packages/core/README.md), [server package](packages/server/README.md), and [web package](packages/web/README.md) — package-level development notes.
 - [Changelog](CHANGELOG.md) — milestone history.
 

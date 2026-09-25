@@ -8,6 +8,7 @@ import {
   type AgentProvider,
   type ConversationEvent,
   type ExecutionStatus,
+  type UnnumberedConversationEvent,
 } from '@automate/core';
 import type { Logger } from 'pino';
 import type { AppPaths } from '../config/app-paths';
@@ -19,6 +20,7 @@ import type {
 import type { TaskRow } from '../db/repositories/task-repository';
 import type { RunStrategy } from './run-strategy';
 import { TaskSession } from './task-session';
+import type { ClarificationService } from '../disclosure/clarification-service';
 
 export interface TaskSessionRegistryDependencies {
   provider: AgentProvider;
@@ -30,6 +32,7 @@ export interface TaskSessionRegistryDependencies {
   auth: () => AgentAuthSelection;
   logger: Logger;
   maxConcurrentExecutions: number;
+  clarifications?: ClarificationService;
 }
 
 /** Registry enforcing one live session per execution and the configured cap. */
@@ -38,8 +41,18 @@ export class TaskSessionRegistry {
   constructor(private readonly deps: TaskSessionRegistryDependencies) {}
 
   assertCapacity(): void {
-    if (this.sessions.size >= this.deps.maxConcurrentExecutions)
+    if (this.activeCount() >= this.deps.maxConcurrentExecutions)
       throw new ExecutionLimitReachedError();
+  }
+
+  activeCount(): number { return [...this.sessions.keys()].filter((id) => this.deps.executions.getById(id)?.status !== 'waiting').length; }
+  waitingCount(): number { return [...this.sessions.keys()].filter((id) => this.deps.executions.getById(id)?.status === 'waiting').length; }
+
+  /** Publish service-owned events through a live session when present. */
+  publish(executionId: number, event: UnnumberedConversationEvent): void {
+    const session = this.sessions.get(executionId);
+    if (session) { session.appendApplicationEvent(event); return; }
+    this.deps.events.append(executionId, { ...event, seq: this.deps.events.maxSeq(executionId) + 1 } as ConversationEvent);
   }
 
   start(execution: ExecutionRow, task: TaskRow): TaskSession {
@@ -81,6 +94,7 @@ export class TaskSessionRegistry {
     if (!row || isTerminal(row.status as ExecutionStatus))
       throw new ExecutionNotRunningError(executionId);
     if (!session) throw new ExecutionInterruptedError(executionId);
+    this.deps.clarifications?.cancelForExecution(executionId);
     await session.abort();
     return session.settled;
   }
@@ -90,6 +104,7 @@ export class TaskSessionRegistry {
     for (const row of active) {
       const next = this.deps.events.maxSeq(row.id) + 1;
       this.deps.executions.markInterrupted(row.id);
+      this.deps.clarifications?.markInterrupted(row.id);
       const event: ConversationEvent = {
         seq: next,
         type: 'state_changed',
@@ -109,6 +124,7 @@ export class TaskSessionRegistry {
 
   async drain(timeoutMs: number): Promise<void> {
     const entries = [...this.sessions.entries()];
+    for (const [id] of entries) this.deps.clarifications?.cancelForExecution(id);
     await Promise.all(entries.map(([, session]) => session.abort()));
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([

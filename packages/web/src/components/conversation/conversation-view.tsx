@@ -3,6 +3,8 @@ import type { ConversationEvent } from '@automate/core';
 import { ds } from '../../design-system/tokens';
 import { ToolCallCard } from './tool-call-card';
 import { TurnSummary } from './turn-summary';
+import { ClarificationEvent } from './clarification-event';
+import { DisclosureReceipt } from '../disclosure/disclosure-receipt';
 const AssistantMessage = lazy(() =>
   import('./assistant-message').then((module) => ({
     default: module.AssistantMessage,
@@ -16,8 +18,10 @@ function assertNever(value: never): never {
 /** Ordered, exhaustive rendering of the durable transcript. */
 export function ConversationView({
   events,
+  executionId,
 }: {
   events: readonly ConversationEvent[];
+  executionId?: number;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
@@ -113,6 +117,12 @@ export function ConversationView({
                   Status changed from {event.from} to {event.to}.
                 </p>
               );
+            case 'clarification_requested':
+              return executionId ? <ClarificationEvent key={event.seq} executionId={executionId} clarificationId={event.clarificationId} /> : <p key={event.seq} className={ds.eventLine}>Clarification requested.</p>;
+            case 'clarification_answered':
+              return <p key={event.seq} className={ds.eventLine}>Clarification answered.</p>;
+            case 'disclosure_sent':
+              return executionId ? <DisclosureReceipt key={event.seq} executionId={executionId} event={event} /> : <p key={event.seq} className={ds.eventLine}>Disclosure sent to {event.provider} {event.model}.</p>;
             default:
               return assertNever(event);
           }
