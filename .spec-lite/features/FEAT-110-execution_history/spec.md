@@ -243,7 +243,7 @@ No new directories. For the first time, every tree under the data root has a doc
 
 ### TASK-001: History contracts, status groups, run wording, the restart partition, and typed errors in `packages/core`
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Status groups.** Add `src/history/history-status.ts` with `HISTORY_STATUS_GROUPS` as defined in §3, and `statusGroupOf(status)`, a total function over `ExecutionStatus` with an exhaustive `switch`.
   - **Wording.** Add `src/history/run-wording.ts`:
     - `describeRunState({ status, errorCode })` returns `{ label, detail }`. Labels: *Starting*, *Writing code*, *Checking the code*, *Running on your file*, *Waiting for your answer*, *Waiting for your go-ahead*, *Waiting for your review*, *Done*, *Didn't finish*, *Cancelled*, *You said this wasn't right*. Two error codes override the label: `EXECUTION_INTERRUPTED` reads *Interrupted*, and `EXECUTION_STOPPED_ON_SHUTDOWN` reads *Stopped when the app closed*.
@@ -262,19 +262,19 @@ No new directories. For the first time, every tree under the data root has a doc
     - Extend `ExecutionSummarySchema` with `trigger` and `retryOfExecutionId`, and `TaskResponseSchema` with `counts`. Both are additive, so FEAT-103's existing consumers keep working.
   - **Restart partition.** In `src/conversation/execution-state.ts`, add `INTERRUPTED_ON_RESTART`, `SURVIVES_RESTART`, and `INTERRUPTION_MESSAGES`. The `waiting` message is: *"This run was interrupted while it waited for your answer. Run it again — your earlier answers are kept, so you won't be asked twice."* The other four messages name their phase, following FEAT-107's wording.
   - **Errors.** Add `TaskHasOpenRunError` (the message names the open run's plain-English state and says to cancel it or finish it first), and extend `ERROR_CODES` with `TASK_HAS_OPEN_RUN` and `EXECUTION_STOPPED_ON_SHUTDOWN`.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Partition.** Every non-terminal status is in exactly one of `INTERRUPTED_ON_RESTART` and `SURVIVES_RESTART`; their union equals the non-terminal set; and no terminal status is in either. A status added without being classified therefore fails the suite. `waiting` is in `INTERRUPTED_ON_RESTART`, asserted by name in a test titled for the FEAT-105/FEAT-107 conflict, so reverting it is a deliberate, visible act. `INTERRUPTION_MESSAGES` has a non-empty message for every member.
   - **Status groups.** `statusGroupOf` is total: a table-driven test over every `ExecutionStatus` asserts exactly one group each. `needs_you` equals `PARKED_STATUSES`.
   - **Wording.** `describeRunState` is total over status × {no error, `EXECUTION_INTERRUPTED`, `EXECUTION_STOPPED_ON_SHUTDOWN`, another code}, and every cell yields a non-empty label. No label contains *error*, *exception*, or an error code. `describeTrigger` covers every `trigger` value. A type-level test asserts each `switch` is exhaustive.
   - **Contracts.** Every schema round-trips through `JSON.parse(JSON.stringify(...))` unchanged. `TaskHistoryQuerySchema` rejects a `limit` of `51`, `0`, `-1`, or `abc`; a `q` of 201 characters; an unknown `status`; and an unknown property.
   - **No protected fields.** `RunRecordSchema` has no property whose name matches `/path|snapshot|stdout|stderr|content|payload|logPath/i`, asserted against the schema's property tree so adding one later fails.
   - **Errors.** `TaskHasOpenRunError` is `instanceof AutoMateError`, keeps its code, and `toJSON()` yields no stack and no details.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the history contracts, the status groups, and the restart partition.
+- [x] **Documentation Update**: Invoke **Document** update mode for the history contracts, the status groups, and the restart partition.
 - **Verify**: `pnpm --filter @automate/core test history execution-state` and `typecheck` pass; `grep -rE "from 'node:|pi-coding-agent" packages/core/src/history` returns nothing.
 
 ### TASK-002: The history read model — `HistoryRepository` and the index migration
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`listTasks({ cursor, limit, group, q })`.** Add `packages/server/src/db/repositories/history-repository.ts`. The page is **driven from executions**. It selects each task's latest execution, meaning an execution with no later sibling (`NOT EXISTS (SELECT 1 FROM execution later WHERE later.task_id = e.task_id AND later.id > e.id)`, served by `execution_task_id`). It joins `task`, applies `e.id < :cursor`, the group's status list (always built from `HISTORY_STATUS_GROUPS`, never typed), and the search predicate, orders by `e.id DESC`, and fetches `limit + 1` rows to compute `hasMore`.
     - The cursor is the last item's latest-run id. Execution ids are `AUTOINCREMENT`, so ordering is "most recently started run first", free of the one-second ties `created_at` would produce. A task given a new run moves to the top instead of reshuffling later pages.
     - Search uses `LIKE ? ESCAPE '\'` over `task.name` and `task.description`, after escaping `\`, `%`, and `_` in the term, so the term is literal text and cannot act as a pattern. Case folding is ASCII-only, which is SQLite's `LIKE` behavior; this is documented rather than hidden.
@@ -287,7 +287,7 @@ No new directories. For the first time, every tree under the data root has a doc
     - Digests are shortened to 12 characters for display, and the full value stays available.
   - **`taskCounts(taskId)`.** Returns `{ runs, inputs, outputs, openRunId }`.
   - **Schema and migration.** In `schema.ts`, build `execution_parked`'s predicate from `PARKED_STATUSES` and `execution_active`'s from `INTERRUPTED_ON_RESTART`, then generate the migration. Only `execution_parked` changes; confirm by reading the generated SQL that it is a `DROP INDEX` / `CREATE INDEX` and nothing else. Wrap driver errors as `RepositoryError`. **No Drizzle query appears outside `src/db/`.**
-- [ ] **Unit Tests** (against a temp database seeded through the real repositories, never the developer's `~/.automate`):
+- [x] **Unit Tests** (against a temp database seeded through the real repositories, never the developer's `~/.automate`):
   - **Ordering.** 45 tasks with 1–4 runs each list in three pages of 20/20/5. Across the pages there is no duplicate and no omission, and every item's `latestRun.id` is its task's true maximum execution id.
   - **Movement.** A task that gets a new run between page 1 and page 2 appears **at most once** across the whole traversal, and appears at the top of a fresh page 1.
   - **Filters.** Each `status` group returns exactly the tasks whose latest run is in that group; `needs_you` includes a `waiting` latest run.
@@ -298,13 +298,13 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Protected columns.** A source scan of `history-repository.ts` finds none of §2's never-selected column names.
   - **Query plans.** `EXPLAIN QUERY PLAN` shows `execution_parked` for the `needs_you` list, `execution_task_id` for the later-run check and the timeline, and `execution_active` for `listActive()`.
   - **Migration test** (`migration-history-index.test.ts`): seed a database at FEAT-109's schema with executions in all eleven statuses and apply the migration. Every row is unchanged. `execution_parked`'s stored SQL names exactly `PARKED_STATUSES`. `execution_active`'s names exactly `INTERRUPTED_ON_RESTART`. Applying the migration twice is a no-op.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the history read model and the index change.
+- [x] **Documentation Update**: Invoke **Document** update mode for the history read model and the index change.
 - **Verify**: `pnpm --filter @automate/server test history-repository migration-history-index` passes; `pnpm drizzle-kit generate` reports no pending diff; `grep -rn "drizzle" packages/server/src --include=*.ts | grep -v "src/db/"` returns nothing.
 - **Depends on**: TASK-001
 
 ### TASK-003: The run-state invariants history relies on — restart partition, one open run per task, and "the app was closed"
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Restart partition.** Modify `ExecutionRepository.listActive()` to select `INTERRUPTED_ON_RESTART`, and `listParked()` to select `PARKED_STATUSES`. Modify `TaskSessionRegistry.reconcileOnStartup()` so that every `INTERRUPTED_ON_RESTART` row is marked `failed`/`EXECUTION_INTERRUPTED` with its `INTERRUPTION_MESSAGES` entry, and every `SURVIVES_RESTART` row is left exactly as it is.
     - For `waiting`, FEAT-105 already settles the pending clarification `interrupted` in the same transaction. Keep it, and assert it.
     - Every interrupted row gets its terminal `state_changed` event at the next `seq`. No event is appended for a surviving row.
@@ -314,24 +314,24 @@ No new directories. For the first time, every tree under the data root has a doc
     - Call it inside `createFeedbackRetry` (FEAT-107's rejection re-run) **after** the source's `awaiting_review → rejected` transition in the same transaction, so the rejected run no longer counts as open.
     - `POST /api/executions/:id/retry` needs no route change; FEAT-101's middleware renders the typed error, now mapped to 409.
   - **"The app was closed."** Thread an abort reason through the registry. `TaskSession.abort(reason: 'user' | 'shutdown' = 'user')`. `drain()` passes `'shutdown'`, and a session aborted for that reason settles `aborted` with `EXECUTION_STOPPED_ON_SHUTDOWN` and *"This run was stopped because the app was closed. Run it again to retry."* A person's own cancel still settles `aborted` with no error message, exactly as FEAT-103 specified. Without this, history labels both cases *Cancelled*, telling a person they cancelled something they did not.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Reconciliation.** With one execution in each of the seven non-terminal statuses: after `reconcileOnStartup`, the five `INTERRUPTED_ON_RESTART` rows read `failed`/`EXECUTION_INTERRUPTED` with their phase message, and the two `SURVIVES_RESTART` rows are unchanged field by field. The `waiting` row's clarification reads `interrupted`. Each interrupted transcript ends with a terminal `state_changed` at a gap-free `seq`, and the surviving transcripts gain nothing. Running reconciliation twice is idempotent.
   - **Retry after interruption.** A retry of the interrupted `waiting` run seeds the earlier answers through FEAT-105's `priorAnswersForTask`, asserted by `answer_source = 'seeded'`.
   - **One open run.** With the latest run at `awaiting_approval`, retrying an older failed run throws `TASK_HAS_OPEN_RUN` and creates no row, asserted by count. The same retry succeeds once the parked run is aborted. A rejection at `awaiting_review` creates exactly one feedback run. Two concurrent retry requests for one task produce one execution and one `TASK_HAS_OPEN_RUN`.
   - **Shutdown reason.** `drain` settles a live run `aborted` with `EXECUTION_STOPPED_ON_SHUTDOWN`. A user abort settles `aborted` with a null `error_code`. Both assertions sit in one test so the pair proves the distinction.
-- [ ] **Documentation Update**: Invoke **Document** update mode for restart outcomes and the one-open-run rule.
+- [x] **Documentation Update**: Invoke **Document** update mode for restart outcomes and the one-open-run rule.
 - **Verify**: `pnpm --filter @automate/server test registry task-session recovery execution-repository` passes, including FEAT-103's, FEAT-105's, and FEAT-107's existing reconciliation cases, updated only where they asserted the `waiting` behavior this row corrects.
 - **Depends on**: TASK-001
 
 ### TASK-004: The history list API and response hygiene
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`GET /api/tasks`.** Add `packages/server/src/routes/history-route.ts` with `GET /api/tasks?cursor=&limit=&status=&q=`. It validates against `TaskHistoryQuerySchema` and returns `TaskHistoryPage` through `HistoryRepository.listTasks` and the presenters, trimming `q` and treating an empty value as no filter. It is a read, so no origin guard applies (see the D10 decision).
   - **`counts` on the task detail.** Extend FEAT-103's `GET /api/tasks/:taskId` with `counts` from `taskCounts`. The `executions` array stays (see Assumptions).
   - **Summary fields.** Extend `presentExecution` with `trigger` and `retryOfExecutionId`.
   - **Headers.** Add `src/middleware/api-headers.ts`, which sets `X-Content-Type-Options: nosniff` on every `/api` response, and mount it in `app.ts` ahead of the routers. Add `TASK_HAS_OPEN_RUN` to the error handler's conflict set so it renders as 409.
   - **Logging.** Log at `debug` only: item count, `hasMore`, group, and `hasQuery: boolean`. **Never the search term.**
-- [ ] **Unit Tests** (against a temp `AUTOMATE_HOME` and `FakeAgentProvider`):
+- [x] **Unit Tests** (against a temp `AUTOMATE_HOME` and `FakeAgentProvider`):
   - **Happy path.** `GET /api/tasks` returns the first 20 tasks newest-run-first with `nextCursor`, and following `nextCursor` returns the rest with no overlap.
   - **Validation.** `limit=51` returns the `VALIDATION_ERROR` envelope naming 50; a non-numeric cursor returns 400; an unknown query parameter returns 400.
   - **Filters and search.** `status=needs_you` returns exactly the parked tasks. `q` with `%` behaves literally.
@@ -339,31 +339,31 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Path scan.** The serialized body of every history response is scanned for the temp data root and contains no match.
   - **Hygiene sweep.** One table-driven test covers **every** `/api` route registered in the app: no response carries any `Access-Control-Allow-*` header, including the error and 404 paths, and every JSON response carries `nosniff`. The route list comes from the router's own registration, so a route added later is covered automatically.
   - **Log spy.** A Pino transport spy asserts that no log line contains the search term.
-- [ ] **Documentation Update**: Invoke **Document** update mode for `GET /api/tasks`, the `counts` field, and the response-header rules.
+- [x] **Documentation Update**: Invoke **Document** update mode for `GET /api/tasks`, the `counts` field, and the response-header rules.
 - **Verify**: `pnpm --filter @automate/server test history-route` passes; `curl -s 'http://127.0.0.1:4317/api/tasks?limit=2'` returns two items and a `nextCursor`; `curl -sI 'http://127.0.0.1:4317/api/tasks'` shows `nosniff` and no `Access-Control-Allow-Origin`.
 - **Depends on**: TASK-002
 
 ### TASK-005: The run timeline and the run record API
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`GET /api/tasks/:taskId/runs?cursor=&limit=`.** Returns `RunTimelinePage` through `listRuns`. Unknown tasks raise `TaskNotFoundError`.
   - **`GET /api/executions/:id/record`.** Returns `RunRecord` through `getRunRecord` and the presenters. Unknown executions raise `ExecutionNotFoundError`.
   - **Validation and errors.** Validate every path and query parameter against TASK-001's schemas. No handler formats an error body itself.
   - **What the record may contain.** The record carries the person's own words (`guidance`, `reviewFeedback`) because it is their data shown on their own machine. It carries **no** payload snapshot, code content, run output, or transcript payload; each of those stays behind its owning feature's route. Each optional section is `null` when its rows do not exist.
   - **Run line wording.** The record's `scriptRun` line uses FEAT-108's `describeLimitBreach` wording verbatim when `limit_breached` is set, never a second phrasing.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Timeline.** Pages a task with 25 runs as 20 + 5, newest first; labels a guidance retry and a feedback re-run by `trigger`; returns the typed envelope for an unknown task.
   - **Sparse record.** A FEAT-103-era text-only run has `inputs: []`, `inputsReadByRun: null`, and every optional section `null`, and serializes cleanly.
   - **Full record.** A fully populated run, driven through FEAT-104–109's services with `FakeAgentProvider` and `FakePythonRunner`, fills every section with values equal to the rows.
   - **Limit wording.** A run stopped by a time limit carries `describeLimitBreach('time')`'s sentence, asserted by string equality.
   - **Protected content.** The serialized record contains no absolute path (scanned for the temp root), no row from the approved payload (a sentinel cell seeded into the upload's sample rows is absent from the JSON), and no `stdout` text (a sentinel in `script_run.stdout` is absent). The sentinels are what prove the record is a summary and not a leak.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the timeline and run-record endpoints and what each section means.
+- [x] **Documentation Update**: Invoke **Document** update mode for the timeline and run-record endpoints and what each section means.
 - **Verify**: `pnpm --filter @automate/server test history-route` passes; `curl -s 'http://127.0.0.1:4317/api/executions/1/record'` returns the record for the first run.
 - **Depends on**: TASK-002
 
 ### TASK-006: Deleting a task — every row, every file, and nothing outside
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **What a task owns on disk.** Add `src/history/task-owned-trees.ts` with `TASK_OWNED_TREES`, the five trees in §2, each as `{ kind, keyedBy: 'task' | 'execution', root: (paths) => string }`. `treesForTask(paths, taskId, executionIds)` returns every directory to remove.
   - **Safe removal.** Add `src/history/safe-remove.ts`. `removeTree(base, name)`:
     - accepts only `^\d+$` names, resolves through `resolveWithin(base, name)`, and `lstat`s the target first;
@@ -384,7 +384,7 @@ No new directories. For the first time, every tree under the data root has a doc
     **Rows first, files second** is deliberate. If files went first and the row delete then failed, the result would be live rows pointing at deleted files. With rows first, the worst case is unreferenced files, which TASK-007's sweep removes.
   - **The route.** Add `DELETE /api/tasks/:taskId` to `history-route.ts`, behind FEAT-103's `originGuard`, returning `DeleteTaskResponse`.
   - **Logging.** Log `info` `{ taskId, runs, inputs, outputs, treesRemoved, treesPending }`, and `warn` per unremoved tree with its `kind` and `code` only. **Never a task name, prompt, filename, or path.**
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Completeness (rows).** Drive a task through the whole pipeline with `FakeAgentProvider` and `FakePythonRunner` (uploads, consent, a clarification, two code versions, verification, approval, a run, artifacts, and a feedback re-run), then delete it. **Every table except the four global ones is empty**, asserted by enumerating `sqlite_master` rather than listing tables by hand, so a future task-owned table without a cascade fails this test.
   - **Completeness (files).** None of the five trees contains an entry for the task's or its executions' ids, and a recursive scan of the data root finds no directory named for any of them.
   - **Isolation.** A second task created alongside keeps every row and every file.
@@ -393,31 +393,31 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Locked files.** When one `rm` fails with `EBUSY` (through memory's pass-through `vi.mock('node:fs/promises')` pattern), the response reports `filesPendingRemoval: 1`, the rows are still gone, and the other trees are removed.
   - **Guards.** A task with a run at `awaiting_approval` returns `TASK_HAS_OPEN_RUN` (409) and deletes nothing, asserted by row and file counts. A foreign `Origin` returns 403 before any row is read. An unknown id returns `TASK_NOT_FOUND`. A second DELETE returns `TASK_NOT_FOUND`. A retry request for a run of a just-deleted task returns `EXECUTION_NOT_FOUND`, not a 500.
   - **Log spy.** A Pino spy asserts that no log line contains the task name, a filename, or the data root.
-- [ ] **Documentation Update**: Invoke **Document** update mode for task deletion: what it removes, the rows-then-files order, and what "files pending removal" means.
+- [x] **Documentation Update**: Invoke **Document** update mode for task deletion: what it removes, the rows-then-files order, and what "files pending removal" means.
 - **Verify**: `pnpm --filter @automate/server test task-deletion history-route` passes on Windows and on Linux or macOS (the link test is platform-specific by design); `curl -s -X DELETE http://127.0.0.1:4317/api/tasks/1` removes task 1, and `ls ~/.automate/runs` no longer lists its runs.
 - **Depends on**: TASK-002, TASK-003
 
 ### TASK-007: The retention sweep — interrupted deletions, crash residue, and unattached consents
 
-- [ ] **Implementation**: Add `src/history/retention-sweeper.ts`, following the pattern of FEAT-104's `StagedUploadSweeper`: one in-flight promise shared by concurrent calls, an unref'd hourly timer, and `start`/`stop`. `sweep()` does two things:
+- [x] **Implementation**: Add `src/history/retention-sweeper.ts`, following the pattern of FEAT-104's `StagedUploadSweeper`: one in-flight promise shared by concurrent calls, an unref'd hourly timer, and `start`/`stop`. `sweep()` does two things:
   1. **Orphaned per-execution trees.** For each `TASK_OWNED_TREES` entry keyed by `execution`, it lists the root's entries and removes, through `removeTree`, every **numeric** entry whose id has no `execution` row. Non-numeric entries (`agent-smoke`, `connection-test-*`) are left alone. Task-keyed trees are already swept by FEAT-104 (`uploads/`) and FEAT-109 (`artifacts/`), and this sweep does not duplicate them.
 
      There is no race with a run being created: an execution's row is always inserted before any of its directories exist, so a directory without a row is residue, never a run in progress.
   2. **Unattached consents.** Through FEAT-105's repository, extended with `deleteUnattachedBefore(cutoff)`, it deletes `disclosure_consent` rows with `task_id IS NULL` granted more than `AUTOMATE_STAGED_UPLOAD_TTL_HOURS` ago. That is the same TTL as the staged files those consents approve. A consent attached to a task is never touched, whatever its age.
 
   The module header states the retention rule once (life of the task, no age-based purge) and says that this sweep is **orphan cleanup, not retention**, in the words FEAT-104's sweeper uses. Wire it into `src/index.ts` after `reconcileOnStartup` and FEAT-104's and FEAT-109's sweeps, before `listen`; then hourly; then stopped on shutdown. Log `info` with the four counts. Never log a path.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Orphans.** `runs/999/`, `scripts/999/`, and `agent-sessions/999/` with no execution 999 are removed; the same trees for a live execution are untouched regardless of age; `agent-sessions/connection-test-123/` and `agent-smoke/` are untouched; and a file (not a directory) named `999` is removed without error.
   - **Idempotence.** The sweep is idempotent across two runs, and two concurrent `sweep()` calls perform one sweep.
   - **Consents.** An unattached consent older than the TTL is deleted; one younger than the TTL is kept; an attached consent 90 days old is kept.
   - **Interrupted deletion.** After a simulated crash (rows deleted and `removeTree` never called), the next sweep removes all three per-execution trees, and FEAT-104's and FEAT-109's sweeps remove the two task-keyed trees. This is the test that makes "rows first, files second" safe.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the retention rule and the orphan sweep.
+- [x] **Documentation Update**: Invoke **Document** update mode for the retention rule and the orphan sweep.
 - **Verify**: `pnpm --filter @automate/server test retention-sweeper` passes; starting the server with a planted `runs/99999/` logs one orphaned run tree and removes it.
 - **Depends on**: TASK-006
 
 ### TASK-008: The History page — list, search, filters, "Needs you", and live refresh
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **The route.** Replace FEAT-101's placeholder in `src/routes/history.tsx`. `validateSearch` accepts `status` (default `all`) and `q`, so a filtered, searched view survives reload and back/forward and can be linked.
   - **Queries.** Add `src/api/history-queries.ts` with `useTaskHistory({ status, q })`, a TanStack `useInfiniteQuery` over `GET /api/tasks` whose `getNextPageParam` is `nextCursor`. It validates each page with `Value.Check` against `TaskHistoryPageSchema`, as the existing query modules do.
   - **Filters.** `history-filters.tsx` has a labelled search input, debounced 300 ms and capped at `HISTORY_SEARCH_MAX_CHARS`, and the five groups as a toggle-button group using `aria-pressed`. Status is never conveyed by color alone.
@@ -427,7 +427,7 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Live refresh.** The query's `refetchInterval` returns `HISTORY_LIVE_REFRESH_MS` while any loaded item is in the `running` group, and `false` otherwise. `refetchOnWindowFocus` and `refetchOnReconnect` are on.
   - **Empty states.** With no tasks: *"Nothing here yet"* with a link to **New task**. With a filter or search that matches nothing: *"No tasks match"* with **Clear filters**. Errors render FEAT-101's plain-English envelope with the correlation id.
   - **Styling.** Add the tokens (`historyList`, `historyItem`, `historyMeta`, `needsYouStrip`, `filterGroup`, `filterChip`, `filterChipActive`) to `tokens.ts`. No raw Tailwind in components.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Rendering.** Three items render with names, labels, run counts, and output counts. An item whose latest run is interrupted reads *Interrupted*. One stopped on shutdown reads *Stopped when the app closed*.
   - **Untrusted names.** A task name of `<img src=x onerror=alert(1)>`, or one beginning with `=`, renders as literal text.
   - **Paging.** **Load more** appends the second page without duplicating and moves focus.
@@ -435,13 +435,13 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Needs you strip.** It is present with parked items, absent without, and links to the run route.
   - **Refresh.** With fake timers, polling happens every 5 s while a loaded item is `generating` and stops once all are terminal or parked.
   - **States.** Both empty states render the right copy and control. The component tree contains no element whose only status signal is a color class, asserted by requiring each badge to have text.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the History page.
+- [x] **Documentation Update**: Invoke **Document** update mode for the History page.
 - **Verify**: `pnpm --filter @automate/web test history` passes; `node packages/web/scripts/check-design-tokens.mjs` exits 0; in the browser, History lists earlier tasks, and a running task's badge changes to *Waiting for your go-ahead* without a reload.
 - **Depends on**: TASK-004
 
 ### TASK-009: The task page becomes a timeline, and every run gets its own address
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Routes.** Restructure the task route into three files:
     - `tasks.$taskId.tsx` becomes the **layout**: `task-header.tsx` (the name, the created date, the prompt verbatim as pre-wrapped **text**, the inputs from FEAT-104's `GET /api/tasks/:taskId/uploads` with name, size, and rows × columns, each opening FEAT-104's existing profile preview, and a **Delete task** control wired in TASK-011), `run-timeline.tsx`, and an `<Outlet />`.
     - `tasks.$taskId.index.tsx` renders the latest run.
@@ -452,20 +452,20 @@ No new directories. For the first time, every tree under the data root has a doc
   - **New task navigation.** After `POST /api/tasks`, navigation still lands on `/tasks/$taskId`, now the index route showing the latest run, so FEAT-103's composer flow is unchanged.
   - **Deleted or missing tasks.** A `TASK_NOT_FOUND` on the layout renders *"This task was deleted or never existed"* with a link to History, not an error panel.
   - **Styling.** Add the tokens (`timeline`, `timelineItem`, `timelineItemCurrent`, `taskPrompt`).
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Extraction held to its word.** Rendering `run-view.tsx` for a run parked at `awaiting_approval` finds FEAT-107's intent gate; for `awaiting_review` finds the review panel; for a completed run with artifacts finds FEAT-109's artifact list; and for a `waiting` run finds FEAT-105's clarification card. Each assertion is by component identity.
   - **Routes.** The index route shows the latest run, and the run route shows the requested one. A run of another task redirects. The timeline marks exactly one item current.
   - **Prompt.** The prompt renders newlines and a `<script>` payload as literal text.
   - **Sockets.** A completed run opens **zero** WebSockets (asserted on the mock constructor's call count), and a parked run opens one.
   - **Missing task.** A deleted task renders the friendly copy.
   - **Composer flow.** FEAT-103's existing composer navigation test still passes unchanged.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the task page, the run timeline, and run URLs.
+- [x] **Documentation Update**: Invoke **Document** update mode for the task page, the run timeline, and run URLs.
 - **Verify**: `pnpm --filter @automate/web test tasks run-view use-execution-stream` passes; in the browser, a task retried twice shows three runs, each run has its own URL, and reloading a finished run's URL shows its transcript and outputs with no socket in the network panel.
 - **Depends on**: TASK-005
 
 ### TASK-010: The run record panel and **Run again**
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **The panel.** Add `run-record-panel.tsx` and `record-section.tsx`. Mounted at the top of `run-view.tsx`, the panel renders `RunRecord` as a short list of sections, each with a one-line summary and an expander:
     - **What you asked** — the prompt, plus the guidance or review feedback quoted as *"You said: …"*.
     - **Files** — inputs, with *"The run read exactly these files"* when `inputsReadByRun` is true.
@@ -481,24 +481,24 @@ No new directories. For the first time, every tree under the data root has a doc
     A `null` section is omitted, not rendered as empty or failed. **Expanders mount the owning feature's component lazily** (`lazy()` + `Suspense`, per memory) and fetch only on first open. The panel itself renders no payload, no code, and no run output.
   - **Run again.** Add `run-again-button.tsx`, shown on a run that is terminal **and** is the task's latest run, which is the only case the server accepts. It opens FEAT-106's guidance box (optional, capped at `MAX_GUIDANCE_CHARS`) and posts to `POST /api/executions/:id/retry`. On success it navigates to the new run. It renders FEAT-105's consent gate when the server answers that the consent is stale (a model changed since), and renders `TASK_HAS_OPEN_RUN` as its plain message with a link to the open run.
   - **Interrupted runs.** On an interrupted run the button is the primary action and the panel's first line is `INTERRUPTION_MESSAGES`' sentence.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Sections.** Each section renders its summary from a fixture record. A record with every optional section `null` renders only *What you asked* and *Run*, with no error styling.
   - **Composition.** Opening each expander mounts the owning feature's component (asserted by identity against the imported component) and issues **exactly one** request to that feature's endpoint. Closing and re-opening issues none.
   - **Untrusted text.** Guidance and feedback containing `<script>` and a leading `=` render as literal text.
   - **Run again visibility.** The button is hidden on a non-latest run and on a live run, and shown on a terminal latest run.
   - **Run again behavior.** It posts the guidance once and navigates to the returned execution. A `TASK_HAS_OPEN_RUN` response renders the message and the link. A stale-consent response renders FEAT-105's gate rather than a generic error. On an interrupted `waiting` run, the panel's first line equals `INTERRUPTION_MESSAGES.waiting`, asserted by string equality.
-- [ ] **Documentation Update**: Invoke **Document** update mode for run records, provenance sections, and **Run again**.
+- [x] **Documentation Update**: Invoke **Document** update mode for run records, provenance sections, and **Run again**.
 - **Verify**: `pnpm --filter @automate/web test run-record run-again` passes; in the browser, an interrupted run shows why and runs again in one click.
 - **Depends on**: TASK-009
 
 ### TASK-011: The delete flow — know what you are deleting, then delete it
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **The dialog.** Add `delete-task-dialog.tsx`, opened from `task-header.tsx`'s **Delete task**. It uses plain elements with `role="alertdialog"`, `aria-labelledby`, and `aria-describedby`. Focus moves to **Keep task** on open, Escape closes, focus returns to the trigger on close, and the page behind is `inert` while it is open.
     - The copy names what goes, from `counts`: *"Delete 'Monthly sales summary'? This removes 3 runs, 2 input files, and 5 outputs from this computer, including everything that was sent to the AI and every version of the code. This can't be undone."* The confirm control reads **Delete task**, styled with a new `btnDanger` token.
     - When `counts.openRunId` is set, the dialog does not offer deletion. It says the run is still going, or is waiting for the person, and offers **Cancel that run**, which calls FEAT-103's abort route for that id and then re-reads `counts`.
   - **`useDeleteTask`.** On success it removes every cached query for that task and its runs, invalidates the history list, navigates to `/history`, and announces *"Task deleted."* in a polite live region. When `filesPendingRemoval > 0` it adds: *"Some files are open in another program. They'll be removed the next time the app starts."* On `TASK_NOT_FOUND` (deleted from another tab) it treats the task as already gone and navigates the same way.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Dialog copy.** The dialog renders the three counts and the "can't be undone" sentence.
   - **Accessibility.** Focus starts on **Keep task** and returns to the trigger on Escape. The background is inert while the dialog is open.
   - **Confirm.** **Delete task** fires the mutation exactly once, and a double click does not fire it twice.
@@ -506,13 +506,13 @@ No new directories. For the first time, every tree under the data root has a doc
   - **Success.** The task's queries are removed, `/history` is the destination, and the live region announces the deletion. With `filesPendingRemoval: 1`, the extra sentence renders.
   - **Already deleted.** `TASK_NOT_FOUND` from the mutation navigates without an error panel.
   - **Untrusted names.** A task name containing `<script>` renders as literal text in the dialog.
-- [ ] **Documentation Update**: Invoke **Document** update mode for deleting a task.
+- [x] **Documentation Update**: Invoke **Document** update mode for deleting a task.
 - **Verify**: `pnpm --filter @automate/web test delete-task` passes; `node packages/web/scripts/check-design-tokens.mjs` exits 0; in the browser, deleting a task from its page returns to History without it, and its folders are gone from the data root.
 - **Depends on**: TASK-006, TASK-009
 
 ### TASK-012: End-to-end proof — history, recovery outcomes, and deletion, asserted on rows, files, and responses
 
-- [ ] **Implementation**: Add `packages/server/src/__tests__/history-e2e.test.ts` against a temp `AUTOMATE_HOME`, `FakeAgentProvider`, and `FakePythonRunner`. Every scenario asserts on stored rows, files on disk, and real HTTP responses, never on service return values alone:
+- [x] **Implementation**: Add `packages/server/src/__tests__/history-e2e.test.ts` against a temp `AUTOMATE_HOME`, `FakeAgentProvider`, and `FakePythonRunner`. Every scenario asserts on stored rows, files on disk, and real HTTP responses, never on service return values alone:
   1. **Access to prior outputs.** A task runs, is rejected with feedback, and its re-run is accepted. `GET /api/tasks` lists it once with `runCount: 2`. The timeline shows both runs with the right triggers. **Both** runs' artifacts list, serve, and archive through FEAT-109's routes. The record's `chain` links them in both directions.
   2. **Restart with every open status.** Seven tasks are parked in the seven non-terminal statuses, then the server is disposed and rebuilt over the same database. The five `INTERRUPTED_ON_RESTART` tasks list as *Interrupted* in the `stopped` group with their phase messages. The two `SURVIVES_RESTART` tasks list under `needs_you`, unchanged, and their gates still work: an approval posted after the restart runs the script, and a review posted after the restart completes. **Run again** on the interrupted `waiting` task produces a run whose clarification answers are `seeded`.
   3. **Graceful shutdown.** `drain` with a live run: after rebuild the task reads *Stopped when the app closed*, not *Cancelled*.
@@ -527,14 +527,14 @@ No new directories. For the first time, every tree under the data root has a doc
   - `packages/core/src/history` imports no Node built-in.
 
   Fix whatever these scenarios expose. The scenarios are the deliverable.
-- [ ] **Unit Tests**: N/A — this task *is* the test. Its acceptance bar is that an implementation which reports success without doing the work fails at least one scenario.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the history end-to-end suite and the recovery outcome table it proves.
+- [x] **Unit Tests**: N/A — this task *is* the test. Its acceptance bar is that an implementation which reports success without doing the work fails at least one scenario.
+- [x] **Documentation Update**: Invoke **Document** update mode for the history end-to-end suite and the recovery outcome table it proves.
 - **Verify**: `pnpm --filter @automate/server test history-e2e recovery` passes on Windows and on Linux or macOS; `pnpm test` stays hermetic and spawns no real process, asserted by the existing suite-level guard.
 - **Depends on**: TASK-007, TASK-008, TASK-010, TASK-011
 
 ### TASK-013: Documentation, memory reconciliation, and the three claims this feature must not overstate
 
-- [ ] **Implementation**: Invoke **Document** update mode across the areas this feature adds, per `.spec-lite.json` (`documentation.directory: "docs"`, `level: "full"`):
+- [x] **Implementation**: Invoke **Document** update mode across the areas this feature adds, per `.spec-lite.json` (`documentation.directory: "docs"`, `level: "full"`):
   - **`docs/features/execution-history.md`**: the History page, the status groups and their plain-English labels, run URLs, the run record's sections and where each expands to, **Run again**, and deletion.
   - **A retention page, written for a person** (in `docs/architecture.md` or a linked page). It states once that everything a task produces lives until the task is deleted and is never purged by age. It lists every file tree removed with a task, and explains that "files pending removal" means a file was open in another program and will be removed at the next start.
   - **The recovery outcome table**, as proven by TASK-012: browser closed mid-run; server restarted in each of the seven open statuses; the app closed with Ctrl+C; deletion interrupted; another tab deleting the task.
@@ -558,8 +558,8 @@ No new directories. For the first time, every tree under the data root has a doc
   - **remove** the entries this row closes: the two D12 retention items (disclosure records; `conversation_event`), `DELETE /api/tasks/:taskId`, and the `runs/` retention item, keeping its dedupe-by-`sha256` idea as a storage optimization under the storage-quota entry;
   - **reword** the D10 local-session-protection item around this row's posture;
   - **remove** the FEAT-105/FEAT-107 restart-conflict entry once memory is reconciled.
-- [ ] **Unit Tests**: N/A — this is a documentation task. The documented status labels are generated from `run-wording.ts` in a test, the documented restart outcomes from `INTERRUPTED_ON_RESTART`/`SURVIVES_RESTART`, and the documented file trees from `TASK_OWNED_TREES`, so a change that makes any of the three wrong fails the build.
-- [ ] **Documentation Update**: This task is the documentation update.
+- [x] **Unit Tests**: N/A — this is a documentation task. The documented status labels are generated from `run-wording.ts` in a test, the documented restart outcomes from `INTERRUPTED_ON_RESTART`/`SURVIVES_RESTART`, and the documented file trees from `TASK_OWNED_TREES`, so a change that makes any of the three wrong fails the build.
+- [x] **Documentation Update**: This task is the documentation update.
 - **Verify**: The `docs/` pages exist and describe the shipped behavior. Every route in `history-route.ts` appears in the API reference, and every reference entry maps to a route. `CHANGELOG.md` names FEAT-110. No document describes the Origin check, the same-origin policy, or deletion as isolation or access control. `.spec-lite/TODO.md` no longer contains the closed entries.
 - **Depends on**: TASK-012
 
@@ -617,18 +617,33 @@ No new directories. For the first time, every tree under the data root has a doc
 
 ## 8. State Tracking
 
-- [ ] TASK-001: History contracts, status groups, run wording, the restart partition, and typed errors in `packages/core`
-- [ ] TASK-002: The history read model — `HistoryRepository` and the index migration
-- [ ] TASK-003: The run-state invariants history relies on — restart partition, one open run per task, and "the app was closed"
-- [ ] TASK-004: The history list API and response hygiene
-- [ ] TASK-005: The run timeline and the run record API
-- [ ] TASK-006: Deleting a task — every row, every file, and nothing outside
-- [ ] TASK-007: The retention sweep — interrupted deletions, crash residue, and unattached consents
-- [ ] TASK-008: The History page — list, search, filters, "Needs you", and live refresh
-- [ ] TASK-009: The task page becomes a timeline, and every run gets its own address
-- [ ] TASK-010: The run record panel and **Run again**
-- [ ] TASK-011: The delete flow — know what you are deleting, then delete it
-- [ ] TASK-012: End-to-end proof — history, recovery outcomes, and deletion, asserted on rows, files, and responses
-- [ ] TASK-013: Documentation, memory reconciliation, and the three claims this feature must not overstate
+- [x] TASK-001: History contracts, status groups, run wording, the restart partition, and typed errors in `packages/core`
+- [x] TASK-002: The history read model — `HistoryRepository` and the index migration
+- [x] TASK-003: The run-state invariants history relies on — restart partition, one open run per task, and "the app was closed"
+- [x] TASK-004: The history list API and response hygiene
+- [x] TASK-005: The run timeline and the run record API
+- [x] TASK-006: Deleting a task — every row, every file, and nothing outside
+- [x] TASK-007: The retention sweep — interrupted deletions, crash residue, and unattached consents
+- [x] TASK-008: The History page — list, search, filters, "Needs you", and live refresh
+- [x] TASK-009: The task page becomes a timeline, and every run gets its own address
+- [x] TASK-010: The run record panel and **Run again**
+- [x] TASK-011: The delete flow — know what you are deleting, then delete it
+- [x] TASK-012: End-to-end proof — history, recovery outcomes, and deletion, asserted on rows, files, and responses
+- [x] TASK-013: Documentation, memory reconciliation, and the three claims this feature must not overstate
 
 Legend: [ ] Not started | [/] In progress | [x] Completed
+
+### Completion notes (2026-09-26)
+
+All thirteen tasks are implemented and verified. `pnpm test` passes (1811 tests), and `pnpm typecheck`, `pnpm lint`, and `pnpm db:generate` (no pending diff) all pass. No Drizzle import exists outside `src/db/`. The first review found every task implemented but ten short of their spec'd tests. Closing those gaps exposed four defects, now fixed:
+
+- **Partial indexes were never used.** `ExecutionRepository.listActive()` and `listParked()` (through Drizzle's `inArray`) and the History **Needs you** query all bound their status lists as parameters, which SQLite cannot match to a partial index, so each did a full table scan. They now write literal lists through `statusLiterals()` (`src/db/status-sql.ts`), the helper the schema also uses. TASK-002's `EXPLAIN QUERY PLAN` tests assert `execution_parked`, `execution_active`, and `execution_task_id`.
+- **Deleting a task left cached data in the browser.** `useDeleteTask` removed an `events` key that nothing uses, so the real transcript cache (`execution-events`) and the task's input list (`task-uploads`) survived.
+- **Opening the Run and Outputs sections fetched the artifact list twice.** The record's **Run** expander no longer fetches outputs; they are their own section.
+- **The legacy `TaskRepository.delete` and its `fileSweeps` hook remained** alongside `TaskDeletionService`. They are removed, and FEAT-109's tests now delete through the production path.
+
+The panel now shows the spec'd details that were missing: questions by answer source (a contract addition: `byPerson` and `defaulted`), the code's own-test result, whether warnings were acknowledged, and an interrupted run's explanation with **Run again** first.
+
+Deliberate choices, recorded:
+- Scenario 1's directory scan skips `uploads/staged/`. The test harness attaches uploads in place, while production renames them into `uploads/{taskId}/`, a tree the scan does check.
+- The seeded-answers retry after an interrupted `waiting` run is proven in `history/run-state-invariants.test.ts` rather than `history-e2e.test.ts`, because the generation harness is the stack with a live clarification service.

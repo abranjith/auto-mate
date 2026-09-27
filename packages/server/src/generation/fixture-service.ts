@@ -15,6 +15,7 @@
 
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import path from 'node:path';
 import {
   FIXTURE_ROW_COUNT,
   FixtureGenerationError,
@@ -29,6 +30,7 @@ import type { UploadProfileRepository } from '../db/repositories/upload-profile-
 import type { UploadRepository } from '../db/repositories/upload-repository';
 import type { NewSyntheticFixture, SyntheticFixtureRepository, SyntheticFixtureRow } from '../db/repositories/synthetic-fixture-repository';
 import { writeCsv, writeXlsx, type FixtureSheet } from './fixture-writer';
+import { resolveGeneratedInputs, type ResolvedInput } from '../execution/execution-inputs';
 
 export interface FixtureServiceDependencies {
   readonly uploads: UploadRepository;
@@ -72,14 +74,15 @@ export class FixtureService {
    * @returns The recorded fixture rows.
    * @throws FixtureGenerationError naming the file by position, never by name, when its profile is missing or failed.
    */
-  async materializeFixtures(executionId: number, uploadIds: readonly number[], signal: AbortSignal): Promise<SyntheticFixtureRow[]> {
+  async materializeFixtures(executionId: number, inputs: readonly ResolvedInput[] | readonly number[], signal: AbortSignal): Promise<SyntheticFixtureRow[]> {
     const directory = this.fixturesDir(executionId);
     rmSync(directory, { recursive: true, force: true });
     mkdirSync(directory, { recursive: true });
     const recorded: NewSyntheticFixture[] = [];
-    for (const [index, uploadId] of uploadIds.entries()) {
+    const resolved = typeof inputs[0] === 'number' ? resolveGeneratedInputs((inputs as readonly number[]).map((id) => this.deps.uploads.getById(id)!).filter(Boolean)) : inputs as readonly ResolvedInput[];
+    for (const input of resolved) {
       signal.throwIfAborted();
-      recorded.push(await this.materializeOne(executionId, uploadId, index + 1, directory));
+      recorded.push(await this.materializeOne(executionId, input, directory));
     }
     const rows = this.deps.fixtures.replaceForExecution(executionId, recorded);
     for (const row of rows) this.deps.logger.info({ executionId, uploadId: row.uploadId, rowCount: row.rowCount, byteSize: row.byteSize }, 'synthetic fixture materialized');
@@ -115,22 +118,24 @@ export class FixtureService {
    * @returns The written file's digest, size, and absolute path.
    * @throws FixtureGenerationError when the upload or its profile is gone.
    */
-  async rebuild(fixture: Pick<SyntheticFixtureRow, 'uploadId' | 'seed' | 'rowCount'>, directory: string): Promise<{ sha256: string; byteSize: number; file: string; rowCount: number }> {
+  async rebuild(fixture: Pick<SyntheticFixtureRow, 'uploadId' | 'seed' | 'rowCount' | 'filePath'>, directory: string): Promise<{ sha256: string; byteSize: number; file: string; rowCount: number }> {
     mkdirSync(directory, { recursive: true });
-    const written = await this.writeFixture(fixture.uploadId, 1, directory, fixture.seed, fixture.rowCount);
-    return { sha256: written.sha256, byteSize: written.byteSize, file: resolveWithin(directory, written.storedFilename), rowCount: written.rowCount };
+    const inputName = path.posix.basename(fixture.filePath);
+    const written = await this.writeFixture(fixture.uploadId, 1, directory, fixture.seed, fixture.rowCount, inputName);
+    return { sha256: written.sha256, byteSize: written.byteSize, file: resolveWithin(directory, inputName), rowCount: written.rowCount };
   }
 
-  private async materializeOne(executionId: number, uploadId: number, position: number, directory: string): Promise<NewSyntheticFixture> {
+  private async materializeOne(executionId: number, input: ResolvedInput, directory: string): Promise<NewSyntheticFixture> {
+    const { uploadId, inputName, position } = input;
     const upload = this.deps.uploads.getById(uploadId);
-    if (!upload || upload.profileStatus !== 'profiled') throw new FixtureGenerationError(position);
+    if (!upload || upload.profileStatus !== 'profiled') throw new FixtureGenerationError(position + 1);
     const seed = fixtureSeed(upload.sha256, executionId);
-    const written = await this.writeFixture(uploadId, position, directory, seed, this.deps.rowCount ?? FIXTURE_ROW_COUNT);
-    return { uploadId, filePath: `${fixturesDirPath(executionId)}/${upload.storedFilename}`, format: written.format, sheetCount: written.sheetCount, rowCount: written.rowCount, sampleRowCount: written.sampleRowCount, byteSize: written.byteSize, sha256: written.sha256, seed };
+    const written = await this.writeFixture(uploadId, position + 1, directory, seed, this.deps.rowCount ?? FIXTURE_ROW_COUNT, inputName);
+    return { uploadId, filePath: `${fixturesDirPath(executionId)}/${inputName}`, format: written.format, sheetCount: written.sheetCount, rowCount: written.rowCount, sampleRowCount: written.sampleRowCount, byteSize: written.byteSize, sha256: written.sha256, seed };
   }
 
   /** The one code path that turns a profile, a seed, and a row count into fixture bytes. */
-  private async writeFixture(uploadId: number, position: number, directory: string, seed: string, rowCount: number) {
+  private async writeFixture(uploadId: number, position: number, directory: string, seed: string, rowCount: number, inputName: string) {
     const upload = this.deps.uploads.getById(uploadId);
     if (!upload || upload.profileStatus !== 'profiled') throw new FixtureGenerationError(position);
     const source = this.deps.profiles.getDisclosureSource(uploadId);
@@ -138,12 +143,12 @@ export class FixtureService {
     const payload = buildDisclosurePayload(source.upload, source.profiles);
     const sheets: FixtureSheet[] = payload.tables.map((table) => ({ sheetName: table.sheetName, isHidden: table.isHidden, hasHeader: table.hasHeader, source: table, table: buildSyntheticFixture(table, { rowCount, seed: `${seed}:${table.sheetIndex}` }) }));
     if (sheets.length === 0) throw new FixtureGenerationError(position, 'none of its tables could be described');
-    const file = resolveWithin(directory, upload.storedFilename);
+    const file = resolveWithin(directory, inputName);
     const format = upload.format as FileFormat;
     if (format === 'csv') writeCsv(file, sheets[0]!, dialectOf(source.profiles[0]!), upload.encoding);
     else await writeXlsx(file, sheets);
     const bytes = readFileSync(file);
-    return { storedFilename: upload.storedFilename, format, sheetCount: sheets.length, rowCount, sampleRowCount: Math.min(...sheets.map(({ table }) => table.sampleRowCount)), byteSize: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
+    return { format, sheetCount: sheets.length, rowCount, sampleRowCount: Math.min(...sheets.map(({ table }) => table.sampleRowCount)), byteSize: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
   }
 }
 

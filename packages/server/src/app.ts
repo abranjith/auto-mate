@@ -26,6 +26,10 @@ import { generationRoute } from './routes/generation-route';
 import type { GenerationService } from './generation/index';
 import { verificationRoute, type VerificationRouteDependencies } from './routes/verification-route';
 import { runtimeRoute, type RuntimeRouteDependencies } from './routes/runtime-route';
+import { artifactRoute, type ArtifactRouteDependencies } from './routes/artifact-route';
+import { historyRoute, type HistoryRouteDependencies } from './routes/history-route';
+import { templateRoute, type TemplateRouteDependencies } from './routes/template-route';
+import { apiHeaders } from './middleware/api-headers';
 
 export interface AppDependencies {
   logger: Logger;
@@ -50,12 +54,17 @@ export interface AppDependencies {
   /** Verification, the approval gate, the real run, and the review (FEAT-107); mounted with the conversation routes. */
   verification?: Omit<VerificationRouteDependencies, 'config'>;
   runtime?: Omit<RuntimeRouteDependencies, 'config'>;
+  /** Run outputs: lists, previews, bytes, and archives (FEAT-109). Read-only GETs, mounted on their own. */
+  artifacts?: Omit<ArtifactRouteDependencies, 'logger'>;
+  history?: Omit<HistoryRouteDependencies, 'logger'>;
+  templates?: Omit<TemplateRouteDependencies, 'config'>;
   configureRoutes?: (app: Express) => void;
 }
 
 /** Create the HTTP application. @param deps Logger, metadata probe, application paths, and public settings. @returns An Express instance without a network listener. */
 export function createApp(deps: AppDependencies): Express {
   const app = express();
+  app.use(apiHeaders);
   app.use(correlationId(deps.logger));
   app.use(express.json({ limit: '1mb' }));
   app.use(healthRoute(deps));
@@ -88,6 +97,7 @@ export function createApp(deps: AppDependencies): Express {
         config: deps.serverConfig,
         ...(deps.ingestion ? { uploads: deps.ingestion.uploads } : {}),
         ...(deps.disclosure ? { disclosure: deps.disclosure.service } : {}),
+        ...(deps.history ? { history: deps.history.history } : {}),
       }),
     );
     if (deps.ingestion)
@@ -107,7 +117,10 @@ export function createApp(deps: AppDependencies): Express {
     }
     if (deps.generation) app.use(generationRoute({ generation: deps.generation.service, config: deps.serverConfig }));
     if (deps.verification) app.use(verificationRoute({ ...deps.verification, config: deps.serverConfig }));
+    if (deps.templates) app.use(templateRoute({ ...deps.templates, config: deps.serverConfig }));
   }
+  if (deps.artifacts) app.use(artifactRoute({ ...deps.artifacts, logger: deps.logger }));
+  if (deps.history) app.use(historyRoute({ ...deps.history, logger: deps.logger }));
   deps.configureRoutes?.(app);
   app.use((_request, _response, next) =>
     next(

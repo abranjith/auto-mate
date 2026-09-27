@@ -83,6 +83,10 @@ const variants: TSchema[] = [
   Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('run_finished'), scriptRunId: Type.Integer({ minimum: 1 }), status: Type.Union(RUN_EVENT_STATUSES.map((status) => Type.Literal(status))), exitCode: Type.Union([Type.Integer(), Type.Null()]), durationMs: Type.Integer({ minimum: 0 }), declaredOutputCount: NullableCount, producedOutputCount: NullableCount, outputTruncated: Type.Boolean(), at: At }),
   Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('review_decided'), verdict: Type.Union(REVIEW_VERDICTS.map((verdict) => Type.Literal(verdict))), retryExecutionId: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]), at: At }),
   Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('runtime_prepared'), kind: Type.Union([Type.Literal('script'), Type.Literal('verify')]), pythonVersion: Type.String(), packageCount: Type.Integer({ minimum: 0 }), at: At }),
+  // FEAT-109: counts only. No filename, title, path, or cell value; the artifact list is fetched over REST.
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('artifacts_registered'), scriptRunId: Type.Integer({ minimum: 1 }), artifactCount: Type.Integer({ minimum: 0 }), undeclaredCount: Type.Integer({ minimum: 0 }), unregisteredOutputCount: Type.Integer({ minimum: 0 }), totalBytes: Type.Integer({ minimum: 0 }), at: At }),
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('task_saved'), templateId: Type.Integer({ minimum: 1 }), name: Type.String(), revisionNumber: Type.Integer({ minimum: 1 }), at: At }),
+  Type.Object({ seq: Type.Integer({ minimum: 1 }), type: Type.Literal('reuse_started'), templateName: Type.String(), revisionNumber: Type.Integer({ minimum: 1 }), digestShort: Type.String(), asOfDate: Type.String(), timeZone: Type.String(), compatibilityStatus: Type.String(), advisoryHeadlines: Type.Array(Type.String()), runtimeChanged: Type.Boolean(), asOfNotRecorded: Type.Optional(Type.Boolean()), at: At }),
 ];
 
 export const ConversationEventSchema = Type.Union(variants);
@@ -105,6 +109,9 @@ export type ConversationEvent = { readonly seq: number } & (
   | { readonly type: 'run_finished'; readonly scriptRunId: number; readonly status: RunEventStatus; readonly exitCode: number | null; readonly durationMs: number; readonly declaredOutputCount: number | null; readonly producedOutputCount: number | null; readonly outputTruncated: boolean; readonly at: string }
   | { readonly type: 'review_decided'; readonly verdict: ReviewVerdict; readonly retryExecutionId: number | null; readonly at: string }
   | { readonly type: 'runtime_prepared'; readonly kind: 'script' | 'verify'; readonly pythonVersion: string; readonly packageCount: number; readonly at: string }
+  | { readonly type: 'artifacts_registered'; readonly scriptRunId: number; readonly artifactCount: number; readonly undeclaredCount: number; readonly unregisteredOutputCount: number; readonly totalBytes: number; readonly at: string }
+  | { readonly type: 'task_saved'; readonly templateId: number; readonly name: string; readonly revisionNumber: number; readonly at: string }
+  | { readonly type: 'reuse_started'; readonly templateName: string; readonly revisionNumber: number; readonly digestShort: string; readonly asOfDate: string; readonly timeZone: string; readonly compatibilityStatus: string; readonly advisoryHeadlines: readonly string[]; readonly runtimeChanged: boolean; readonly asOfNotRecorded?: boolean; readonly at: string }
   | { readonly type: 'disclosure_sent'; readonly transmissionId: number; readonly kind: 'context' | 'diagnostics'; readonly provider: string; readonly model: string; readonly byteSize: number; readonly summary: unknown; readonly at: string }
 );
 export type ConversationEventFromSchema = Static<
@@ -114,3 +121,45 @@ export type ConversationEventFromSchema = Static<
 export type UnnumberedConversationEvent = {
   [Kind in ConversationEvent['type']]: Omit<Extract<ConversationEvent, { readonly type: Kind }>, 'seq'>;
 }[ConversationEvent['type']];
+
+/** The five kinds FEAT-102's `AgentEvent` union produces. The `satisfies` clause below fails to compile if the two drift. */
+export const AGENT_EVENT_TYPES = ['tool_started', 'tool_finished', 'assistant_text', 'turn_finished', 'failed'] as const;
+type AgentEventTypeCheck = [AgentEvent['type']] extends [(typeof AGENT_EVENT_TYPES)[number]] ? ([(typeof AGENT_EVENT_TYPES)[number]] extends [AgentEvent['type']] ? true : never) : never;
+export const AGENT_EVENT_TYPES_MATCH: AgentEventTypeCheck = true;
+
+/** One row of the `conversation_event_kind` lookup table: who produces the kind, and which feature added it. */
+export interface ConversationEventKindRow {
+  readonly kind: ConversationEvent['type'];
+  readonly owner: 'agent' | 'app';
+  readonly addedIn: string;
+}
+
+/**
+ * Every persisted event kind, in the order they were introduced. Migration
+ * `0007` seeds `conversation_event_kind` with exactly these rows (a test
+ * compares the two), and every kind after FEAT-109 is an INSERT, never a
+ * table rebuild.
+ */
+export const CONVERSATION_EVENT_KINDS: readonly ConversationEventKindRow[] = Object.freeze([
+  { kind: 'user_prompt', owner: 'app', addedIn: 'FEAT-103' },
+  { kind: 'state_changed', owner: 'app', addedIn: 'FEAT-103' },
+  { kind: 'tool_started', owner: 'agent', addedIn: 'FEAT-103' },
+  { kind: 'tool_finished', owner: 'agent', addedIn: 'FEAT-103' },
+  { kind: 'assistant_text', owner: 'agent', addedIn: 'FEAT-103' },
+  { kind: 'turn_finished', owner: 'agent', addedIn: 'FEAT-103' },
+  { kind: 'failed', owner: 'agent', addedIn: 'FEAT-103' },
+  { kind: 'clarification_requested', owner: 'app', addedIn: 'FEAT-105' },
+  { kind: 'clarification_answered', owner: 'app', addedIn: 'FEAT-105' },
+  { kind: 'disclosure_sent', owner: 'app', addedIn: 'FEAT-105' },
+  { kind: 'code_version_sealed', owner: 'app', addedIn: 'FEAT-106' },
+  { kind: 'test_run_finished', owner: 'app', addedIn: 'FEAT-106' },
+  { kind: 'generation_settled', owner: 'app', addedIn: 'FEAT-106' },
+  { kind: 'verification_finished', owner: 'app', addedIn: 'FEAT-107' },
+  { kind: 'approval_decided', owner: 'app', addedIn: 'FEAT-107' },
+  { kind: 'run_finished', owner: 'app', addedIn: 'FEAT-107' },
+  { kind: 'review_decided', owner: 'app', addedIn: 'FEAT-107' },
+  { kind: 'runtime_prepared', owner: 'app', addedIn: 'FEAT-108' },
+  { kind: 'artifacts_registered', owner: 'app', addedIn: 'FEAT-109' },
+  { kind: 'reuse_started', owner: 'app', addedIn: 'FEAT-111' },
+  { kind: 'task_saved', owner: 'app', addedIn: 'FEAT-111' },
+]);

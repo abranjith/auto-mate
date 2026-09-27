@@ -108,7 +108,7 @@ describe('verification routes', () => {
     await until(() => live.some((event) => event.type === 'review_decided') && live.at(-1)?.type === 'state_changed');
     const stored = h.repos.events.listAfter(h.execution.id, lastSeq, 100).events;
     expect(live).toEqual(stored);
-    expect(stored.map(({ type }) => type)).toEqual(['approval_decided', 'state_changed', 'run_finished', 'state_changed', 'review_decided', 'state_changed']);
+    expect(stored.map(({ type }) => type)).toEqual(['approval_decided', 'state_changed', 'run_finished', 'artifacts_registered', 'state_changed', 'review_decided', 'state_changed']);
     const uploads = h.store.paths.uploadsDir;
     for (const body of bodies) for (const needle of [h.store.root, h.store.root.replace(/\\/g, '/'), h.store.root.replace(/\\/g, '\\\\'), uploads.replace(/\\/g, '\\\\')]) expect(body).not.toContain(needle);
   });

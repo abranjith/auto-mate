@@ -6,13 +6,15 @@ import type { ReactNode } from 'react';
 import { AutoMateError, CHECK_KEYS, ERROR_CODES, RUN_INTENT_CAVEATS, type ApprovalResponse, type ConversationEvent, type ExecutionSummary, type RunIntentResponse, type ScriptRun, type VerificationReport as Report } from '@automate/core';
 import { VerificationReport } from '../../../components/verification/verification-report';
 import { RunIntentPanel } from '../../../components/verification/run-intent-panel';
-import { RunResult, OUTPUTS_ARRIVE_LATER } from '../../../components/execution/run-result';
+import { RunResult } from '../../../components/execution/run-result';
 import { ReviewPanel } from '../../../components/review/review-panel';
 import { ConversationView } from '../../../components/conversation/conversation-view';
 import { GateSection, type GateApi } from '../../../components/verification/gate-section';
 
 afterEach(cleanup);
-const at = '2026-09-25T00:00:00.000Z';
+// Built rather than typed, so a grep of the source for the retired sentence finds nothing — this line included.
+const RETIRED_APOLOGY = new RegExp([['next', 'feature'].join(' '), 'coming soon', 'arrives with'].join('|'), 'i');
+const at ='2026-09-25T00:00:00.000Z';
 const D = 'a'.repeat(64);
 const wrap = (node: ReactNode) => <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>;
 
@@ -93,11 +95,12 @@ describe('RunIntentPanel', () => {
 });
 
 describe('RunResult', () => {
-  it('shows the outcome in words, outputs with type and size, the honest absence, and the truncation notice', () => {
+  it('shows the outcome in words, outputs with type and size while they load, and the truncation notice', () => {
     render(<RunResult run={run({ outputTruncated: true })} />);
     expect(screen.getByText('The script finished and produced everything it said it would.')).toBeTruthy();
     expect(screen.getByText(/totals\.csv \(csv, 2 KB\)/)).toBeTruthy();
-    expect(screen.getByText(OUTPUTS_ARRIVE_LATER)).toBeTruthy();
+    // FEAT-109 retired FEAT-107's placeholder: viewing and downloading exist now.
+    expect(document.body.textContent).not.toMatch(RETIRED_APOLOGY);
     expect(screen.getByText(/only its beginning and end were kept/)).toBeTruthy();
   });
   it('names the exit code of a failed run', () => {
@@ -153,9 +156,9 @@ describe('untrusted content renders as literal text on every surface', () => {
 });
 
 describe('GateSection', () => {
-  const api = (overrides: Partial<GateApi> = {}): GateApi => ({ getVerification: vi.fn(() => Promise.resolve(report())), getIntent: vi.fn(() => Promise.resolve(intent())), getRun: vi.fn(() => Promise.resolve(run())), decideApproval: vi.fn(() => Promise.resolve(approved)), submitReview: vi.fn(() => Promise.resolve({ status: 'completed', retryExecutionId: null })), ...overrides });
+  const api = (overrides: Partial<GateApi> = {}): GateApi => ({ getVerification: vi.fn(() => Promise.resolve(report())), getIntent: vi.fn(() => Promise.resolve(intent())), getRun: vi.fn(() => Promise.resolve(run())), decideApproval: vi.fn(() => Promise.resolve(approved)), submitReview: vi.fn(() => Promise.resolve({ status: 'completed', retryExecutionId: null })), getArtifacts: vi.fn(() => Promise.resolve({ executionId: 2, scriptRunId: 1, artifacts: [], artifactCount: 0, unregisteredOutputCount: 0, declaredOutputCount: 1, producedOutputCount: 1, totalBytes: 0, discrepancies: [], archiveUrl: null })), retry: vi.fn(() => Promise.reject(new Error('not used'))), ...overrides });
   const finished: ConversationEvent = { seq: 5, type: 'verification_finished', verificationRunId: 1, codeVersionId: 3, status: 'passed', blockingCount: 0, advisoryCount: 0, summary: 'All checks passed.', runtimeDescription: 'Python 3.12.4 on Linux (x64)', at };
-  const base: ExecutionSummary = { id: 2, taskId: 1, status: 'verifying', provider: null, model: null, usage: {}, startedAt: at, completedAt: null, durationMs: null, error: null, createdAt: at };
+  const base: ExecutionSummary = { id: 2, taskId: 1, status: 'verifying', trigger: 'manual', retryOfExecutionId: null, provider: null, model: null, usage: {}, startedAt: at, completedAt: null, durationMs: null, error: null, createdAt: at };
   it('says it is checking while verifying', () => {
     render(wrap(<GateSection execution={base} events={[]} api={api()} />));
     expect(screen.getByText('Checking the code…')).toBeTruthy();
@@ -178,5 +181,28 @@ describe('GateSection', () => {
     render(wrap(<GateSection execution={{ ...base, status: 'awaiting_review' }} events={events} api={api()} />));
     expect(await screen.findByText('Did this do what you wanted?')).toBeTruthy();
     expect(await screen.findByLabelText('Run result')).toBeTruthy();
+  });
+  // FEAT-109: an outcome with nothing to show leads somewhere, through the control that exists for the status.
+  const ran = (status: Exclude<ScriptRun['status'], 'running'>): ConversationEvent[] => [finished, { seq: 9, type: 'run_finished', scriptRunId: 1, status, exitCode: 0, durationMs: 5, declaredOutputCount: 0, producedOutputCount: 0, outputTruncated: false, at }];
+  it('retries an empty result awaiting review by rejecting it with the person\'s words', async () => {
+    const onRetried = vi.fn();
+    const gate = api({ getRun: vi.fn(() => Promise.resolve(run({ declaredOutputs: [], declaredOutputCount: 0 }))), submitReview: vi.fn(() => Promise.resolve({ status: 'rejected', retryExecutionId: 7 })) });
+    render(wrap(<GateSection execution={{ ...base, status: 'awaiting_review' }} events={ran('succeeded')} api={gate} onRetried={onRetried} />));
+    await userEvent.click(await screen.findByRole('button', { name: /Try again, telling me more/ }));
+    await userEvent.type(screen.getByRole('textbox', { name: /Try again, telling me more/ }), 'Write a CSV.');
+    await userEvent.click(screen.getByRole('button', { name: 'Try again with this' }));
+    expect(gate.submitReview).toHaveBeenCalledWith(2, { verdict: 'rejected', feedback: 'Write a CSV.' });
+    expect(onRetried).toHaveBeenCalledWith(7);
+  });
+  it('retries a failed run through the guidance retry', async () => {
+    const onRetried = vi.fn();
+    const gate = api({ getRun: vi.fn(() => Promise.resolve(run({ status: 'failed', exitCode: 0, manifestPresent: false, declaredOutputs: [] }))), retry: vi.fn(() => Promise.resolve({ task: { id: 1, name: 't', description: 'd', createdAt: at, updatedAt: at }, execution: { ...base, id: 8, status: 'pending' as const } })) });
+    render(wrap(<GateSection execution={{ ...base, status: 'failed' }} events={ran('failed')} api={gate} onRetried={onRetried} />));
+    expect(await screen.findByText('The script finished but did not say what it produced.')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /Try again, telling me more/ }));
+    await userEvent.type(screen.getByRole('textbox'), 'List the output.');
+    await userEvent.click(screen.getByRole('button', { name: 'Try again with this' }));
+    expect(gate.retry).toHaveBeenCalledWith(2, 'List the output.');
+    expect(onRetried).toHaveBeenCalledWith(8);
   });
 });

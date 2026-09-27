@@ -6,10 +6,12 @@
 // Nothing composed here opens a provider session: FEAT-107 sends nothing to a
 // model.
 
-import { AutoMateError, ERROR_CODES, type PythonRunner, type UnnumberedConversationEvent } from '@automate/core';
+import { AutoMateError, ERROR_CODES, UPLOAD_LIMIT_DEFAULTS, type PythonRunner, type UnnumberedConversationEvent } from '@automate/core';
 import type { Logger } from 'pino';
 import type { AppPaths } from '../config/app-paths';
-import type { GenerationConfig, VerificationConfig } from '../config/env';
+import { getArtifactConfig, type ArtifactConfig, type GenerationConfig, type VerificationConfig } from '../config/env';
+import { ArtifactRepository } from '../db/repositories/artifact-repository';
+import { ArtifactRegistrar } from '../artifacts/artifact-registrar';
 import type { TaskSessionRegistry } from '../conversation/task-session-registry';
 import type { DatabaseConnection } from '../db/client';
 import { ApprovalRepository } from '../db/repositories/approval-repository';
@@ -21,6 +23,8 @@ import type { UploadProfileRepository } from '../db/repositories/upload-profile-
 import type { UploadRepository } from '../db/repositories/upload-repository';
 import { VerificationRepository } from '../db/repositories/verification-repository';
 import { ScriptRunService } from '../execution/script-run-service';
+import { ExecutionInputs } from '../execution/execution-inputs';
+import { ExecutionReuseRepository } from '../db/repositories/execution-reuse-repository';
 import { RuntimeProvisioner } from '../execution/runtime-provisioner';
 import { RuntimeEnvironmentRepository } from '../db/repositories/runtime-environment-repository';
 import type { CodeWorkspace } from '../generation/code-workspace';
@@ -50,6 +54,10 @@ export interface VerificationStackDependencies {
   readonly fixtureService: Pick<FixtureService, 'rebuild'>;
   readonly generation: Pick<GenerationService, 'retry'>;
   readonly registry: () => TaskSessionRegistry;
+  /** FEAT-109 limits; defaults when absent. */
+  readonly artifactConfig?: ArtifactConfig;
+  /** FEAT-104's workbook inflation budget, reused by the formula scan. */
+  readonly maxInflatedBytes?: number;
 }
 
 /**
@@ -61,6 +69,11 @@ export function createVerificationStack(deps: VerificationStackDependencies) {
   const verifications = new VerificationRepository(connection);
   const approvals = new ApprovalRepository(connection);
   const scriptRuns = new ScriptRunRepository(connection);
+  const artifacts = new ArtifactRepository(connection);
+  const reuse = new ExecutionReuseRepository(connection);
+  const inputs = new ExecutionInputs(deps.executions, reuse, deps.uploads);
+  const artifactConfig = deps.artifactConfig ?? getArtifactConfig({});
+  const registrar = new ArtifactRegistrar({ paths, artifacts, logger, maxArtifactsPerRun: artifactConfig.maxArtifactsPerRun, scan: { formulaScanRows: artifactConfig.formulaScanRows, maxInflatedBytes: deps.maxInflatedBytes ?? UPLOAD_LIMIT_DEFAULTS.maxInflatedBytes } });
   const publish = (executionId: number, event: UnnumberedConversationEvent) => deps.registry().publish(executionId, event);
   const track = (executionId: number, job: Parameters<TaskSessionRegistry['track']>[1]) => deps.registry().track(executionId, job);
   const state = new ExecutionStateWriter(deps.executions, publish);
@@ -69,13 +82,13 @@ export function createVerificationStack(deps: VerificationStackDependencies) {
   const probe = new UvRuntimeProbe({ runner: deps.runner, workingDir: paths.verifyEnvDir, checkerVersions: async (signal) => { await verifyEnv.ensureVerifyEnvironment(signal); return verifyEnv.probeCheckerVersions(signal); } });
   const checkers = { ensureVerifyEnvironment: (signal: AbortSignal) => verifyEnv.ensureVerifyEnvironment(signal), runTool: verifyEnv.runTool.bind(verifyEnv), bandit: { configPath: verifyEnv.banditConfigPath, iniPath: verifyEnv.banditIniPath } };
   const pass = { integrity: { project: (id: number) => deps.workspace.project(id), fixtures: deps.fixtureService }, checkers, runner: deps.runner, limits: { lintTimeoutMs: config.lintTimeoutMs, securityTimeoutMs: config.securityTimeoutMs, testRunTimeoutMs: deps.generationConfig.testRunTimeoutMs } };
-  const verification = new VerificationService({ executions: deps.executions, versions: deps.versions, verifications, fixtures: new SyntheticFixtureRepository(connection), uploads: deps.uploads, profiles: deps.profiles, probe, pass, paths, state, publish, track, logger, timeoutMs: config.verificationTimeoutMs });
-  const intents = new RunIntentService({ executions: deps.executions, versions: deps.versions, verifications, uploads: deps.uploads, profiles: deps.profiles });
-  const runs = new ScriptRunService({ executions: deps.executions, versions: deps.versions, uploads: deps.uploads, scriptRuns, runner: deps.runner, probe, provisioner, project: (id) => deps.workspace.project(id), paths, state, publish, track, logger, timeoutMs: config.scriptRunTimeoutMs, maxOutputBytes: config.maxRunOutputBytes });
+  const verification = new VerificationService({ executions: deps.executions, versions: deps.versions, verifications, fixtures: new SyntheticFixtureRepository(connection), uploads: deps.uploads, inputs, reuse, profiles: deps.profiles, probe, pass, paths, state, publish, track, logger, timeoutMs: config.verificationTimeoutMs });
+  const intents = new RunIntentService({ executions: deps.executions, versions: deps.versions, verifications, uploads: deps.uploads, inputResolver: inputs, reuse, profiles: deps.profiles });
+  const runs = new ScriptRunService({ executions: deps.executions, versions: deps.versions, uploads: deps.uploads, inputs, scriptRuns, runner: deps.runner, probe, provisioner, project: (id) => deps.workspace.project(id), paths, state, publish, track, logger, timeoutMs: config.scriptRunTimeoutMs, maxOutputBytes: config.maxRunOutputBytes, registrar, artifacts });
   const approval = new ApprovalService({ executions: deps.executions, approvals, intents, probe, state, publish, assertCapacity: () => deps.registry().assertCapacity(), onApproved: (id) => { runs.start(id); }, reverify: (id) => { verification.start(id); }, logger });
-  const review = new ReviewService({ executions: deps.executions, state, publish, retry: (id, feedback) => deps.generation.retry(id, feedback, 'feedback'), logger, maxFeedbackChars: config.maxReviewFeedbackChars });
+  const review = new ReviewService({ executions: deps.executions, reuse, state, publish, retry: (id, feedback) => deps.generation.retry(id, feedback, 'feedback'), logger, maxFeedbackChars: config.maxReviewFeedbackChars });
   return {
-    verification, intents, approval, runs, review, verifications, scriptRuns,
+    verification, intents, approval, runs, review, verifications, scriptRuns, artifacts,
     /** The registry's hand-off: a finalized generation starts its verification pass. */
     onHandOff: (executionId: number) => {
       try { verification.start(executionId); }

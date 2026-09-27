@@ -49,6 +49,7 @@ describe('execution state machine', () => {
   });
 
   it('permits exactly the FEAT-107 gate edges', () => {
+    expect(TRANSITIONS.pending).toEqual(['generating', 'verifying', 'failed', 'aborted']);
     expect(TRANSITIONS.generating).toEqual(['waiting', 'verifying', 'completed', 'failed', 'aborted']);
     expect(TRANSITIONS.verifying).toEqual(['awaiting_approval', 'failed', 'aborted']);
     expect(TRANSITIONS.awaiting_approval).toEqual(['executing', 'verifying', 'aborted']);

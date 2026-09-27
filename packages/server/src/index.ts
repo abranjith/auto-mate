@@ -1,6 +1,8 @@
 import { createApp } from './app';
 import { getAppPaths, ensureAppDirectories } from './config/app-paths';
-import { getGenerationConfig, getIngestionConfig, getServerConfig, getVerificationConfig, getRuntimeConfig } from './config/env';
+import { getArtifactConfig, getGenerationConfig, getIngestionConfig, getServerConfig, getVerificationConfig, getRuntimeConfig } from './config/env';
+import { ArtifactService } from './artifacts/artifact-service';
+import { ArtifactSweeper } from './artifacts/artifact-sweeper';
 import { openDatabase } from './db/client';
 import { migrateDatabase } from './db/migrate';
 import { AppMetaRepository } from './db/repositories/app-meta-repository';
@@ -10,6 +12,8 @@ import { AgentConfigStore, createAgentProvider } from './agent/index';
 import { ConversationEventRepository } from './db/repositories/conversation-event-repository';
 import { ExecutionRepository } from './db/repositories/execution-repository';
 import { TaskRepository } from './db/repositories/task-repository';
+import { HistoryRepository } from './db/repositories/history-repository';
+import { RetentionSweeper, TaskDeletionService } from './history/index';
 import { TaskSessionRegistry } from './conversation/index';
 import { attachExecutionSocket } from './ws/index';
 import { UploadProfileRepository } from './db/repositories/upload-profile-repository';
@@ -21,6 +25,9 @@ import { ClarificationService, DisclosureRunStrategy, DisclosureService, Preflig
 import { createGenerationStack } from './generation/index';
 import { MAX_CAPTURE_BYTES, UvPythonRunner, ProcessRunner, RuntimeProvisioner } from './execution/index';
 import { RuntimeEnvironmentRepository } from './db/repositories/runtime-environment-repository';
+import { TemplateRepository } from './db/repositories/template-repository';
+import { ExecutionReuseRepository } from './db/repositories/execution-reuse-repository';
+import { SaveService, CompatibilityService, ReuseRunService, RepairService } from './reuse/index';
 import { createVerificationStack } from './verification/index';
 import {
   ProfileService,
@@ -34,6 +41,7 @@ const ingestionLimits = getIngestionConfig();
 const generationConfig = getGenerationConfig();
 const verificationConfig = getVerificationConfig();
 const runtimeConfig = getRuntimeConfig();
+const artifactConfig = getArtifactConfig();
 const logger = createLogger(config.logLevel);
 
 /** Start the local preview. @returns Resolves once listening; opens storage and a loopback listener after preflight. */
@@ -60,6 +68,10 @@ async function start(): Promise<void> {
     const executions = new ExecutionRepository(connection);
     const events = new ConversationEventRepository(connection);
     const tasks = new TaskRepository(connection);
+    const fileStore = new UploadFileStore(paths);
+    // Removes `artifacts/<taskId>/` left by an interrupted deletion; TaskDeletionService owns the normal path.
+    const artifactSweeper = new ArtifactSweeper({ paths, taskExists: (taskId) => Boolean(tasks.getById(taskId)), logger });
+    const history = new HistoryRepository(connection);
     const provider = createAgentProvider({ paths, configStore, logger });
     const uploadRows = new UploadRepository(connection);
     const uploadProfiles = new UploadProfileRepository(connection);
@@ -108,7 +120,10 @@ async function start(): Promise<void> {
       versions: generation.versions, uploads: uploadRows, profiles: uploadProfiles,
       workspace: generation.workspace, fixtureService: generation.fixtureService, generation: generation.service,
       registry: () => registryRef.current!,
+      artifactConfig, maxInflatedBytes: ingestionLimits.maxInflatedBytes,
     });
+    // FEAT-109: the read model behind the artifact routes. No provider session is opened here either.
+    const artifactService = new ArtifactService({ paths, artifacts: verification.artifacts, scriptRuns: verification.scriptRuns, executions, tasks, config: artifactConfig, maxInflatedBytes: ingestionLimits.maxInflatedBytes });
     const strategy = generation.strategy;
     const registry = new TaskSessionRegistry({
       provider,
@@ -133,7 +148,7 @@ async function start(): Promise<void> {
     });
     registryRef.current = registry;
     registry.reconcileOnStartup();
-    const fileStore = new UploadFileStore(paths);
+    const deletion = new TaskDeletionService({ paths, tasks, executions, registry, logger });
     const uploads = new UploadService({
       uploads: uploadRows,
       profiles: uploadProfiles,
@@ -142,6 +157,12 @@ async function start(): Promise<void> {
       limits: ingestionLimits,
       logger,
     });
+    const templates = new TemplateRepository(connection);
+    const reuse = new ExecutionReuseRepository(connection);
+    const compatibility = new CompatibilityService({ templates, reuse, executions, uploads: uploadRows, profiles: uploadProfiles, runtime: environments, logger });
+    const save = new SaveService({ connection, executions, tasks, versions: generation.versions, approvals: new (await import('./db/repositories/approval-repository')).ApprovalRepository(connection), verifications: verification.verifications, profiles: uploadProfiles, clarifications, events, templates, reuse, inputs: generation.inputs, logger });
+    const runs = new ReuseRunService({ connection, tasks, executions, templates, reuse, versions: generation.versions, uploads, inputs: generation.inputs, fixtures: generation.fixtureService, workspace: generation.workspace, verification: verification.verification, compatibility, registry, logger });
+    const repairs = new RepairService({ connection, tasks, executions, templates, reuse, uploads: uploadRows, profiles: uploadProfiles, uploadService: uploads, disclosure, consents, preflight, compatibility, registry, logger });
     const sweeper = new StagedUploadSweeper({
       uploads: uploadRows,
       tasks,
@@ -152,6 +173,11 @@ async function start(): Promise<void> {
     // Orphan cleanup runs before the listener binds, alongside reconciliation, then hourly.
     await sweeper.sweep();
     sweeper.start();
+    // FEAT-109: artifact directories whose task is gone. No age-based purge exists.
+    await artifactSweeper.sweepOrphanArtifactDirectories();
+    const retention = new RetentionSweeper({ paths, history, consents, ttlHours: ingestionLimits.stagedUploadTtlHours, logger });
+    await retention.sweep();
+    retention.start();
     const app = createApp({
       logger,
       dataRoot: paths.root,
@@ -166,6 +192,9 @@ async function start(): Promise<void> {
       generation: { service: generation.service },
       verification: { verification: verification.verification, intents: verification.intents, approval: verification.approval, runs: verification.runs, review: verification.review, assertCapacity: () => registry.assertCapacity() },
       runtime: { provisioner },
+      artifacts: { artifacts: artifactService, root: paths.root, maxTablePageRows: artifactConfig.maxTablePageRows },
+      history: { history, tasks, deletion, config },
+      templates: { templates, reuse, history, executions, save, compatibility, runs, repairs },
     });
     const server = app.listen(config.port, config.host, () =>
       logger.info(
@@ -188,6 +217,7 @@ async function start(): Promise<void> {
     });
     const shutdown = () => {
       sweeper.stop();
+      retention.stop();
       void registry.drain(5_000).finally(() => {
         detachSockets();
         server.close(() => {

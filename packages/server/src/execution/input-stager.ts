@@ -19,6 +19,7 @@ import { copyFile, mkdir, rm } from 'node:fs/promises';
 import { InputCopyMismatchError } from '@automate/core';
 import { resolveWithin, type AppPaths } from '../config/app-paths';
 import type { UploadRow } from '../db/repositories/upload-repository';
+import { resolveGeneratedInputs, type ResolvedInput } from './execution-inputs';
 import type { StagedInput } from '../db/repositories/script-run-repository';
 
 /** Stream a file through SHA-256. @returns The lowercase hex digest. */
@@ -36,17 +37,18 @@ export async function sha256File(file: string): Promise<string> {
  * @returns Exactly which bytes were staged, by digest.
  * @throws InputCopyMismatchError naming the file by position, never by name, when a copy's digest differs.
  */
-export async function stageInputs(paths: AppPaths, uploads: readonly UploadRow[], inputDir: string): Promise<StagedInput[]> {
+export async function stageInputs(paths: AppPaths, uploads: readonly ResolvedInput[] | readonly UploadRow[], inputDir: string): Promise<StagedInput[]> {
   await rm(inputDir, { recursive: true, force: true });
   await mkdir(inputDir, { recursive: true });
   const staged: StagedInput[] = [];
-  for (const [index, upload] of uploads.entries()) {
+  const resolved = uploads.length && 'upload' in uploads[0]! ? uploads as readonly ResolvedInput[] : resolveGeneratedInputs(uploads as readonly UploadRow[]);
+  for (const [index, { upload, inputName }] of resolved.entries()) {
     const source = resolveWithin(paths.uploadsDir, resolveWithin(paths.root, ...upload.filePath.split('/')));
-    const target = resolveWithin(inputDir, upload.storedFilename);
+    const target = resolveWithin(inputDir, inputName);
     await copyFile(source, target);
     const digest = await sha256File(target);
     if (digest !== upload.sha256) throw new InputCopyMismatchError(index + 1);
-    staged.push({ uploadId: upload.id, storedFilename: upload.storedFilename, sha256: digest, byteSize: upload.byteSize });
+    staged.push({ uploadId: upload.id, storedFilename: upload.storedFilename, inputName, sha256: digest, byteSize: upload.byteSize });
   }
   return staged;
 }

@@ -173,18 +173,19 @@ describe('ScriptRunRepository.openGated', () => {
 describe('ExecutionRepository (FEAT-107)', () => {
   it('creates a feedback retry that leaves the original untouched', () => {
     const s = setup();
+    s.executions.markSettled(s.execution.id, { status: 'failed' });
     const before = s.executions.getById(s.execution.id);
     const retry = s.executions.createFeedbackRetry(s.execution.id, 'The totals double-count refunds.');
     expect(retry).toMatchObject({ trigger: 'feedback', retryOfExecutionId: s.execution.id, guidance: 'The totals double-count refunds.', status: 'pending' });
     expect(s.executions.getById(s.execution.id)).toEqual(before);
   });
-  it('marks a review and lists parked executions without waiting', () => {
+  it('marks a review and lists all parked executions, including waiting', () => {
     const s = setup();
     atGate(s);
     const second = s.executions.create(s.execution.taskId);
     s.executions.markStarted(second.id);
     s.executions.transitionStatus(second.id, 'waiting');
-    expect(s.executions.listParked().map(({ id }) => id)).toEqual([s.execution.id]);
+    expect(s.executions.listParked().map(({ id }) => id)).toEqual([second.id, s.execution.id]);
     expect(s.executions.listActive().map(({ id }) => id)).toEqual([second.id]);
     s.executions.transitionStatus(s.execution.id, 'executing');
     s.executions.transitionStatus(s.execution.id, 'awaiting_review');

@@ -49,13 +49,14 @@ describe('conversation contract', () => {
       { seq: 18, type: 'run_finished', scriptRunId: 1, status: 'succeeded', exitCode: 0, durationMs: 1200, declaredOutputCount: 2, producedOutputCount: 2, outputTruncated: false, at },
       { seq: 19, type: 'review_decided', verdict: 'rejected', retryExecutionId: 2, at },
       { seq: 20, type: 'runtime_prepared', kind: 'script', pythonVersion: '3.13.1', packageCount: 8, at },
+      { seq: 21, type: 'artifacts_registered', scriptRunId: 1, artifactCount: 4, undeclaredCount: 1, unregisteredOutputCount: 0, totalBytes: 2048, at },
     ];
     for (const event of events) {
       expect(Value.Check(ConversationEventSchema, event)).toBe(true);
       expect(JSON.parse(JSON.stringify(event))).toEqual(event);
     }
     expectTypeOf<ConversationEvent['type']>().toEqualTypeOf<
-      AgentEvent['type'] | 'user_prompt' | 'state_changed' | 'clarification_requested' | 'clarification_answered' | 'disclosure_sent' | 'code_version_sealed' | 'test_run_finished' | 'generation_settled' | 'verification_finished' | 'approval_decided' | 'run_finished' | 'review_decided' | 'runtime_prepared'
+      AgentEvent['type'] | 'user_prompt' | 'state_changed' | 'clarification_requested' | 'clarification_answered' | 'disclosure_sent' | 'code_version_sealed' | 'test_run_finished' | 'generation_settled' | 'verification_finished' | 'approval_decided' | 'run_finished' | 'review_decided' | 'runtime_prepared' | 'artifacts_registered' | 'task_saved' | 'reuse_started'
     >();
   });
 

@@ -359,19 +359,32 @@ sandbox allow-scripts
 
 ## 8. State Tracking
 
-- [ ] TASK-001: Artifact type policy, safety constants, outcome wording, and typed errors in `packages/core`
-- [ ] TASK-002: Persistence — `artifact`, the `conversation_event_kind` lookup table, and migration `0007`
-- [ ] TASK-003: The registrar — reconcile, move, digest, scan, record
-- [ ] TASK-004: The byte routes — type, disposition, CSP, range, ETag
-- [ ] TASK-005: Tabular and text previews, read server-side and paged
-- [ ] TASK-006: Download all — a store-only ZIP, streamed
-- [ ] TASK-007: The outputs section, and retiring FEAT-107's placeholder
-- [ ] TASK-008: The sandboxed frame — where generated HTML actually renders
-- [ ] TASK-009: The trusted renderers — table, image, markdown, text
-- [ ] TASK-010: When there is nothing to show — failure messages that lead somewhere
-- [ ] TASK-011: The output contract — self-contained files, told to the agent
-- [ ] TASK-012: Deletion, retention, and the orphan sweep
-- [ ] TASK-013: End-to-end proof and the hostile-artifact corpus
-- [ ] TASK-014: Documentation, and the two claims this feature must not overstate
+- [x] TASK-001: Artifact type policy, safety constants, outcome wording, and typed errors in `packages/core`
+- [x] TASK-002: Persistence — `artifact`, the `conversation_event_kind` lookup table, and migration `0007`
+- [x] TASK-003: The registrar — reconcile, move, digest, scan, record
+- [x] TASK-004: The byte routes — type, disposition, CSP, range, ETag
+- [x] TASK-005: Tabular and text previews, read server-side and paged
+- [x] TASK-006: Download all — a store-only ZIP, streamed
+- [x] TASK-007: The outputs section, and retiring FEAT-107's placeholder
+- [x] TASK-008: The sandboxed frame — where generated HTML actually renders
+- [x] TASK-009: The trusted renderers — table, image, markdown, text
+- [x] TASK-010: When there is nothing to show — failure messages that lead somewhere
+- [x] TASK-011: The output contract — self-contained files, told to the agent
+- [x] TASK-012: Deletion, retention, and the orphan sweep
+- [x] TASK-013: End-to-end proof and the hostile-artifact corpus
+- [x] TASK-014: Documentation, and the two claims this feature must not overstate
 
 Legend: [ ] Not started | [/] In progress | [x] Completed
+
+### Implementation notes (2026-09-25)
+
+- DEVIATION: tests live under each package's `src/__tests__/`, mirroring the source tree (memory's testing rule), not beside the modules as §3 lists.
+- DEVIATION: `ARTIFACT_TYPES` is re-exported from `contracts/generation-api.ts`, where FEAT-107 already defined it, rather than defined a second time in `artifact-type.ts`.
+- DEVIATION: `registerRunOutputs` takes the run's ids, output directory, and manifest text rather than only `scriptRunId`, because it runs before `settle` writes `manifest_json`. Files are digested in place and then moved in one synchronous commit with explicitly allocated ids, so cancelling before the commit leaves no row and no moved file; a failed insert moves the files back.
+- ADDED: `artifacts/artifact-service.ts` holds the read model the routes call (no logic in handlers); `TaskRepository.delete` did not exist and was added with injected file sweeps.
+- DEVIATION: the system-`unzip` checks run only with `AUTOMATE_LIVE_ZIP=1`, keeping `pnpm test` process-free; an independent in-test ZIP parser covers every run. The live check passed on Windows during implementation.
+- NOTE: hostile manifest names (`..`, NUL, CRLF, 500 characters) make FEAT-107's parser refuse the whole manifest, so those files register as undeclared under their ids; names a filesystem accepts are stored verbatim as labels.
+- NOTE: the preview route returns the head of `text`/`json` past the cap with `truncated`; `ARTIFACT_TOO_LARGE_TO_PREVIEW` is raised only for Markdown past the cap.
+- NOTE: `plotly-inline.html` is real Plotly 7.1.0 `write_html(include_plotlyjs=True)` output with its ~4.8 MB bundled plotly.js body trimmed; `plotly-cdn.html` is untrimmed.
+- NOTE: the table heap guard bounds "well under the file size", not "the page size": FEAT-104's `openCsv` streams the whole file once to confirm its encoding (queued in TODO.md).
+- NOT PERFORMED: the manual in-browser verifications in TASK-008 and TASK-011 (report content visible, CDN/`fetch` blocked by CSP, empty `document.cookie`, Plotly chart visible in the frame). Queued in TODO.md for automation.

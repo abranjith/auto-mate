@@ -93,6 +93,7 @@ export const RunIntentSchema = Type.Object({
   tests: Type.Object({ total: Nullable(Count), passed: Nullable(Count), fixtureRowCount: Nullable(Count) }),
   runtime: Type.Object({ fingerprint: Digest, description: Type.String(), packages: Type.Array(RuntimePackageSchema) }),
   caveats: Type.Array(Type.String()),
+  reuse: Type.Optional(Nullable(Type.Object({ templateName: Type.String(), revisionNumber: Id, revisionDigestShort: Type.String(), compatibility: Type.Object({ status: Type.Union([Type.Literal('compatible'), Type.Literal('compatible_with_warnings'), Type.Literal('incompatible')]), advisories: Type.Array(Type.String()) }), runtimeChanges: Type.Array(Type.String()) }))),
 });
 /** `GET /api/executions/:id/intent`. */
 export const RunIntentResponseSchema = Type.Object({ intent: RunIntentSchema, intentDigest: Digest });
@@ -135,7 +136,7 @@ export const ScriptRunSchema = Type.Object({
 
 /** `POST /api/executions/:id/review`. Feedback is required, and non-blank, for a rejection. */
 export const ReviewRequestSchema = Type.Object({ verdict: literals(REVIEW_VERDICTS), feedback: Type.Optional(Type.String({ maxLength: MAX_REVIEW_FEEDBACK_CHARS })) }, Closed);
-export const ReviewResponseSchema = Type.Object({ status: Type.String(), retryExecutionId: Nullable(Id) });
+export const ReviewResponseSchema = Type.Object({ status: Type.String(), retryExecutionId: Nullable(Id), nextSteps: Type.Optional(Type.Array(Type.Union([Type.Literal('repair'), Type.Literal('replay')]))) });
 
 export type RuntimeDetailPayload = Static<typeof RuntimeDetailSchema>;
 export type VerificationFinding = Static<typeof VerificationFindingSchema>;

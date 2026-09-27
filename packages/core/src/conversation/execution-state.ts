@@ -39,6 +39,19 @@ export const PARKED_STATUSES = ['waiting', 'awaiting_approval', 'awaiting_review
  */
 export const RESTART_SURVIVING_STATUSES = ['awaiting_approval', 'awaiting_review'] as const satisfies readonly ExecutionStatus[];
 
+/** Runs whose in-memory work cannot resume after a server restart. */
+export const INTERRUPTED_ON_RESTART = ['pending', 'generating', 'verifying', 'executing', 'waiting'] as const satisfies readonly ExecutionStatus[];
+/** Database-backed gates that remain actionable after a restart. */
+export const SURVIVES_RESTART = RESTART_SURVIVING_STATUSES;
+/** The explanation stored when reconciliation interrupts a run. */
+export const INTERRUPTION_MESSAGES: Readonly<Record<(typeof INTERRUPTED_ON_RESTART)[number], string>> = {
+  pending: 'This run was interrupted before it started. Run it again to retry.',
+  generating: 'This run was interrupted while writing code. Run it again to retry.',
+  verifying: 'This run was interrupted while checking the code. Run it again to retry.',
+  executing: 'This run was interrupted while running on your file. Run it again to retry.',
+  waiting: "This run was interrupted while it waited for your answer. Run it again — your earlier answers are kept, so you won't be asked twice.",
+};
+
 /**
  * Explicit transition graph; terminal rows are deliberately empty.
  * FEAT-107 filled the verifying/executing rows FEAT-103 left for it and added
@@ -47,7 +60,8 @@ export const RESTART_SURVIVING_STATUSES = ['awaiting_approval', 'awaiting_review
 export const TRANSITIONS: Readonly<
   Record<ExecutionStatus, readonly ExecutionStatus[]>
 > = {
-  pending: ['generating', 'failed', 'aborted'],
+  // FEAT-111: a saved task's run has no generation phase.
+  pending: ['generating', 'verifying', 'failed', 'aborted'],
   generating: ['waiting', 'verifying', 'completed', 'failed', 'aborted'],
   verifying: ['awaiting_approval', 'failed', 'aborted'],
   // The `verifying` edge is re-verification after the runtime changed.

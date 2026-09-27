@@ -53,7 +53,7 @@ describe('run_tests', () => {
     const version = h.repos.versions.listByExecution(h.execution.id)[0]!;
     expect(request.args).toEqual(PYTEST_ARGS);
     expect(request.workingDir).toBe(h.workspace.attemptDir(version));
-    expect(request.env).toEqual({ AUTOMATE_INPUT_DIR: h.fixtureService.fixturesDir(h.execution.id), AUTOMATE_OUTPUT_DIR: h.workspace.outputDir(version) });
+    expect(request.env).toMatchObject({ AUTOMATE_INPUT_DIR: h.fixtureService.fixturesDir(h.execution.id), AUTOMATE_OUTPUT_DIR: h.workspace.outputDir(version), AUTOMATE_AS_OF_DATE: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), AUTOMATE_AS_OF: expect.any(String), AUTOMATE_TIMEZONE: expect.any(String) });
     expect(readFileSync(path.join(request.workingDir, 'main.py'), 'utf8')).toContain('pandas');
   });
 

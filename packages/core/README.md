@@ -6,6 +6,10 @@ From the repository root, run `pnpm install`, then `pnpm --filter @automate/core
 
 Key exports are `HealthResponseSchema`, `ApiErrorSchema`, the corresponding TypeScript types, `AutoMateError`, and the `ValidationError`, `ConfigurationError`, and `RepositoryError` subclasses. `AutoMateError.toJSON()` returns the public error envelope without private details or stack traces.
 
+## Saved tasks and reruns
+
+`src/reuse/` holds the browser-safe FEAT-111 logic: `buildInputContract` records input shape and answered decisions without sample rows; `checkCompatibility` compares a new profile with that contract; `validateMapping` and `renderMappingInstructions` turn repair choices into reviewed prompt text; `resolveAsOf` pins a run's business date. `contracts/template-api.ts` defines the saved-task routes and responses. Compatibility is a structural check, not a claim that a column has the same meaning. See [Save and rerun](../../docs/features/save-and-rerun.md).
+
 ## Agent provider seam
 
 `packages/core/src/agent/` defines the contract between Auto-Mate and any AI coding agent SDK, and holds two invariants: **no provider SDK type may be imported here**, and **no `AgentEvent` member may be added without a named consumer in a later feature**.
@@ -65,3 +69,19 @@ Shared TypeBox contracts cover previews, consents, receipts, clarification batch
 ## Python runtime
 
 `packages/core/src/execution/` holds the browser-safe FEAT-108 runtime contracts and provisional D14 limits. `runtime-environment.ts` describes stored preparation status, limit breaches, and platform capabilities. `describeRuntimeCapabilities(platform)` is the single source for the POSIX memory limit and Windows memory gap shown by the server and Settings. `contracts/runtime-api.ts` validates runtime status and preparation responses. `errors/runtime-errors.ts` adds six typed `RUNTIME_*`, `LAUNCHER_INTEGRITY`, `SCRIPT_LIMIT_EXCEEDED`, and `NON_PYTHON_ENTRYPOINT` codes. `PythonRunner` remains the same three-method seam; the server supplies its locked implementation. See [Python Runtime Execution](../../docs/features/python-runtime-execution.md).
+
+## Results and outputs
+
+`packages/core/src/artifacts/` is the single source for what an output file is and how it is shown (FEAT-109). Browser-safe, like the rest of the package.
+
+- `ARTIFACT_TYPE_POLICY` maps each of the nine artifact types (`ARTIFACT_TYPES`, the same list FEAT-107's `contract_outputs` check enforces) to its extension allowlist, one MIME type per extension, its `RenderMode`, and whether it has a text preview. `image` admits png, jpeg, webp, and gif, and never svg. `resolveArtifactType(declaredType, filename)`, `mimeTypeFor`, and `renderModeFor` are the only ways a type, a MIME type, or a render mode is decided; nothing sniffs content.
+- `ARTIFACT_CSP` and `SANDBOX_ATTRIBUTE` are the preview's containment, each defined once. `describeArtifactSafety(renderMode)` is the only place the preview caveat is worded; the UI renders it verbatim. `sanitizeDownloadFilename` and `buildContentDisposition` turn a model-authored name into a safe download name with an RFC 5987 form. `hasFormulaPrefix` and `FORMULA_PREFIXES` drive the formula count, which is information, not protection.
+- `describeRunOutcome(run, artifacts)` is plan §6's "failure messages that lead somewhere" as a total function: every status, limit, manifest, and count yields a headline, an optional `describeLimitBreach` sentence, a detail, and next steps that each name a control. `describeDiscrepancies` words declared-versus-written-versus-kept differences.
+- `artifacts/limits.ts` holds the six provisional limits; `contracts/artifact-api.ts` the TypeBox schemas for every artifact endpoint; `errors/artifact-errors.ts` the seven artifact error codes.
+- `OUTPUT_CONTRACT_RULES` (in `generation/code-contract.ts`) is the self-contained-output text the code contract gives the agent. `CONVERSATION_EVENT_KINDS` lists every transcript kind with its owner and the feature that added it; migration `0007` seeds the `conversation_event_kind` table from it.
+
+See [Results, Outputs, and Downloads](../../docs/features/results-outputs-downloads.md).
+
+## Execution history
+
+`packages/core/src/history/` defines the four History groups, page limits, plain-English trigger and run wording, and the restart partition. `describeRunState` is the single source for labels used by the list and run record. `INTERRUPTED_ON_RESTART` includes `waiting`; `SURVIVES_RESTART` contains the approval and review gates. `contracts/history-api.ts` validates list, timeline, record, counts, and deletion responses, while `TaskHasOpenRunError` names an existing open run. These contracts use no Node built-ins. See [Execution History](../../docs/features/execution-history.md).

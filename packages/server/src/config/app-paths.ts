@@ -28,6 +28,15 @@ export interface AppPaths {
   sessionDirFor(executionId: string): string;
   /** Resolve a task's upload directory, `uploads/<taskId>/`, guarded against traversal (FEAT-104). */
   uploadsDirForTask(taskId: number): string;
+  /** A task's artifact directory, `artifacts/<taskId>/`, guarded against traversal (FEAT-109). */
+  taskArtifactsDir(taskId: number): string;
+  /** One artifact's file, `artifacts/<taskId>/<artifactId><extension>`. The id is the name; a model-authored filename never is (FEAT-109). */
+  artifactFile(taskId: number, artifactId: number, extension: string): string;
+}
+
+function positiveId(value: number, what: string): number {
+  if (!Number.isSafeInteger(value) || value < 1) throw new ValidationError(`The ${what} id must be a positive integer.`);
+  return value;
 }
 
 /** Resolve the configured data root and all durable child directories. @param home Optional root override. @returns Absolute paths for application storage. */
@@ -52,6 +61,11 @@ export function getAppPaths(home = process.env.AUTOMATE_HOME): AppPaths {
     uploadsDirForTask: (taskId: number) => {
       if (!Number.isSafeInteger(taskId) || taskId < 1) throw new ValidationError('The task id must be a positive integer.');
       return resolveWithin(uploadsDir, String(taskId));
+    },
+    taskArtifactsDir: (taskId: number) => resolveWithin(path.join(root, 'artifacts'), String(positiveId(taskId, 'task'))),
+    artifactFile: (taskId: number, artifactId: number, extension: string) => {
+      if (!/^\.[a-z0-9]{1,8}$/.test(extension)) throw new ValidationError('An artifact extension must be a short lowercase extension such as .csv.');
+      return resolveWithin(path.join(root, 'artifacts'), String(positiveId(taskId, 'task')), `${positiveId(artifactId, 'artifact')}${extension}`);
     },
   };
 }

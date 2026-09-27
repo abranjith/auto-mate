@@ -1,4 +1,6 @@
 import { sql } from 'drizzle-orm';
+import { INTERRUPTED_ON_RESTART, PARKED_STATUSES } from '@automate/core';
+import { statusLiterals } from './status-sql';
 import {
   check,
   index,
@@ -72,6 +74,11 @@ export const execution = sqliteTable(
     reviewFeedback: text('review_feedback'),
     /** When a person accepted or rejected the result (FEAT-107). */
     reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+    /** Null only for executions created before FEAT-111. */
+    asOfAt: integer('as_of_at', { mode: 'timestamp' }),
+    asOfDate: text('as_of_date'),
+    asOfTimezone: text('as_of_timezone'),
+    asOfSource: text('as_of_source'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -89,12 +96,118 @@ export const execution = sqliteTable(
     index('execution_active')
       .on(table.status)
       .where(
-        sql`${table.status} in ('pending','generating','verifying','executing','waiting')`,
+        sql`${table.status} in (${sql.raw(statusLiterals(INTERRUPTED_ON_RESTART))})`,
       ),
-    // Two questions, two indexes: `execution_active` is what a restart interrupts; `execution_parked` is what waits on a person and survives one.
-    index('execution_parked').on(table.status).where(sql`${table.status} in ('awaiting_approval','awaiting_review')`),
+    // Slot-free and restart-safe answer different questions: waiting is parked but interrupted.
+    index('execution_parked').on(table.status).where(sql`${table.status} in (${sql.raw(statusLiterals(PARKED_STATUSES))})`),
     index('execution_retry_of').on(table.retryOfExecutionId).where(sql`${table.retryOfExecutionId} is not null`),
   ],
+);
+
+/** Saved task metadata; code and its input contract live in immutable revisions. */
+export const taskTemplate = sqliteTable('task_template', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  check('task_template_name_check', sql`length(trim(${table.name})) between 1 and 120`),
+  check('task_template_description_check', sql`length(trim(${table.description})) > 0`),
+]);
+
+/** One accepted, append-only revision. Deleting its source execution only clears provenance. */
+export const templateRevision = sqliteTable('template_revision', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  templateId: integer('template_id').notNull().references(() => taskTemplate.id, { onDelete: 'cascade' }),
+  revisionNumber: integer('revision_number').notNull(),
+  sourceExecutionId: integer('source_execution_id').references(() => execution.id, { onDelete: 'set null' }),
+  contentDigest: text('content_digest').notNull(),
+  entrypoint: text('entrypoint').notNull(),
+  summary: text('summary').notNull(),
+  declaredInputs: text('declared_inputs').notNull(),
+  declaredOutputs: text('declared_outputs').notNull(),
+  inputContract: text('input_contract').notNull(),
+  contractDigest: text('contract_digest').notNull(),
+  runtimeFingerprint: text('runtime_fingerprint').notNull(),
+  runtimeDetail: text('runtime_detail').notNull(),
+  readsWallClock: integer('reads_wall_clock', { mode: 'boolean' }).notNull(),
+  note: text('note'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  check('template_revision_number_check', sql`${table.revisionNumber} >= 1`),
+  check('template_revision_digest_check', sql`length(${table.contentDigest}) = 64`),
+  uniqueIndex('template_revision_number').on(table.templateId, table.revisionNumber),
+  uniqueIndex('template_revision_source').on(table.sourceExecutionId).where(sql`${table.sourceExecutionId} is not null`),
+]);
+
+/** A revision owns copies of its files, independent of the source task. */
+export const templateRevisionFile = sqliteTable('template_revision_file', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  revisionId: integer('revision_id').notNull().references(() => templateRevision.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  byteSize: integer('byte_size').notNull(),
+  sha256: text('sha256').notNull(),
+}, (table) => [
+  check('template_revision_file_role_check', sql`${table.role} in ('script','test','support')`),
+  check('template_revision_file_size_check', sql`${table.byteSize} >= 0`),
+  uniqueIndex('template_revision_file_path').on(table.revisionId, table.path),
+]);
+
+/** A run's saved-task origin; snapshots survive deleting the saved task. */
+export const executionReuse = sqliteTable('execution_reuse', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  templateId: integer('template_id').references(() => taskTemplate.id, { onDelete: 'set null' }),
+  templateRevisionId: integer('template_revision_id').references(() => templateRevision.id, { onDelete: 'set null' }),
+  templateName: text('template_name').notNull(),
+  revisionNumber: integer('revision_number').notNull(),
+  revisionDigest: text('revision_digest').notNull(),
+  compatibilityReport: text('compatibility_report'),
+  compatibilityDigest: text('compatibility_digest'),
+  mapping: text('mapping'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  check('execution_reuse_kind_check', sql`${table.kind} in ('run','replay','repair')`),
+  check('execution_reuse_mapping_check', sql`${table.kind} = 'repair' or ${table.mapping} is null`),
+  check('execution_reuse_report_check', sql`(${table.compatibilityReport} is null) = (${table.compatibilityDigest} is null)`),
+  uniqueIndex('execution_reuse_execution').on(table.executionId),
+  index('execution_reuse_template').on(table.templateId).where(sql`${table.templateId} is not null`),
+]);
+
+/** Which new upload is presented to saved code under its original input name. */
+export const executionInputBinding = sqliteTable('execution_input_binding', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+  uploadId: integer('upload_id').notNull().references(() => upload.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(),
+  inputName: text('input_name').notNull(),
+}, (table) => [
+  check('execution_input_binding_position_check', sql`${table.position} >= 0`),
+  uniqueIndex('execution_input_binding_name').on(table.executionId, table.inputName),
+  uniqueIndex('execution_input_binding_upload').on(table.executionId, table.uploadId),
+  uniqueIndex('execution_input_binding_position').on(table.executionId, table.position),
+]);
+
+/**
+ * Every kind a transcript row may carry (FEAT-109). Replaces the CHECK that
+ * FEAT-105 through FEAT-108 each rebuilt `conversation_event` to widen: a new
+ * kind is now an INSERT, never a table rebuild. `owner` says whether the kind
+ * is one of FEAT-102's five `AgentEvent` members (`agent`) or application-owned
+ * (`app`); `added_in` is the feature that introduced it. Seeded by migration
+ * 0007 from `CONVERSATION_EVENT_KINDS`.
+ */
+export const conversationEventKind = sqliteTable(
+  'conversation_event_kind',
+  {
+    kind: text('kind').primaryKey().notNull(),
+    owner: text('owner').notNull(),
+    addedIn: text('added_in').notNull(),
+  },
+  (table) => [check('conversation_event_kind_owner_check', sql`${table.owner} in ('agent','app')`)],
 );
 
 /** Append-only transcript row, ordered independently for every execution. */
@@ -106,7 +219,8 @@ export const conversationEvent = sqliteTable(
       .notNull()
       .references(() => execution.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
-    kind: text('kind').notNull(),
+    /** FK with NO delete action: a kind is never deleted, and removing one that events use must fail loudly. */
+    kind: text('kind').notNull().references(() => conversationEventKind.kind),
     payload: text('payload').notNull(),
     at: text('at').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -114,10 +228,6 @@ export const conversationEvent = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [
-    check(
-      'conversation_event_kind_check',
-      sql`${table.kind} in ('user_prompt','state_changed','tool_started','tool_finished','assistant_text','turn_finished','failed','clarification_requested','clarification_answered','disclosure_sent','code_version_sealed','test_run_finished','generation_settled','verification_finished','approval_decided','run_finished','review_decided','runtime_prepared')`,
-    ),
     uniqueIndex('conversation_event_execution_seq').on(
       table.executionId,
       table.seq,
@@ -619,6 +729,10 @@ export const scriptRun = sqliteTable(
     limitBreached: text('limit_breached'),
     runtimeLockDigest: text('runtime_lock_digest'),
     durationMs: integer('duration_ms'),
+    /** FEAT-109: artifact rows registered from this run; NULL until registration runs. */
+    artifactCount: integer('artifact_count'),
+    /** FEAT-109: files left in `output/` that produced no artifact row (disallowed extension, failed move, or the per-run cap); NULL until registration runs. Non-zero is shown to the person. */
+    unregisteredOutputCount: integer('unregistered_output_count'),
     startedAt: integer('started_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
     settledAt: integer('settled_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
@@ -659,3 +773,48 @@ export const runtimeEnvironment = sqliteTable('runtime_environment', {
   index('runtime_environment_fingerprint').on(table.fingerprint),
   index('runtime_environment_ready').on(table.kind).where(sql`${table.status} = 'ready'`),
 ]);
+
+/**
+ * One registered output file (FEAT-109, D12). The file lives at `file_path`,
+ * RELATIVE to the data root: `artifacts/{task_id}/{id}{extension}`. The id is
+ * in the path; `filename` is model-authored text used only as a display label
+ * and download name, never as a path component. `mime_type` and `render_mode`
+ * are derived by the application from `type` + `extension` through
+ * `ARTIFACT_TYPE_POLICY`, never sniffed and never the model's word.
+ * `title`/`description` are untrusted and rendered as text. `content_scan`
+ * holds counts only, never a cell value. Rows go with their task, execution,
+ * or run by cascade; the file is removed by the artifact sweeper, because
+ * SQLite cascades do not touch the filesystem. No `saved` flag and no tags:
+ * the standalone library that would use them is deferred (D08).
+ */
+export const artifact = sqliteTable(
+  'artifact',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    executionId: integer('execution_id').notNull().references(() => execution.id, { onDelete: 'cascade' }),
+    taskId: integer('task_id').notNull().references(() => task.id, { onDelete: 'cascade' }),
+    scriptRunId: integer('script_run_id').notNull().references(() => scriptRun.id, { onDelete: 'cascade' }),
+    filename: text('filename').notNull(),
+    filePath: text('file_path').notNull(),
+    type: text('type').notNull(),
+    extension: text('extension').notNull(),
+    mimeType: text('mime_type').notNull(),
+    renderMode: text('render_mode').notNull(),
+    declared: integer('declared', { mode: 'boolean' }).notNull().default(true),
+    title: text('title'),
+    description: text('description'),
+    byteSize: integer('byte_size').notNull(),
+    sha256: text('sha256').notNull(),
+    contentScan: text('content_scan'),
+    registeredAt: integer('registered_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    check('artifact_type_check', sql`${table.type} in ('csv','xlsx','json','text','markdown','html','plotly-html','image','pdf')`),
+    check('artifact_render_mode_check', sql`${table.renderMode} in ('table','image','markdown','text','sandboxed_html','sandboxed_pdf','download_only')`),
+    check('artifact_byte_size_check', sql`${table.byteSize} >= 0`),
+    index('artifact_execution').on(table.executionId),
+    index('artifact_task').on(table.taskId),
+    uniqueIndex('artifact_run_filename').on(table.scriptRunId, table.filename),
+  ],
+);

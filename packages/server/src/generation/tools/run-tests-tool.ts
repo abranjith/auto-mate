@@ -36,6 +36,7 @@ import type { DisclosureTransmissionRepository } from '../../db/repositories/dis
 import type { GenerationRun, GenerationRuns } from '../generation-run';
 import { parsePytestReport, type PytestReport } from '../pytest-report';
 import { assertNotFinal, executionIdOf, sealedEvent, type GenerationToolDependencies } from './tool-context';
+import { executionAsOfEnvironment } from '../../execution/as-of-storage';
 
 /** pytest, quietly, with native tracebacks (the frame shape the diagnostic allowlist recognizes) and no cache directory. */
 export const PYTEST_ARGS = ['-m', 'pytest', '-q', '--tb=native', '-rfE', '-p', 'no:cacheprovider'] as const;
@@ -113,7 +114,7 @@ export class RunTestsExecutor {
     const attempt = this.deps.attempts.open({ executionId, codeVersionId: version.id, attempt: version.attempt, callId });
     const outputDir = this.deps.workspace.outputDir(version);
     let result: PythonRunResult;
-    try { result = await this.deps.runner.run({ executionId, workingDir: this.deps.workspace.attemptDir(version), args: PYTEST_ARGS, env: { AUTOMATE_INPUT_DIR: this.deps.fixturesDir(executionId), AUTOMATE_OUTPUT_DIR: outputDir }, timeoutMs: this.deps.testRunTimeoutMs ?? TEST_RUN_TIMEOUT_MS, signal: run.signal }); }
+    try { result = await this.deps.runner.run({ executionId, workingDir: this.deps.workspace.attemptDir(version), args: PYTEST_ARGS, env: { AUTOMATE_INPUT_DIR: this.deps.fixturesDir(executionId), AUTOMATE_OUTPUT_DIR: outputDir, ...executionAsOfEnvironment(this.deps.executions.getById(executionId)!) }, timeoutMs: this.deps.testRunTimeoutMs ?? TEST_RUN_TIMEOUT_MS, signal: run.signal }); }
     catch (cause) {
       this.deps.attempts.settle(attempt.id, { status: 'errored' });
       throw cause;

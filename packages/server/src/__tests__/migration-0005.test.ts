@@ -63,7 +63,7 @@ describe('migration 0005 (FEAT-107)', () => {
       expect(after.code_file).toEqual(before.code_file);
       expect(after.generation_attempt).toEqual(before.generation_attempt);
       expect(after.synthetic_fixture).toEqual(before.synthetic_fixture);
-      expect((after.execution as Record<string, unknown>[]).map(({ review_feedback, reviewed_at, ...rest }) => { expect(review_feedback).toBeNull(); expect(reviewed_at).toBeNull(); return rest; })).toEqual(before.execution);
+      expect((after.execution as Record<string, unknown>[]).map(({ review_feedback, reviewed_at, as_of_at, as_of_date, as_of_timezone, as_of_source, ...rest }) => { expect([review_feedback, reviewed_at, as_of_at, as_of_date, as_of_timezone, as_of_source]).toEqual([null, null, null, null, null, null]); return rest; })).toEqual(before.execution);
       const seqs = (connection.client.prepare('SELECT seq FROM conversation_event WHERE execution_id = 2 ORDER BY seq').all() as { seq: number }[]).map(({ seq }) => seq);
       expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       expect(connection.client.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
@@ -98,7 +98,7 @@ describe('migration 0005 (FEAT-107)', () => {
       expect(() => run("UPDATE execution SET status = 'nonsense' WHERE id = 2")).toThrow(/CHECK/);
       expect(() => run("INSERT INTO execution (task_id, trigger) VALUES (1, 'nonsense')")).toThrow(/CHECK/);
       for (const kind of ['verification_finished', 'approval_decided', 'run_finished', 'review_decided']) run(`INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (2, (SELECT max(seq) + 1 FROM conversation_event WHERE execution_id = 2), '${kind}', '{}', 'x')`);
-      expect(() => run("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (2, 99, 'nonsense', '{}', 'x')")).toThrow(/CHECK/);
+      expect(() => run("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (2, 99, 'nonsense', '{}', 'x')")).toThrow(/FOREIGN KEY/); // FEAT-109: kinds are a lookup table now, not a CHECK.
       expect(() => run("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (2, 1, 'user_prompt', '{}', 'x')")).toThrow(/UNIQUE/);
       // The self-reference survived the rename: deleting the source sets the link to NULL, never deletes the retry.
       run('DELETE FROM execution WHERE id = 1');

@@ -111,7 +111,12 @@ export function useExecutionStream(executionId: number): ExecutionStream {
     [refetchHistory],
   );
   const open = useCallback(() => {
-    if (disposed.current || history.data === undefined) return;
+    if (disposed.current || history.data === undefined || summary.data === undefined) return;
+    if (isTerminal(summary.data.status)) {
+      socket.current?.close(1000);
+      setConnection('closed');
+      return;
+    }
     if (!navigator.onLine) {
       setConnection('offline');
       return;
@@ -159,7 +164,7 @@ export function useExecutionStream(executionId: number): ExecutionStream {
       reconnect(event.code === 1013);
     };
     ws.onerror = () => undefined;
-  }, [executionId, history.data, merge, reconnect]);
+  }, [executionId, history.data, summary.data, merge, reconnect]);
   openRef.current = open;
   useEffect(() => {
     if (history.data) {

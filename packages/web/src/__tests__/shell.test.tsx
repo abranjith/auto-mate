@@ -14,9 +14,10 @@ function renderPath(path: string) {
   return render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={router} /></QueryClientProvider>);
 }
 
-it('renders keyboard-reachable navigation links and history placeholder', async () => {
+it('renders keyboard-reachable navigation links and History controls', async () => {
   renderPath('/history');
-  expect(await screen.findByText('Execution history arrives in FEAT-110.')).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeTruthy();
+  expect(screen.getByRole('textbox', { name: 'Search your tasks' })).toBeTruthy();
   for (const name of ['New task', 'History', 'Settings']) expect(screen.getByRole('link', { name })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'History' }).className).toContain('font-semibold');
 });

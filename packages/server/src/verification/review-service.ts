@@ -16,13 +16,16 @@
 // `user_prompt` source (the guidance), and it is never logged.
 // ---------------------------------------------------------------------------
 
-import { AutoMateError, ExecutionNotFoundError, MAX_REVIEW_FEEDBACK_CHARS, ReviewNotPendingError, ValidationError, feedbackProblem, type ReviewRequest, type ReviewResponse } from '@automate/core';
+import { AutoMateError, ExecutionNotFoundError, MAX_REVIEW_FEEDBACK_CHARS, ReviewNotPendingError, ValidationError, feedbackProblem, isSavedCodeRun, type ReviewRequest, type ReviewResponse } from '@automate/core';
 import type { Logger } from 'pino';
 import type { ExecutionRepository, ExecutionRow } from '../db/repositories/execution-repository';
+import type { ExecutionReuseRepository } from '../db/repositories/execution-reuse-repository';
 import type { ExecutionStateWriter, Publish } from './execution-state-writer';
 
 export interface ReviewServiceDependencies {
   readonly executions: ExecutionRepository;
+  /** FEAT-111: rejecting a saved-code run creates no retry. */
+  readonly reuse: Pick<ExecutionReuseRepository, 'getByExecution'>;
   readonly state: ExecutionStateWriter;
   readonly publish: Publish;
   /** FEAT-106's retry, with the feedback as guidance and `trigger = 'feedback'`. */
@@ -60,6 +63,12 @@ export class ReviewService {
 
   private reject(executionId: number, feedback: string): ReviewResponse {
     this.deps.executions.markReviewed(executionId, 'rejected', feedback);
+    if (isSavedCodeRun(this.deps.reuse.getByExecution(executionId)?.kind as 'run' | 'replay' | 'repair' | null)) {
+      this.deps.publish(executionId, { type: 'review_decided', verdict: 'rejected', retryExecutionId: null, at: new Date().toISOString() });
+      this.deps.state.announce(executionId, 'awaiting_review', 'rejected');
+      this.deps.logger.info({ executionId, verdict: 'rejected', retryExecutionId: null }, 'saved-code review decided');
+      return { status: 'rejected', retryExecutionId: null, nextSteps: ['repair', 'replay'] };
+    }
     let retry: ExecutionRow | null = null;
     let failure: unknown = null;
     try { retry = this.deps.retry(executionId, feedback).execution; }

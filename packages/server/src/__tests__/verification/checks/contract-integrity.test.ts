@@ -18,7 +18,7 @@ async function finalized(options: Parameters<typeof createFinalizedHarness>[0] =
 }
 const deps = (h: Harness) => ({ project: (id: number) => h.workspace.project(id), fixtures: h.fixtureService });
 const fixtureDir = (h: Harness) => path.join(h.store.paths.runsDir, String(h.execution.id), 'verify', 'input');
-const inputsOf = (h: Harness): ProfiledInput[] => h.uploads.map((upload) => ({ storedFilename: upload.storedFilename, tables: h.repos.profiles.listByUpload(upload.id) }));
+const inputsOf = (h: Harness): ProfiledInput[] => h.uploads.map((upload) => ({ inputName: upload.storedFilename, tables: h.repos.profiles.listByUpload(upload.id) }));
 const withVersion = (h: Harness, patch: Partial<CodeVersionWithFiles>): CodeVersionWithFiles => ({ ...h.final!, ...patch });
 /** Every serialized finding: no absolute path, no data root, no cell content. */
 const assertClean = (h: Harness, value: unknown) => {

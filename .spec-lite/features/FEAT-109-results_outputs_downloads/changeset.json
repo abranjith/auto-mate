@@ -1,0 +1,698 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-25T21:10:01.895Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-25T21:14:39.383Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-25T21:22:37.001Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-25T21:28:24.711Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-25T23:52:34.379Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-25T23:54:23.257Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-25T23:56:00.139Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-26T00:05:16.164Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-26T00:05:16.873Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-26T00:54:55.482Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-26T00:54:56.206Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-26T00:58:18.428Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-26T01:00:32.930Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-014",
+      "at": "2026-09-26T01:06:52.825Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-26T01:08:29.597Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "docs/features/results-outputs-downloads.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "docs/features/verification-execution-gate.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/core/src/__tests__/artifacts/artifact-safety.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/artifacts/artifact-type.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/artifacts/artifact.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/artifacts/next-step.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/artifact-api.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/errors/artifact-errors.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/generation/output-contract.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/core/src/artifacts/artifact-safety.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/artifacts/artifact-type.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/artifacts/artifact.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/artifacts/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/artifacts/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/artifacts/next-step.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/artifact-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/conversation/conversation-event.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/conversation/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/artifact-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/code-contract.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/core/src/generation/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifact-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifact-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/artifact-reader.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/artifact-registrar.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/artifact-sweeper.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/docs-examples.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/output-contract.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/server/src/__tests__/artifacts/zip-writer.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/server/src/__tests__/conversation/task-session-generation.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/artifact-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/script-run-artifacts.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/artifacts/formula-cells.csv",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/artifacts/hostile-report.html",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/artifacts/plotly-cdn.html",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/server/src/__tests__/fixtures/artifacts/plotly-inline.html",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-011"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0005.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0007.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/artifact-app.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/artifact-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/verification-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/zip-reader.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-013"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification-route.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-bytes.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-reader.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-registrar.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-scanner.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/artifacts/artifact-sweeper.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-012"
+    },
+    {
+      "path": "packages/server/src/artifacts/zip-writer.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/config/app-paths.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/config/env.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/artifact-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/script-run-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/task-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/execution/script-run-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/ingestion/xlsx-reader.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/middleware/error-handler.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/routes/artifact-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/verification-stack.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/web/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-014"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/artifact-fixtures.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/artifact-frame.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/artifact-list.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/artifact-renderers.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/no-outputs-panel.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-009"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/api/artifact-queries.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-card.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-frame.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-image.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-list.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-markdown.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-table.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/artifact-text.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/download-controls.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/no-outputs-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/assistant-message.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/execution/run-result.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/verification/gate-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-109-results_outputs_downloads/changeset.json",
+    ".spec-lite/features/FEAT-109-results_outputs_downloads/spec.md",
+    ".spec-lite/memory.md",
+    ".spec-lite/plan_mvp.md"
+  ],
+  "baseline": {
+    "sha": "e7f090499af9f2ddb9b3ba662698298d73304343",
+    "capturedAt": "2026-09-25T21:01:04.055Z",
+    "dirtyAtBaseline": [],
+    "dirtyBlobHashes": {}
+  },
+  "featureId": "FEAT-109"
+}

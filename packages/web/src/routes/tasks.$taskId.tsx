@@ -1,84 +1,28 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ConversationView } from '../components/conversation/conversation-view';
-import { ConnectionIndicator } from '../components/conversation/connection-indicator';
-import { ExecutionStatusBadge } from '../components/conversation/execution-status-badge';
-import { FailurePanel } from '../components/conversation/failure-panel';
-import {
-  CompletedSummary,
-  RunControls,
-} from '../components/conversation/run-controls';
-import { useExecutionStream } from '../api/use-execution-stream';
+import { createFileRoute, Outlet } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { getTask } from '../api/task-queries';
 import { ds } from '../design-system/tokens';
-import { WaitingBanner } from '../components/conversation/waiting-banner';
-import { GenerationSection } from '../components/generation/generation-section';
-import { GateSection } from '../components/verification/gate-section';
+import { TaskHeader } from '../components/history/task-header';
+import { RunTimeline } from '../components/history/run-timeline';
+import { TaskInputs } from '../components/history/task-inputs';
+import { useRunTimeline } from '../api/history-queries';
 
-/** Statuses where the generic cancel control applies; the gates and the run carry their own. */
-const CANCELLABLE = ['pending', 'generating', 'verifying'];
-/** Follow one execution using durable history plus its live tail. */
-function LiveConversation({
-  taskId,
-  executionId,
-}: {
-  taskId: string;
-  executionId: number;
-}) {
-  const stream = useExecutionStream(executionId);
-  const client = useQueryClient();
-  return (
-    <section className={ds.cardStack}>
-      <header className={ds.header}>
-        <h1 className={ds.title}>Task {taskId}</h1>
-        <div className={ds.row}>
-          {stream.execution ? (
-            <ExecutionStatusBadge status={stream.execution.status} />
-          ) : null}
-          <ConnectionIndicator
-            state={stream.connection}
-            onRetry={stream.retry}
-          />
-        </div>
-      </header>
-      {stream.error ? <p className={ds.statusDanger}>{stream.error}</p> : null}
-      <ConversationView events={stream.events} executionId={executionId} />
-      {stream.execution ? (
-        <>
-          {CANCELLABLE.includes(stream.execution.status) ? <RunControls execution={stream.execution} /> : null}
-          <WaitingBanner execution={stream.execution} />
-          <CompletedSummary execution={stream.execution} />
-          {stream.execution.error ? (
-            <FailurePanel error={stream.execution.error} />
-          ) : null}
-          <GenerationSection
-            execution={stream.execution}
-            events={stream.events}
-            onRetried={() => void client.invalidateQueries({ queryKey: ['task', taskId] })}
-          />
-          <GateSection
-            execution={stream.execution}
-            events={stream.events}
-            onRetried={() => void client.invalidateQueries({ queryKey: ['task', taskId] })}
-          />
-        </>
-      ) : null}
-    </section>
-  );
-}
-function TaskConversationPage() {
+/** Task header, original request, inputs, and the navigable run timeline. */
+function TaskPage() {
   const { taskId } = Route.useParams();
-  const task = useQuery({
-    queryKey: ['task', taskId],
-    queryFn: () => getTask(Number(taskId)),
-  });
-  if (task.isPending)
-    return <p className={ds.statusMuted}>Loading conversation…</p>;
-  const execution = task.data?.executions.at(-1);
-  if (!execution)
-    return <p className={ds.statusDanger}>This task has no execution.</p>;
-  return <LiveConversation key={execution.id} taskId={taskId} executionId={execution.id} />;
+  const id = Number(taskId);
+  const task = useQuery({ queryKey: ['task', taskId], queryFn: () => getTask(id) });
+  const timeline = useRunTimeline(id);
+  const reuse = timeline.data?.pages.flatMap((page) => page.items).find((item) => item.reuse)?.reuse;
+  if (task.isPending) return <p className={ds.statusMuted}>Loading task…</p>;
+  if (task.isError || !task.data) return <p className={ds.statusDanger}>This task was deleted or never existed. <a href="/history" className={ds.historyLink}>Back to History</a></p>;
+  return <div className={ds.cardStack}>
+    <TaskHeader task={task.data.task} counts={task.data.counts} reuse={reuse} />
+    <section className={ds.card}><h2 className={ds.sectionTitle}>What you asked</h2><p className={ds.historyPrompt}>{task.data.task.description}</p></section>
+    <TaskInputs taskId={id} />
+    <RunTimeline taskId={id} />
+    <Outlet />
+  </div>;
 }
-export const Route = createFileRoute('/tasks/$taskId')({
-  component: TaskConversationPage,
-});
+
+export const Route = createFileRoute('/tasks/$taskId')({ component: TaskPage });

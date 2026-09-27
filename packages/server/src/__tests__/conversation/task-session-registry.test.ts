@@ -124,8 +124,8 @@ describe('TaskSessionRegistry', () => {
       expect(transcript).toHaveLength(1);
       expect(transcript[0]).toMatchObject({ seq: 1, type: 'state_changed', from: status, to: 'failed' });
     }
-    expect(executions.getById(ids.verifying!)?.errorMessage).toBe('This run was interrupted while its code was being checked. Start it again to retry.');
-    expect(executions.getById(ids.executing!)?.errorMessage).toMatch(/while the script was running/);
+    expect(executions.getById(ids.verifying!)?.errorMessage).toBe('This run was interrupted while checking the code. Run it again to retry.');
+    expect(executions.getById(ids.executing!)?.errorMessage).toMatch(/while running on your file/);
     const aborted = verifications.getLatest(ids.verifying!)!;
     expect(aborted.status).toBe('aborted');
     expect(aborted.settledAt).toBeInstanceOf(Date);

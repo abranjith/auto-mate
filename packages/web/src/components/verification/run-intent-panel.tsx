@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AutoMateError, ERROR_CODES, RUN_INTENT_CAVEATS, formatBytes, type ApprovalResponse, type RunIntentResponse } from '@automate/core';
+import { AutoMateError, ERROR_CODES, formatBytes, type ApprovalResponse, type RunIntentResponse } from '@automate/core';
 import { ds } from '../../design-system/tokens';
 import { looksLikeFormula } from '../ingestion/sample-rows-table';
 import { RuntimeNote } from './runtime-note';
@@ -64,7 +64,8 @@ export function RunIntentPanel({ data, onDecide, onStale }: RunIntentPanelProps)
         {tests ? <p className={ds.hint}>{tests}</p> : null}
       </div>
       <RuntimeNote description={intent.runtime.description} {...(changes ? { changes } : {})} />
-      <ul className={ds.caveatList} aria-label="Before you run">{RUN_INTENT_CAVEATS.map((caveat) => <li key={caveat} className={ds.caveat}>{caveat}</li>)}</ul>
+      {intent.reuse ? <section className={ds.keepsNote}><h3>Saved task: {intent.reuse.templateName} (revision {intent.reuse.revisionNumber})</h3><p>Code digest {intent.reuse.revisionDigestShort} · fit check: {intent.reuse.compatibility.status}</p>{intent.reuse.compatibility.advisories.map((item) => <p key={item}>{item}</p>)}{intent.reuse.runtimeChanges.map((item) => <p key={item}>{item}</p>)}</section> : null}
+      <ul className={ds.caveatList} aria-label="Before you run">{intent.caveats.map((caveat) => <li key={caveat} className={ds.caveat}>{caveat}</li>)}</ul>
       {warnings > 0 ? (
         <label className={ds.checkboxRow}>
           <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />

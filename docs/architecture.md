@@ -12,9 +12,13 @@ For a text-only task, the provider receives only the words typed into the task c
 
 A task with attached files runs as a code-generation run (FEAT-106). The agent writes Python and pytest tests through four application-owned tools. It has no filesystem, shell, or network tool of its own. The application stores every file in SQLite and seals each candidate as an immutable version identified by a SHA-256 digest. It writes that version to `scripts/{executionId}/attempt-{n}/` and runs pytest through `uv` against synthetic fixtures built from the approved disclosure payload. The real upload is not opened during generation. Output from a failed test run goes back to the model only after the default-deny diagnostic filter, and each one is recorded as a `diagnostics` transmission.
 
-The final version does not run on the strength of the agent's own report (FEAT-107). When generation finalizes a version, the run is handed to an application-owned verification pass. The pass makes no provider call. It re-checks the version's integrity and declared contract, lints it with `ruff`, scans it with `bandit`, and re-runs its pytest tests itself. The result is bound to the code's digest and to a fingerprint of the Python runtime. If nothing blocks, the run parks at an approval gate. There, the person sees exactly what will run, on which files, with which caveats, and has to choose **Run it** explicitly. Only then does the script run once against a verified copy of the real upload. A run that exits cleanly with every declared output parks again, until the person accepts the result or rejects it with feedback. A rejection starts a new linked execution. There is still no artifact renderer.
+The final version does not run on the strength of the agent's own report (FEAT-107). When generation finalizes a version, the run is handed to an application-owned verification pass. The pass makes no provider call. It re-checks the version's integrity and declared contract, lints it with `ruff`, scans it with `bandit`, and re-runs its pytest tests itself. The result is bound to the code's digest and to a fingerprint of the Python runtime. If nothing blocks, the run parks at an approval gate. There, the person sees exactly what will run, on which files, with which caveats, and has to choose **Run it** explicitly. Only then does the script run once against a verified copy of the real upload. A run that exits cleanly with every declared output parks again, until the person accepts the result or rejects it with feedback. A rejection of generated code starts a new linked execution; a rejection of saved code offers replay or repair. When a run settles, the application registers its output files as artifacts (FEAT-109): each is moved into `artifacts/{taskId}/{artifactId}{ext}`, digested, typed from a fixed nine-type policy, and served back only through two byte routes that set the content type, a deny-by-default Content-Security-Policy, and `nosniff`. Generated HTML renders only in a frame whose sandbox attribute grants scripts and nothing else — no same-origin access and no network destination — and that guarantee covers the browser, not the unisolated script that wrote the file.
 
 Generated tests and the approved script both run unisolated, with the server process's privileges, and can reach any file or host the server can. The loopback bind, request-origin checks, uv environments, the checker environment, the attempt and run directories, and the input copy organize local state. The runtime caps resource use, but none of these measures is a generated-code isolation boundary. Windows has no enforced memory cap.
+
+History (FEAT-110) makes the stored work browsable after the browser closes or the server restarts. The task list groups each task by its latest run, the task page shows every run, and each run has a durable URL and a small provenance record. A terminal latest run can start a linked new run through the existing guidance-retry path. Deleting a task removes the application's task-owned rows and file trees together, subject to retrying files the operating system temporarily keeps open.
+
+Saved tasks (FEAT-111) copy the code, input shape, recorded decisions, runtime fingerprint, and other contract metadata from a person-accepted run into an immutable revision. A person can stage another file and compare its profiled shape with the current revision. A compatible run creates a new task, rechecks the same saved code on synthetic rows, and enters the approval gate without opening an agent session or sending the file description to an AI provider. Replay uses that execution's final code and original input bindings, even after the saved task is deleted. A repair uses a new disclosure consent for the attached file and sends the person's reviewed mapping instructions to the agent; saved revision code is not included in that prompt.
 
 ```mermaid
 flowchart LR
@@ -38,6 +42,10 @@ flowchart LR
   Runtime --> RuntimeRows[(runtime_environment)]
   Sessions -->|hand-off at verifying| Verification[Verification, approval, run, and review]
   Api --> Verification
+  Api --> Saved[Saved task and compatibility services]
+  Saved -->|compatible run or replay| Verification
+  Saved -->|repair after fresh consent| Gate
+  Saved --> Db
   Verification --> Runner
   Verification -->|ruff and bandit| Checkers[("verify-env/ checker uv project")]
   Verification --> Runs[("runs/ input copies, output, verify scratch")]
@@ -149,6 +157,42 @@ The pnpm workspace has three TypeScript ESM packages with one-way dependencies f
 The Pi adapter keeps `noTools: 'all'` and allowlists exactly the registered tools, so five tools reach the provider.
 
 The transport boundary is intentionally split. State-changing commands use REST so they pass through correlation-ID error handling and the Origin/Host guard. The WebSocket is server-to-client application traffic only: it sends an initial snapshot, event messages, and execution summaries; inbound application frames are ignored. It subscribes to the registry, not to a `TaskSession`, and closes normally only when the execution reaches a terminal status. A page open at a gate therefore keeps its live tail. It also owns heartbeat cleanup and closes slow consumers with a retryable close code.
+
+The FEAT-110 history boundary is read-only except for whole-task deletion. `HistoryRepository` reads a task once with its latest run, pages tasks and runs by descending execution id, and assembles a small run record from stored rows. It does not open an agent session or rebuild a prompt. The record links to the owning disclosure, code, verification, transcript, and artifact routes for full detail. The four history routes expose the task list, a task's run timeline, one run record, and `DELETE /api/tasks/:taskId`; the existing task detail response includes run, input, output, and open-run counts. `TaskDeletionService` refuses an open run, deletes task-owned rows in a transaction, then removes the five owned file trees. `RetentionSweeper` revisits orphaned execution trees on startup and hourly, while the upload and artifact sweepers revisit their task-keyed trees. These sweeps remove residue from interrupted deletion; they do not expire a live task by age.
+
+FEAT-111 adds a browser-safe `core/src/reuse/` module for input contracts, as-of resolution, wall-clock scans, rule evaluation, compatibility findings, mapping validation, and the wording shown to the person. `template-api.ts` holds the shared REST schemas. The web package adds Saved tasks list/detail/run pages, compatibility and mapping review, and actions on a run record. On the server, `template-route.ts` exposes the saved-task API behind the same origin guard on writes. `SaveService` accepts only a completed, approved run, checks the final file digests, and copies its version and shape into `TemplateRepository`. `CompatibilityService` compares stored upload profiles and runtime metadata without opening upload bytes or starting Python. `ReuseRunService` checks the compatibility digest, binds the staged uploads under the revision's original input names, materializes a final code version, and tracks verification as a phase job. `RepairService` verifies a fresh FEAT-105 consent, persists mapping decisions and a new generation execution, and starts the existing agent strategy. The `ExecutionInputs` resolver is the shared source of upload id, slot, and input name for fixtures, verification, and the real-file copy. `HistoryRepository` reads reuse snapshots for run labels even if the saved task is gone.
+
+```mermaid
+flowchart LR
+  SavedPage[Saved tasks and run pages] --> TemplateApi[Template REST routes]
+  TemplateApi --> Save[SaveService]
+  TemplateApi --> Compare[CompatibilityService]
+  TemplateApi --> Run[ReuseRunService]
+  TemplateApi --> Repair[RepairService]
+  Compare --> Profile[(Stored upload profiles)]
+  Save --> Templates[(Template revisions and file copies)]
+  Run --> Templates
+  Run --> Bindings[(Execution reuse and input bindings)]
+  Run --> Verify[Verification and approval gate]
+  Repair --> Consent[Disclosure consent and pre-flight decisions]
+  Repair --> Generate[Existing generation strategy]
+  Bindings --> Inputs[ExecutionInputs resolver]
+  Inputs --> Verify
+  Inputs --> Generate
+```
+
+```mermaid
+flowchart LR
+  BrowserHistory[History and task pages] -->|paged REST reads| HistoryRoute[History routes]
+  HistoryRoute --> HistoryRepo[HistoryRepository]
+  HistoryRepo --> Database[(SQLite)]
+  BrowserHistory -->|delete task| HistoryRoute
+  HistoryRoute --> Deletion[TaskDeletionService]
+  Deletion -->|transactional row delete| Database
+  Deletion -->|remove owned directories| Trees[(uploads, artifacts, runs, scripts, agent-sessions)]
+  Startup[Startup and hourly sweeps] -->|remove orphan directories| Trees
+  Startup -->|check surviving rows| Database
+```
 
 ```mermaid
 flowchart TB
@@ -294,12 +338,13 @@ flowchart TB
 
 Creating a task is an asynchronous handoff, with an additional gate when files are attached. The browser first requests `GET /api/disclosure/preview`; the server rebuilds the exact text and pre-flight findings from persisted profiles and the current provider/model. `POST /api/disclosure/consents` re-derives that preview before storing the approval. `POST /api/tasks` then independently verifies the acknowledgement and all required choices before it attaches the consent and uploads in the transaction that creates the task and first pending execution. A text-only task skips this gate. The registry starts the run without making the HTTP response wait for completion. The browser navigates to the task page, loads task/execution state and paged transcript history over REST, then opens `/api/ws/executions/:id?afterSeq=N` from the last durable sequence it holds.
 
-During a run, the execution moves through the transition table in `packages/core/src/conversation/execution-state.ts`. An agent clarification adds the reversible `generating -> waiting -> generating` path. Code generation and its repair loop happen entirely inside `generating`. A text-only run, which has no lifecycle, still ends at `generating -> completed`. A run with uploads whose generation finalizes a version continues to `verifying`, then `awaiting_approval`, `executing`, and `awaiting_review`, and ends at `completed` or `rejected`. `completed` on that path means a person accepted the result. `awaiting_approval -> verifying` re-checks the code after the runtime changed. `completed`, `failed`, `aborted`, and `rejected` are terminal.
+During a run, the execution moves through the transition table in `packages/core/src/conversation/execution-state.ts`. An agent clarification adds the reversible `generating -> waiting -> generating` path. Code generation and its repair loop happen entirely inside `generating`. A text-only run, which has no lifecycle, still ends at `generating -> completed`. A run with uploads whose generation finalizes a version continues to `verifying`, then `awaiting_approval`, `executing`, and `awaiting_review`, and ends at `completed` or `rejected`. Saved-code runs enter `verifying` directly from `pending`; they skip generation and its provider session. `completed` on the gated path means a person accepted the result. `awaiting_approval -> verifying` re-checks the code after the runtime changed. `completed`, `failed`, `aborted`, and `rejected` are terminal.
 
 ```mermaid
 stateDiagram-v2
   [*] --> pending
   pending --> generating
+  pending --> verifying: saved code
   pending --> failed
   pending --> aborted
   generating --> waiting: agent asks a question
@@ -422,6 +467,41 @@ Filtered diagnostics do not pass through that call. They return to the model as 
 
 Agent clarification batches require a rationale, a `meaning` or `data_loss` impact, and a proposed default for every question. The server counts persisted agent questions and allows at most three by default. It declines an over-budget batch, or one that would exceed waiting capacity, records the decline, and returns the proposed defaults to the agent. An accepted batch moves the execution to `waiting`; the provider tool call remains blocked until the complete answer batch arrives. The parked session is excluded from active concurrency accounting.
 
+### Saving, compatible runs, replay, and AI repair
+
+`GET /api/executions/:id/save-preview` shows what an accepted run can retain. `POST /api/executions/:id/save` rechecks that the run is completed, approved, and has intact final code before it creates a saved task with revision 1. A completed repair can instead append a revision to its own saved task. The revision owns its file copies, input contract, recorded decisions and notes, runtime fingerprint/detail, and the wall-clock-read flag. The highest revision number is current; no revision row or file is edited to promote a repair.
+
+For a new file, the browser stages it for local profiling, then calls `GET /api/templates/:id/compatibility` with the upload ids and as-of choice. `CompatibilityService` checks format, required sheets and columns, inferred types, recorded decisions, runtime change, and the as-of caution using stored profiles. The report describes shape and previously recorded choices; it does not establish that a different file has the same meaning. Its digest binds the selected uploads, current revision, report, runtime comparison, and as-of. `POST /api/templates/:id/runs` requires that digest and refuses a stale or incompatible check before writing a task. A successful start creates one new task, execution, reuse snapshot, input bindings, and sealed final code version in a transaction. After commit, it projects the files, creates synthetic fixtures, publishes `reuse_started`, and enters local verification. The existing approval, real-data execution, and result review gates still apply. The saved-code start path makes no provider call and records no context transmission; that says nothing about isolation of the later Python run.
+
+`POST /api/executions/:id/replay` starts a linked execution within the same task. It copies the source execution's own final code files, upload bindings, and as-of date. Its reuse snapshot keeps the display name and revision number if the saved task was deleted. A saved-code rejection does not seed a feedback-generation retry. `POST /api/templates/:id/repairs` and `POST /api/executions/:id/repair` instead take a person's reviewed column, sheet, and decision mapping or note, verify a new FEAT-105 disclosure consent for the uploads, and start a generation execution. The prompt receives the new file's approved description and the person's rendered instructions through the existing disclosure boundary. It does not receive saved revision file content. A completed, accepted repair can be saved as the next immutable revision.
+
+Each newly created execution records an as-of instant, calendar date, IANA time zone, and source (`now`, `chosen`, or `copied`). A chosen date resolves to the last second of that local day; replay and retries copy the source when present. The intent digest includes the as-of, and generation tests, verification tests, and the real script receive `AUTOMATE_AS_OF`, `AUTOMATE_AS_OF_DATE`, and `AUTOMATE_TIMEZONE` as application-set environment entries. A legacy execution with null as-of columns receives none.
+
+```mermaid
+sequenceDiagram
+  actor Person
+  participant Web as Saved tasks page
+  participant API as Template API
+  participant DB as SQLite
+  participant Gate as Verification gate
+  participant Agent as AgentProvider
+  Person->>Web: Stage another file
+  Web->>API: Check compatibility and as-of
+  API->>DB: Read revision and stored upload profiles
+  API-->>Web: Report and digest
+  alt Compatible run
+    Person->>Web: Run saved code
+    Web->>API: Start with digest
+    API->>DB: Insert task, reuse, bindings, final code
+    API->>Gate: Verify synthetic fixtures, then approval
+  else Repair with AI
+    Person->>Web: Review mapping and disclosure
+    Web->>API: Grant consent, then start repair
+    API->>DB: Insert task, consent, decisions, reuse
+    API->>Agent: Approved new-file context and reviewed instructions
+  end
+```
+
 ### Code generation and the repair loop
 
 A generation run starts when `TaskSession` builds the run for a task with uploads. `CodeGenerationRunStrategy` verifies the context consent before any fixture is written. A revoked or stale approval therefore fails the run with nothing on disk, and the provider is never opened. The strategy then writes the fixtures, renders the code contract, and passes the contract and any retry guidance to the inner strategy's single prompt call. A fixture that cannot be built fails the run with `FIXTURE_GENERATION_FAILED` before the provider opens. After that, the application tracks the loop but does not drive it. The agent decides when to write, test, and finalize, through these tools:
@@ -487,7 +567,7 @@ sequenceDiagram
 
 The code path is database-first. A file lives only as a `code_file` row until `run_tests` or `finalize_script` seals its draft. Sealing reads the stored files in one transaction and computes `content_digest` as SHA-256 over the canonical JSON of `[{path, sha256}]` sorted by path. Projection then deletes and recreates `scripts/{executionId}/attempt-{n}/`, writes each file from its row through `resolveWithin`, and creates an empty `output/`. What pytest runs is written from what was digested, not from anything the agent supplied directly. Changing a sealed version's files raises `CODE_VERSION_IMMUTABLE`. The rows remain the authoritative copy, and `CodeWorkspace.project` can rewrite any sealed version from them.
 
-`UvPythonRunner` runs pytest as `uv run --project <env> --no-sync --locked -- python -m pytest -q --tb=native -rfE -p no:cacheprovider`. The working directory is the attempt directory. `AUTOMATE_INPUT_DIR` points at the execution's fixtures, and `AUTOMATE_OUTPUT_DIR` points at the attempt's scratch `output/`. The run has a wall clock of `AUTOMATE_TEST_RUN_TIMEOUT_MS`. The child environment is the server's environment minus `AUTOMATE_*` settings (other than those two), `VIRTUAL_ENV`, and credential-shaped variables. That is hygiene, not isolation. `--no-sync --locked` prevents dependency drift during a test run. It is not a network restriction, and generated code can still reach any file or host the server process can. pytest exit code 0 maps to `passed`, 1 to `failed`, and anything else to `errored`. A timeout maps to `timed_out`, and cancellation maps to `aborted`. Output is capped per stream, keeping the head and tail, and the dropped bytes are counted. `run_tests` records whether a parseable `manifest.json` appeared, but that observation never changes the outcome.
+`UvPythonRunner` runs pytest as `uv run --project <env> --no-sync --locked -- python -m pytest -q --tb=native -rfE -p no:cacheprovider`. The working directory is the attempt directory. `AUTOMATE_INPUT_DIR` points at the execution's fixtures, and `AUTOMATE_OUTPUT_DIR` points at the attempt's scratch `output/`. The run has a wall clock of `AUTOMATE_TEST_RUN_TIMEOUT_MS`. The child environment is the server's environment minus `AUTOMATE_*` settings (other than those two and the three application-set as-of entries), `VIRTUAL_ENV`, and credential-shaped variables. That is hygiene, not isolation. `--no-sync --locked` prevents dependency drift during a test run. It is not a network restriction, and generated code can still reach any file or host the server process can. pytest exit code 0 maps to `passed`, 1 to `failed`, and anything else to `errored`. A timeout maps to `timed_out`, and cancellation maps to `aborted`. Output is capped per stream, keeping the head and tail, and the dropped bytes are counted. `run_tests` records whether a parseable `manifest.json` appeared, but that observation never changes the outcome.
 
 Test output is untrusted input to the model. Generated code runs unisolated, so its stdout could carry anything the server process can read. `RunTestsExecutor.consumeRawOutput` is the only reader of raw output. It parses counts locally and, for a run that failed, errored, or timed out, sends the raw text through `recordDiagnosticTransmission`, which returns only the filtered text. `generation_attempt.diagnostic_digest` stores the SHA-256 of that filtered text, and `dropped_line_count` stores how many lines the allowlist withheld. Neither raw nor filtered output is logged.
 
@@ -588,7 +668,7 @@ The pass settles `passed` or `failed`, or `aborted`, `timed_out`, or `errored` w
 
 Stdout and stderr are each capped head-and-tail at `AUTOMATE_MAX_RUN_OUTPUT_BYTES` (1 MiB by default). They are stored in `script_run` and never logged, because they can contain the person's cell values. The runner's capture limit is raised to at least twice that value. `manifest.json` is untrusted, and `parseOutputManifest` parses it. It is reconciled with the files actually present. A run that exits 0 with a valid manifest and every declared file present settles `succeeded`, and the execution moves to `awaiting_review`. Other endings settle `script_run` as `failed`, `errored`, `timed_out`, or `aborted`. An aborted run settles the execution `aborted`. Any other failure settles it `failed` with `RUN_OUTPUT_MISSING` and a sentence saying what happened. Every ending appends one `run_finished` event.
 
-**Review.** `POST /api/executions/:id/review` accepts `accepted` or `rejected`. Acceptance moves `awaiting_review -> completed`. Rejection requires non-blank feedback of at most 2,000 characters. It stores the feedback on the execution, settles it `rejected`, and seeds a new execution through FEAT-106's `GenerationService.retry` with `trigger = 'feedback'`. The feedback becomes that execution's guidance. The verdict is recorded before the retry is attempted. A retry refused at the concurrency cap therefore returns its error without rolling the rejection back. A `review_decided` event carries the verdict and the retry's id.
+**Review.** `POST /api/executions/:id/review` accepts `accepted` or `rejected`. Acceptance moves `awaiting_review -> completed`. Rejection requires non-blank feedback of at most 2,000 characters and stores it before settling the execution `rejected`. For generated code, it seeds a new execution through FEAT-106's `GenerationService.retry` with `trigger = 'feedback'`, and the feedback becomes that execution's guidance. A retry refused at the concurrency cap does not roll the rejection back. For saved code, it creates no retry and returns replay and repair as the next steps. A `review_decided` event carries the verdict and a retry id only when one was created.
 
 The FEAT-107 routes are:
 
@@ -666,17 +746,25 @@ A terminal execution returns `EXECUTION_NOT_RUNNING`. A non-terminal database ro
 
 Recovery has explicit outcomes:
 
-| Event                       | Implemented outcome                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Browser disconnect          | The server-side run continues. Reconnection replays events after the browser's last sequence and resumes the live tail.                                                                                                                                                                                                                                                                                                                             |
-| Server restart during a run | Before listening, startup handles every active execution: `pending`, `generating`, `waiting`, `verifying`, and `executing`. For each one, it first settles any generation attempt, `verification_run`, or `script_run` still `running` as `aborted`. It then marks the execution `failed` with `EXECUTION_INTERRUPTED`, interrupts any pending clarification, and appends a final `state_changed` event. `waiting` is interrupted because its question lives in a live provider session. This follows the FEAT-105/FEAT-110 resolution recorded in `TODO.md`, not the wording of FEAT-107's TASK-004. `awaiting_approval` and `awaiting_review` are left untouched: they hold no in-memory state, and the person's pending decision survives the restart. Provider sessions, in-memory waits, verification passes, and runs are not resumed. Sealed code versions, attempts, fixtures, passes, approvals, and runs stay readable, and a guidance retry starts a new execution. |
-| Graceful shutdown           | The registry cancels clarification waits, asks every live session to abort, and aborts every `PhaseJob`. This stops in-flight `uv`, pytest, checker, and script process trees before the provider. It waits up to five seconds for sessions and jobs. It then marks any still-active row interrupted, with its `running` attempts, passes, and runs settled `aborted`, before closing sockets and SQLite. Rows parked at a gate are left as they are.                                                                                   |
-| Slow or half-open socket    | Backpressure closes with `1013` so the browser reloads history; heartbeat terminates a connection after two missed pong intervals.                                                                                                                                                                                                                                                                                                                  |
-| Multiple browser clients    | Each client receives the same persisted sequence; disconnecting one subscription does not stop the execution or other clients.                                                                                                                                                                                                                                                                                                                      |
+| Event | Implemented outcome |
+| --- | --- |
+| Browser closes or disconnects mid-run | Server work continues. The browser reloads durable history and resumes the live tail after its last sequence. |
+| Restart from `pending` | The run becomes `failed` with `EXECUTION_INTERRUPTED`; History says **Interrupted** and the record says it stopped before it started. |
+| Restart from `generating` | The run becomes **Interrupted**; an in-flight generation attempt is settled. |
+| Restart from `verifying` | The run becomes **Interrupted**; an in-flight verification pass is settled. |
+| Restart from `executing` | The run becomes **Interrupted**; an in-flight script run is settled. |
+| Restart from `waiting` | The live provider question cannot resume, so the run becomes **Interrupted**. A new run can reuse the task's recorded clarification answers. Nothing already sent to the provider is recalled. |
+| Restart from `awaiting_approval` | The database-backed approval gate remains in **Needs you**, and the person can still approve it. |
+| Restart from `awaiting_review` | The database-backed review gate remains in **Needs you**, and the person can still review it. |
+| Graceful app shutdown | The registry cancels live sessions, clarifications, and phase jobs, waits up to five seconds, and records **Stopped when the app closed** for a run it stopped. A still-active row reconciled after the drain is marked interrupted. Approval and review gates remain actionable. |
+| Deletion interrupted after row commit | Startup sweeps remove orphaned task and execution directories. If a file remains open or otherwise cannot be removed, a later sweep retries it. |
+| Another tab deletes the task | The next task read returns `TASK_NOT_FOUND`; the delete flow treats that response as already deleted. |
+| Slow or half-open socket | Backpressure closes with `1013` so the browser reloads history; heartbeat terminates a connection after two missed pong intervals. |
+| Multiple browser clients | Each receives the persisted sequence; disconnecting one does not stop the run or other clients. |
 
 ## Data Model
 
-SQLite is the durable source for application metadata, task definitions, execution summaries, the displayed conversation, generated code, verification results, approvals, runs, and prepared Python environments. Drizzle defines the schema and the server applies committed migrations in-process. The connection enables WAL and foreign-key enforcement. There are seven committed migrations, named by timestamp. The fifth, `20260925044250_damp_otto_octavius` (FEAT-106), does three things:
+SQLite is the durable source for application metadata, task definitions, execution summaries, the displayed conversation, generated code, verification results, approvals, runs, prepared Python environments, and saved-task revisions. Drizzle defines the schema and the server applies committed migrations in-process. The connection enables WAL and foreign-key enforcement. There are eleven committed migrations, named by timestamp. The fifth, `20260925044250_damp_otto_octavius` (FEAT-106), does three things:
 
 - It creates the four generation tables.
 - It adds the two new `execution` columns with `ALTER TABLE ... ADD`.
@@ -691,6 +779,10 @@ The sixth, migration 0005 in `drizzle/20260925161513_equal_synch/` (FEAT-107), m
 - It ends with a hand-added guard. A CHECK on a temporary table fails the statement when `pragma_foreign_key_check` finds any orphaned row, so the whole migration rolls back instead of committing a broken graph.
 
 The seventh, `20260925194955_safe_blackheart` (FEAT-108), adds `runtime_environment`, records output usage, limit breaches, and the runtime lock digest on `script_run`, and extends `conversation_event` with `runtime_prepared`. The runtime table has one row per environment kind, spec digest, lock digest, platform, and architecture. It has no task foreign key: preparation history survives task deletion.
+
+The eighth, `20260925211027_artifacts_and_event_kinds` (FEAT-109), adds registered artifacts and the extensible event-kind lookup. The ninth, `20260926014135_history_index` (FEAT-110), changes the partial `execution_parked` index to include `waiting` alongside the two database-backed gates. `waiting` is parked for concurrency but remains in the interrupted-on-restart set.
+
+The tenth, `20260926160041_save_and_rerun`, adds four as-of columns on `execution` and creates `task_template`, `template_revision`, `template_revision_file`, `execution_reuse`, and `execution_input_binding`. The eleventh, `20260926160051_save_and_rerun_triggers`, makes revision fields and file rows immutable and registers `reuse_started` and `task_saved` event kinds. Its revision trigger names every protected column explicitly: deleting a source task must still be able to set `source_execution_id` to null through the foreign key. A separate trigger permits only that nulling of provenance.
 
 `migrateDatabase` turns foreign keys off before drizzle's `BEGIN` and back on afterwards, even on failure. This matters because drizzle wraps every pending migration in one transaction, and inside a transaction SQLite ignores `PRAGMA foreign_keys`. With foreign keys still on, `DROP TABLE execution` would fire every `ON DELETE CASCADE` and empty every child table. A migration test demonstrates that failure.
 
@@ -752,6 +844,10 @@ erDiagram
     integer duration_ms
     integer retry_of_execution_id FK "null unless a retry"
     text guidance
+    integer as_of_at
+    text as_of_date
+    text as_of_timezone
+    text as_of_source
     text review_feedback "set only on rejection"
     integer reviewed_at
     integer created_at
@@ -1030,6 +1126,59 @@ erDiagram
   }
 ```
 
+The saved-task part of the model is separate from task-owned rows. A nullable source link preserves where a revision came from while allowing its source task to be deleted. Deleting the saved task clears the nullable links from reuse snapshots and cascades only through its own revisions and file copies; the run task and its final code remain.
+
+```mermaid
+erDiagram
+  TASK ||--o{ EXECUTION : has
+  EXECUTION |o--o{ TEMPLATE_REVISION : "source of"
+  TASK_TEMPLATE ||--|{ TEMPLATE_REVISION : owns
+  TEMPLATE_REVISION ||--|{ TEMPLATE_REVISION_FILE : copies
+  EXECUTION ||--o| EXECUTION_REUSE : records
+  TASK_TEMPLATE |o--o{ EXECUTION_REUSE : "nullable origin"
+  TEMPLATE_REVISION |o--o{ EXECUTION_REUSE : "nullable revision"
+  EXECUTION ||--o{ EXECUTION_INPUT_BINDING : binds
+  UPLOAD ||--o{ EXECUTION_INPUT_BINDING : supplies
+  TASK_TEMPLATE {
+    integer id PK
+    text name
+    text description
+  }
+  TEMPLATE_REVISION {
+    integer id PK
+    integer template_id FK
+    integer source_execution_id FK "nullable"
+    integer revision_number
+    text content_digest
+    text input_contract
+    text contract_digest
+    text runtime_fingerprint
+    boolean reads_wall_clock
+  }
+  TEMPLATE_REVISION_FILE {
+    integer revision_id FK
+    text path
+    text role
+    text content
+    text sha256
+  }
+  EXECUTION_REUSE {
+    integer execution_id FK
+    text kind "run, replay, repair"
+    integer template_id FK "nullable"
+    integer template_revision_id FK "nullable"
+    text template_name "snapshot"
+    integer revision_number "snapshot"
+    text revision_digest "snapshot"
+  }
+  EXECUTION_INPUT_BINDING {
+    integer execution_id FK
+    integer upload_id FK
+    integer position
+    text input_name
+  }
+```
+
 - `task` stores the trimmed plain-language request and a deterministic display name derived from its first useful line.
 - `execution` owns the state machine, provider/model provenance, optional sanitized failure, optional usage, and timings. Its `agent_log_path` is persisted for local diagnostics but excluded from browser contracts.
 - `conversation_event` is the append-only transcript. `(execution_id, seq)` is unique and indexed; `seq` is the replay cursor and browser deduplication key. `payload` stores the complete JSON event, while `kind` and `at` support integrity and inspection.
@@ -1041,9 +1190,9 @@ erDiagram
 - `code_version` (FEAT-106) is one candidate per attempt. `draft` is its only mutable status and has no digest. A CHECK makes "draft, no digest, no seal time" a single fact rather than three fields that could disagree. The sealed statuses are `sealed`, `tested_pass`, `tested_fail`, and `superseded`, which marks a leftover draft frozen when the run settles. `(execution_id, attempt)` is unique. Partial unique indexes allow at most one draft and at most one final version per execution, and `content_digest` is indexed for lookup by identity. `tests_passed` is recorded, not enforced. `dir_path` is relative, so `AUTOMATE_HOME` can move without rewriting rows.
 - `code_file` holds the only authoritative copy of generated code. `(code_version_id, path)` is unique, and a CHECK limits `role` to `script`, `test`, or `support`. The repository re-validates each path and refuses to add, replace, or seal files of a version that is no longer a draft. The files under `scripts/` are projections of these rows.
 - `generation_attempt` records one `run_tests` call, and it is the attempt limit: the budget counts its non-`refused` rows on every claim. `(execution_id, attempt)` is unique. `code_version_id` and `call_id` are unique where they are present, so there is one test run per sealed version and one attempt per tool call. A CHECK ties `status = 'refused'` to a non-null `refusal_reason`. The filtered diagnostic text is not stored here. `diagnostic_digest` matches the `payload_digest` of the `diagnostics` transmission that holds it, deliberately without a foreign key, because an attempt that passed sends nothing.
-- `synthetic_fixture` records one fixture per upload per execution, with `(execution_id, upload_id)` unique. It stores the relative file path, which is named after the upload's `stored_filename`, plus the format, sheet and row counts, how many rows are verbatim sample rows, the byte size, the SHA-256, and the seed. The seed is derived from the upload's SHA-256 and the execution id, so the same run always rebuilds identical fixture data.
+- `synthetic_fixture` records one fixture per upload per execution, with `(execution_id, upload_id)` unique. It stores the relative file path, named by `ExecutionInputs` after either the generated run's stored upload name or the saved run's bound original input name, plus the format, sheet and row counts, how many rows are verbatim sample rows, the byte size, the SHA-256, and the seed. The seed is derived from the upload's SHA-256 and the execution id, so the same run always rebuilds identical fixture data.
 - `execution.retry_of_execution_id` links a retry to its source with `ON DELETE SET NULL`, so deleting a failed run never deletes its replacement. `execution.guidance` holds the person's hint. A guidance retry's `trigger` is `rerun`. A retry seeded by a rejected result has `trigger = 'feedback'`, and its guidance is the feedback. A partial index serves the retry link.
-- `execution.review_feedback` and `execution.reviewed_at` (FEAT-107) record a person's verdict. Feedback is stored only for a rejection. The partial index `execution_active` covers the statuses a restart interrupts. `execution_parked` covers `awaiting_approval` and `awaiting_review`.
+- `execution.review_feedback` and `execution.reviewed_at` (FEAT-107) record a person's verdict. Feedback is stored only for a rejection. The partial index `execution_active` covers the statuses a restart interrupts. `execution_parked` covers `waiting`, `awaiting_approval`, and `awaiting_review` for concurrency lookup; its membership does not determine restart survival. SQLite uses a partial index only when a query's `WHERE` clause provably implies the index predicate, and a bound `IN (?, ?)` list never does. `ExecutionRepository.listActive()`, `listParked()`, and the History **Needs you** query therefore write their status lists as literals through `statusLiterals()` in `src/db/status-sql.ts`, the same helper the schema uses for both predicates. `EXPLAIN QUERY PLAN` tests assert each query uses its index.
 - `verification_run` (FEAT-107) is one pass over one sealed version on one runtime. It stores the version's `content_digest`, the `runtime_fingerprint`, and the full `runtime_detail` JSON the fingerprint was computed from. `(code_version_id, runtime_fingerprint)` is unique, which is what makes a pass reusable for an unchanged pair. `VerificationRepository.discardInconclusive` removes an `aborted`, `timed_out`, or `errored` row so the pair can be verified again. CHECKs constrain the status, keep the counts non-negative, and tie `running` to a null `settled_at`.
 - `verification_check` holds exactly one row per check key per pass, with `(verification_run_id, check_key)` unique. A CHECK limits the key to the seven `CHECK_KEYS`. Checks that never ran are written as `skipped`, so a settled pass always has all seven. `is_blocking` records whether that check blocked this pass. `detail` is check-specific JSON, such as test counts, the fixture digests, or a short head-and-tail output excerpt.
 - `verification_finding` stores one normalized finding with a version-relative path and the policy's `is_blocking`, resolved when the finding was created. A partial index serves blocking findings. Finding messages are tool output about model-written code.
@@ -1051,11 +1200,32 @@ erDiagram
 - `script_run` is the one real-data run per execution, with `execution_id` unique. `ScriptRunRepository.openGated` is the only way a row is created. The row records the approval it ran under, the digest recomputed from the stored files, the freshly probed fingerprint, the relative run directory, and an input manifest with each staged copy's upload id, stored name, SHA-256, and size. When it settles, it records the exit code, the capped `stdout` and `stderr`, whether anything was cut, and the manifest as written, when it was valid. It also records the declared and produced output counts. `stdout` and `stderr` can contain the person's cell values. They are stored here and never logged.
 - `runtime_environment` (FEAT-108) stores one preparation state per environment kind and exact manifest and host shape. `preparing`, `ready`, `failed`, and `aborted` are constrained states; only a ready row has a fingerprint and package list. Its unique scope index prevents duplicate preparations, while fingerprint and ready indexes serve lookup. The script launcher digest records the bytes deployed beside the script environment. There is no foreign key from a run to this table; the run retains its own fingerprint and lock digest even if an environment is later prepared again.
 - `script_run.output_byte_count`, `limit_breached`, and `runtime_lock_digest` record the observed output, the stopping limit, and the exact dependency lock. A time breach requires `timed_out`; memory and output breaches settle as failures.
+- `execution.as_of_at`, `as_of_date`, `as_of_timezone`, and `as_of_source` capture the instant and local calendar interpretation selected for this run. Old rows may remain null. The source distinguishes today's value, a chosen date, and a copied retry or replay.
+- `task_template` holds the saved task's name and description independently of a source task. `template_revision` owns the copied final-version metadata, input contract, recorded decisions and notes, runtime fingerprint/detail, and immutable revision number. `(template_id, revision_number)` and non-null `source_execution_id` are unique. `template_revision_file` owns code copies with one path per revision and a SHA-256 per file. The repository verifies the overall version digest before insertion; triggers reject later edits to revision content and file rows.
+- `execution_reuse` is the one-row-per-execution provenance record for `run`, `replay`, or `repair`. It keeps snapshot name, revision number and digest, compatibility report/digest, and any person-authored mapping. Its nullable template and revision foreign keys use `ON DELETE SET NULL`, so deleting a saved task does not erase run history. `execution_input_binding` records upload id, slot, and original input name for a run; unique constraints guard each upload, slot, and name within an execution. Both rows cascade when their owning execution is deleted.
 
-- Deleting an execution cascades to its code versions, files, attempts, fixtures, verification passes, checks, findings, approvals, and run. Deleting an upload cascades to its fixtures. Nothing deletes `scripts/{executionId}/` or `runs/{executionId}/` from disk yet, and none of these rows has a retention policy.
+- Deleting an execution cascades to its code versions, files, attempts, fixtures, verification passes, checks, findings, approvals, run, and artifacts. Deleting an upload cascades to its fixtures. The production whole-task delete path is `TaskDeletionService`: `TaskRepository.deleteOwnedRows` rejects any open run, collects execution ids and counts, deletes the task row with its cascading children inside one transaction, then the service removes the owned directories. A failed directory removal does not roll back the row transaction; the response counts that directory in `filesPendingRemoval` and a sweep retries it. `TaskRepository` no longer touches the filesystem; `TaskDeletionService` is the only whole-task delete path, and FEAT-109's artifact file sweep now runs only as the startup orphan sweep.
+
+FEAT-109 added `artifact` (one registered output: `execution_id`, `task_id`, `script_run_id`, the display `filename`, `file_path` relative to the data root, `type`, `extension`, `mime_type`, `render_mode`, `declared`, `title`, `description`, `byte_size`, `sha256`, and a counts-only `content_scan`), `script_run.artifact_count` and `unregistered_output_count`, and `conversation_event_kind`, the lookup table that replaced `conversation_event.kind`'s CHECK — a new event kind is now an `INSERT`, not a table rebuild.
+
+### Task retention and deletion
+
+Task-owned work stays for the life of that task; no task, run, upload, generated code, transmission, or output is purged by age. A saved task is an explicit exception: it owns independent revision and code copies and survives deletion of its source task. Deletion of run history is whole-task only. SQLite's foreign-key cascades remove the task-owned rows, including conversation events, disclosure receipts, code versions, checks, approvals, script runs, and artifact records. `TASK_OWNED_TREES` is the file-side inventory:
+
+| Directory | Key | Contents |
+| --- | --- | --- |
+| `uploads/{taskId}/` | Task | Attached input files. |
+| `artifacts/{taskId}/` | Task | Registered outputs. |
+| `runs/{executionId}/` | Run | Real input copies, output remnants, and verification scratch. |
+| `scripts/{executionId}/` | Run | Projected generated code and synthetic fixtures. |
+| `agent-sessions/{executionId}/` | Run | Raw local provider session logs. |
+
+The row transaction commits before file removal. If a directory cannot be removed, `filesPendingRemoval` counts it and the application retries orphan removal on startup; the upload and execution-tree sweeps also run hourly. This can happen when a file is open in another program. Unattached staged uploads and consents have a separate short cleanup window because they never became task-owned. Shared `env/`, `verify-env/`, `pi/`, configuration, and `runtime_environment` are installation state and do not belong to one task.
+
+Deletion removes copies the application owns under its data root. It cannot remove downloads, emailed reports, or anything unisolated generated Python wrote elsewhere. A run marked **Interrupted** has stopped; deletion or restart cannot recall text or diagnostics already sent to the provider.
 - `app_meta` remains the key/value store for schema version, application version, and installation time. Drizzle also maintains its migration table.
 
-The broader `.spec-lite/data_model.md` remains a proposal and includes deferred tables that are not present. There are currently no artifact, schedule, template, or tool-registry tables.
+The broader `.spec-lite/data_model.md` remains a proposal and includes deferred tables that are not present. There are currently no schedule or tool-registry tables; the implemented saved-task tables cover basic reuse, while a richer gallery is deferred. The `artifact` table deliberately omits the proposal's `saved`, `saved_at`, and `tags` columns, which belong to the deferred standalone artifact library. The proposal's `plotly-json` type is `plotly-html` in the implemented schema, as memory's manifest model says.
 
 ## Key Design Decisions
 
@@ -1069,7 +1239,14 @@ The broader `.spec-lite/data_model.md` remains a proposal and includes deferred 
 - **Persist before broadcast:** A client never receives a conversation event that cannot subsequently be replayed from the database.
 - **REST commands, WebSocket progress:** Commands retain correlation IDs, validation, and the common error envelope. The socket is a resumable, server-to-client tail rather than a second command API.
 - **Explicit restart semantics:** In-memory provider sessions, verification passes, and runs are not reconstructible. Startup therefore converts active rows, including `waiting`, to a readable interrupted failure instead of leaving stale state or pretending to resume. The two gates, `awaiting_approval` and `awaiting_review`, are database rows with nothing in memory, so they survive a restart and wait for the person.
-- **Origin and Host validation:** State-changing REST routes and WebSocket upgrades accept the local application origins plus explicitly configured origins. Missing Origin is allowed for non-browser clients; an unrecognized or `null` Origin is rejected. This mitigates browser cross-site requests and DNS rebinding against the loopback service, but it is not authentication or code isolation.
+- **One open run per task:** A retry and a review-generated rerun check for any non-terminal execution inside the transaction that would insert the new one. The history delete path makes the same check before removing task rows. A parked approval or review still counts as open.
+- **Origin and Host validation:** State-changing REST routes, including whole-task deletion, and WebSocket upgrades accept the local application origins plus explicitly configured origins. Missing Origin is allowed for non-browser clients; an unrecognized or `null` Origin is rejected. Read routes rely on the browser's same-origin policy; the app sends no CORS access header and applies `X-Content-Type-Options: nosniff` to every `/api` response. This posture mitigates requests from foreign web pages. It is not access control against other local programs or accounts, authentication, or code isolation; a per-install token remains a pre-pilot item.
+- **History as a projection:** The task list uses the latest run per task and an execution-id keyset cursor. A page gathers run, input, output, and last-state counts with a fixed set of queries instead of one query per task. The run record contains references and summaries; full payloads stay at their owning routes. History reads never ask the provider for data.
+- **Saved revisions own their copies (D11):** Only a completed run accepted by a person can become a saved task. Its revision holds code and input-contract copies independent of the source task, and append-only revision numbers make a later accepted repair the new current version. The content trigger lists protected columns so SQLite may still clear `source_execution_id` on source deletion. Deleting a saved task clears nullable run-origin links while snapshots and task history survive.
+- **A compatibility report describes shape:** The check uses locally stored profiles, recorded decision rules, runtime metadata, and the selected as-of. Its digest makes a start refuse a changed selection or revision. Passing this check permits the unchanged saved code to reach the verification and approval gates; it cannot prove that another file's values carry the same meaning.
+- **Saved code skips the provider, not the gates:** A compatible run materializes the revision into a final `code_version` and moves `pending -> verifying` without opening an agent session or recording a prompt transmission. It still runs verification, needs a person's approval, and executes Python with the server's access. "Nothing sent to the AI" is therefore an account of this start path, not an isolation claim.
+- **Repair widens disclosure only after review:** A repair gets new FEAT-105 consent for the uploaded file and renders the person's mapping as instructions they inspect before submission. The prompt consists of that reviewed guidance and approved new-file context through the existing boundary. The saved revision's code is kept out of the prompt; including it later would require a separate disclosure decision.
+- **Replay keeps code, bindings, and date:** Replay copies the source execution's final code version, upload-to-name bindings, and as-of rather than reading the current saved revision. It remains possible after saved-task deletion. This reproduces those three inputs to the run, while runtime changes can still alter the outcome and are shown at the approval gate.
 - **Local profiling, bounded disclosure (D04):** Ingestion runs in Node, not Python, so it works before any Python runtime exists. What may ever leave the machine is one bounded artifact: at most 10 sample rows with 200-character cells, frequent values only for columns under 1,000 distinct values, and 64 KiB in total, degraded in a fixed, recorded order. The bound is enforced in the accumulator, the repository, the payload builder, and the schema.
 - **Exact, recipient-bound approval:** The preview digest covers the rendered disclosure text, sorted upload ids, provider, and model. Consent is checked once before task creation and again before prompt construction. The provider receives the approved snapshot rather than a re-rendered payload, and a receipt is inserted before the session is opened.
 - **One prompt-context chokepoint:** `assemblePromptContext` admits only user text, approved disclosure bytes, filtered diagnostics, and application-authored context. Pi adapter details and arbitrary provider output cannot be injected as file context through this boundary. Code generation widens nothing. The strategy wraps FEAT-105's rather than replacing it, the code contract enters as application text, retry guidance enters as the person's words, and all of it goes through the same single call.
@@ -1112,6 +1289,8 @@ Startup runs prerequisite checks, resolves `AUTOMATE_HOME` (default `~/.automate
 
 `uv` is a prerequisite; the application does not install it. `RuntimeProvisioner` checks `uv --version`, finds the exact pinned CPython 3.14.6, and uses `uv python install 3.14.6` if necessary. The source manifests live in `packages/server/runtime/{script-env,verify-env}/`; only `pnpm runtime:lock` runs `uv lock`, in the repository. At runtime, preparation copies those manifests to `env/` and `verify-env/` and uses `uv sync --locked --project <dir>`. An outdated lock is a preparation failure, not a reason to resolve new dependencies. Script and checker calls use `uv run --project <dir> --no-sync --locked -- ...`. `VerifyEnvironment` writes the app-owned Bandit configuration and runs checkers with `ruff --isolated` and explicit Bandit config arguments. All spawns use `shell: false` with application-built argument arrays. The Python process inherits filtered environment variables, UTF-8 settings, and `PYTHONSAFEPATH=1`; this is hygiene, not isolation.
 
+`executionAsOfEnvironment` adds `AUTOMATE_AS_OF` (a zoned timestamp), `AUTOMATE_AS_OF_DATE` (`YYYY-MM-DD`), and `AUTOMATE_TIMEZONE` (an IANA zone) to generation tests, verification tests, and the real script. They are values from the execution row, not inherited shell variables. A saved-code run and a replay use the same Python and resource-control path as any generated run; replay does not pin the historical runtime.
+
 | Setting                                                    | Runtime effect                                                                                                                                                                       |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `AUTOMATE_HOME`                                            | Overrides the application data root.                                                                                                                                                 |
@@ -1146,10 +1325,13 @@ Startup runs prerequisite checks, resolves `AUTOMATE_HOME` (default `~/.automate
 | `LOG_LEVEL`                                                | Sets Pino logging verbosity.                                                                                                                                                         |
 | `AUTOMATE_MAX_UPLOAD_BYTES` and the other ingestion limits | Bound upload size, files per task, rows, columns, sheets, parse time, workbook expansion, and staged-upload lifetime; see [ingestion limits](features/csv-xlsx-ingestion.md#limits). |
 
-Durable state lives under the application data root: `data/automate.db`, `config/agent.json`, managed Pi files under `pi/`, and raw SDK logs under `agent-sessions/<executionId>/`. Uploaded files live under `uploads/staged/` until a task claims them and under `uploads/<taskId>/` afterwards. Code generation fills `scripts/` and `env/`. Verification and the real run fill `verify-env/` and `runs/`. Startup still creates `artifacts/` for later features, and nothing writes to it yet: a run's outputs stay in `runs/{executionId}/output/`.
+Durable state lives under the application data root: `data/automate.db`, `config/agent.json`, managed Pi files under `pi/`, and raw SDK logs under `agent-sessions/<executionId>/`. Uploaded files live under `uploads/staged/` until a task claims them and under `uploads/<taskId>/` afterwards. Code generation fills `scripts/` and `env/`. Verification and the real run fill `verify-env/` and `runs/`. Registered outputs live in `artifacts/{taskId}/{artifactId}{ext}` (FEAT-109): the settle moves them out of `runs/{executionId}/output/`, which keeps only `manifest.json`. Memory writes the layout as `{artifactId}.{ext}`; the stored extension already carries its dot, so the path is the same. The five task-owned trees are listed in [Task retention and deletion](#task-retention-and-deletion).
 
 ```text
 ~/.automate/                       (or $AUTOMATE_HOME)
++-- data/automate.db               SQLite source of task and run rows
++-- uploads/{taskId}/              attached task inputs
++-- agent-sessions/{executionId}/  local provider session log
 +-- env/                           shared uv project for generated tests and the real run
 |   +-- pyproject.toml             copied from committed script-env manifest
 |   +-- uv.lock                    copied from committed script-env lock
@@ -1166,9 +1348,11 @@ Durable state lives under the application data root: `data/automate.db`, `config
 |   +-- attempt-{n}/               projection of one sealed code_version; cwd for tests and the run
 |       +-- main.py, test_main.py  written from code_file rows
 |       +-- output/                scratch for AUTOMATE_OUTPUT_DIR during generation, never registered
++-- artifacts/{taskId}/
+|   +-- {artifactId}{ext}          a registered output, named by id; life of the task
 +-- runs/{executionId}/
     +-- input/<stored_filename>    verified copy of each upload for the real run (not a boundary)
-    +-- output/                    AUTOMATE_OUTPUT_DIR for the real run, with manifest.json
+    +-- output/                    AUTOMATE_OUTPUT_DIR for the real run; manifest.json stays, output files move to artifacts/
     +-- verify/input/              fixtures rebuilt by the integrity check
     +-- verify/output/             test re-run scratch, deleted afterwards
 ```

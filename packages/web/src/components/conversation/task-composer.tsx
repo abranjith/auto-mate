@@ -45,7 +45,7 @@ export function TaskComposer() {
     if (!trimmed || mutation.isPending || submitting.current || attachments.busy) return;
     if (attachments.uploadIds.length > 0) { void loadPreview(); return; }
     submitting.current = true;
-    startTask({ prompt: trimmed });
+    startTask({ prompt: trimmed, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
   };
   const approve = async ({ diagnostics, decisions }: { diagnostics: boolean; decisions: readonly PreflightDecision[] }) => {
     if (!preview || submitting.current) return;
@@ -53,7 +53,7 @@ export function TaskComposer() {
     setGateError(undefined);
     try {
       const consent = await grantDisclosureConsent({ uploadIds: preview.uploadIds, payloadDigest: preview.digest, scopeDiagnostics: diagnostics });
-      startTask({ prompt: prompt.trim(), uploadIds: preview.uploadIds, disclosureAck: { consentId: consent.id, payloadDigest: consent.payloadDigest }, preflightDecisions: [...decisions] });
+      startTask({ prompt: prompt.trim(), uploadIds: preview.uploadIds, disclosureAck: { consentId: consent.id, payloadDigest: consent.payloadDigest }, preflightDecisions: [...decisions], timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     } catch (error) { submitting.current = false; setGateError(errorMessage(error)); }
   };
   const keyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); submit(); } };

@@ -4,6 +4,39 @@
 
 > Current implemented behavior only. Change history lives in source control.
 
+## Saved tasks
+
+**FEAT-111 — Save and rerun** _(updated: 2026-09-26 by implement)_  
+Source spec: [spec.md](features/FEAT-111-save_and_rerun/spec.md)
+
+Only an accepted (`completed`) run can be saved (**Save this task**, `POST /api/executions/:id/save`). Saving copies its code under the same digest, its input contract (formats, sheets, column names and types, required flags, and no rows or values), its pre-flight and clarification answers as semantic rules, and the approved runtime into revision 1 of a saved task. Revisions are immutable by database trigger and only append; a saved task survives deleting its source task, and the delete-task dialog says so. **Saved tasks** lists them with revision, last run, and run count, and each detail page shows what it expects and produces, remembered choices, runtime, clock-read warnings, revisions, runs, and code on request.
+
+**Run with another file** checks each slot's stored profile against the contract (blocking, advisory, and informational findings worded in `wording.ts`) and binds the new upload to the input name the code reads. A compatible file runs the saved code as a new task (`pending → verifying`), re-runs its tests on a fixture synthesized from the new file, and waits at the **Run it** approval and the result review, with no provider session and no transmission. A mismatch is mapped by the person (column, sheet, or decision), rendered as fixed sentences, and repaired by the AI under the new file's disclosure consent without the saved code; an accepted repair can be promoted to revision N+1.
+
+Every execution records an as-of instant, date, zone, and source, passed to Python as `AUTOMATE_AS_OF`, `AUTOMATE_AS_OF_DATE`, and `AUTOMATE_TIMEZONE`. **Run again exactly** on a saved-code run reuses its code, inputs, and as-of date on today's runtime, and the approval gate names any runtime change. Rejecting a saved-code run records the feedback and offers **Repair with AI** or **Run again exactly** instead of starting an AI retry, and FEAT-106's retry refuses saved-code runs. Compatibility is about shape, not meaning.
+
+---
+
+## Execution History
+
+**FEAT-110 — Execution History** _(updated: 2026-09-26 by implement)_
+Source spec: [spec.md](features/FEAT-110-execution_history/spec.md)
+
+History lists one row per task with its latest run, text search, status filters, a **Needs you** strip, and keyset paging. A task has a paged timeline; each run has a stable URL, its transcript and outputs, and a provenance summary that expands through the owning feature's views. **Run again** creates a linked run with optional guidance, reopens disclosure review if consent is stale, and refuses when another run of the task remains open.
+
+Whole-task deletion removes database rows first and then the task's upload and artifact trees plus each execution's run, script, and raw agent-session trees. Startup cleanup removes residue after interrupted deletion; attached records are never purged by age. `pending`, `generating`, `verifying`, `executing`, and `waiting` interrupt on restart with phase-specific messages, while approval and review gates survive. Graceful shutdown records a separate reason. The API adds list, timeline, record, and delete routes plus task counts, with `nosniff` on all `/api` responses. Restart reconciliation, the parked-run lookup, and **Needs you** are served by the `execution_active` and `execution_parked` partial indexes, whose status lists are written as literals. The end-to-end suite covers prior outputs, the restart partition including gates that still work after a restart, one open run per task, deletion of every row and file with an outside link left intact, startup cleanup, and a provider that must never be opened. This preview relies on browser same-origin policy for history reads; it has no local account access control.
+
+---
+
+## Results & Outputs
+
+**FEAT-109 — Results, Outputs & Downloads** _(updated: 2026-09-25 by implement)_
+Source spec: [spec.md](features/FEAT-109-results_outputs_downloads/spec.md)
+
+When a run settles, every file the script wrote — declared in `manifest.json` or not — is moved into `artifacts/{taskId}/{artifactId}{ext}`, digested, typed from a fixed nine-type policy (never `.svg`), and recorded; undeclared files are kept and marked, and files that cannot be kept are counted and shown, never fatal and never changing where the run lands. The result panel lists each output with a viewer and a download: server-paged tables for CSV/XLSX (cells as text, formula-like cells counted but never rewritten), images, Markdown with raw HTML disabled, text/JSON heads, and HTML/Plotly/PDF in a frame shown only after **Show preview** that grants scripts and nothing else, over bytes served with a deny-by-default CSP — a browser guarantee only, since the script ran unisolated. **Download all** streams a store-only ZIP. A run with nothing, or less than promised, shows a headline, detail, and next steps wired to real controls. Seven read-only endpoints serve lists, bytes, pages, previews, and archives with `nosniff` and an SHA-256 ETag; outputs live for the life of the task and are deleted with it, never by age.
+
+---
+
 ## Verification & Execution
 
 **FEAT-108 — Locked Python Runtime Execution** _(updated: 2026-09-25 by implement)_

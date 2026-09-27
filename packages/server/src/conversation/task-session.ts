@@ -61,6 +61,7 @@ export class TaskSession {
   private deadlineArmed = false;
   private started = false;
   private aborting = false;
+  private abortReason: 'user' | 'shutdown' = 'user';
   readonly settled: Promise<ExecutionRow>;
   private resolveSettled!: (row: ExecutionRow) => void;
   private rejectSettled!: (error: unknown) => void;
@@ -95,9 +96,10 @@ export class TaskSession {
   }
 
   /** Ask the run to abort at most once: application work in flight first, then the provider. */
-  async abort(): Promise<void> {
+  async abort(reason: 'user' | 'shutdown' = 'user'): Promise<void> {
     if (this.aborting) return;
     this.aborting = true;
+    this.abortReason = reason;
     this.lifecycle?.cancel();
     await this.agentSession?.abort();
   }
@@ -201,7 +203,7 @@ export class TaskSession {
     const current = this.currentStatus();
     const row = settlement.status === 'verifying'
       ? this.deps.executions.markHandedOff(this.executionId, settlement.status, result.usage)
-      : this.deps.executions.markSettled(this.executionId, { status: settlement.status, usage: result.usage, ...(settlement.error ? { errorCode: settlement.error.code, errorMessage: settlement.error.message } : {}) });
+      : this.deps.executions.markSettled(this.executionId, { status: settlement.status, usage: result.usage, ...(this.abortReason === 'shutdown' && settlement.status === 'aborted' ? { errorCode: 'EXECUTION_STOPPED_ON_SHUTDOWN', errorMessage: 'This run was stopped because the app was closed. Run it again to retry.' } : settlement.error ? { errorCode: settlement.error.code, errorMessage: settlement.error.message } : {}) });
     this.state(current, settlement.status);
     return row;
   }
@@ -210,6 +212,11 @@ export class TaskSession {
     this.coalescer.flush();
     this.lifecycle?.cancel();
     const current = this.currentStatus();
+    if (this.abortReason === 'shutdown') {
+      const row = this.deps.executions.markSettled(this.executionId, { status: 'aborted', errorCode: 'EXECUTION_STOPPED_ON_SHUTDOWN', errorMessage: 'This run was stopped because the app was closed. Run it again to retry.' });
+      this.state(current, 'aborted');
+      return row;
+    }
     const code = cause instanceof AutoMateError ? cause.code : 'AGENT_SESSION_START_FAILED';
     const message = cause instanceof AutoMateError ? cause.message : 'The agent session could not complete this run.';
     if (!(cause instanceof AutoMateError)) this.deps.logger.error({ err: cause, executionId: this.executionId }, 'task session failed');

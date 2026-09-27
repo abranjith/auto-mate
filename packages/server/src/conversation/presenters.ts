@@ -19,6 +19,10 @@ export function presentExecution(row: ExecutionRow): ExecutionSummary {
     id: row.id,
     taskId: row.taskId,
     status: row.status as ExecutionSummary['status'],
+    trigger: row.trigger as ExecutionSummary['trigger'],
+    retryOfExecutionId: row.retryOfExecutionId,
+    asOf: row.asOfAt && row.asOfDate && row.asOfTimezone && row.asOfSource ? { at: Math.floor(row.asOfAt.getTime() / 1000), date: row.asOfDate, timeZone: row.asOfTimezone, source: row.asOfSource as 'now' | 'chosen' | 'copied' } : null,
+    reuse: null,
     provider: row.provider,
     model: row.model,
     usage: {

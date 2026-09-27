@@ -22,6 +22,7 @@ import { originGuard } from '../middleware/origin-guard';
 import type { DisclosureService } from '../disclosure/disclosure-service';
 import type { PreflightService } from '../disclosure/preflight-service';
 import type { DisclosureConsentRepository } from '../db/repositories/disclosure-consent-repository';
+import type { HistoryRepository } from '../db/repositories/history-repository';
 
 export interface TaskRouteDependencies {
   tasks: TaskRepository;
@@ -33,6 +34,7 @@ export interface TaskRouteDependencies {
   disclosure?: DisclosureService;
   preflight?: PreflightService;
   consents?: DisclosureConsentRepository;
+  history?: HistoryRepository;
 }
 function parseId(value: string): number {
   const id = Number(value);
@@ -62,7 +64,7 @@ export function taskRoute(deps: TaskRouteDependencies): Router {
     originGuard(deps.config),
     async (request, response, next) => {
       try {
-        const { prompt, uploadIds = [], disclosureAck, preflightDecisions = [] } = parseCreateTask(request.body);
+        const { prompt, uploadIds = [], disclosureAck, preflightDecisions = [], timeZone } = parseCreateTask(request.body);
         const uploads = deps.uploads;
         if (uploadIds.length > 0 && !uploads)
           throw new ValidationError('File attachments are not available.');
@@ -81,11 +83,12 @@ export function taskRoute(deps: TaskRouteDependencies): Router {
           prompt,
           uploadIds.length === 0 || !uploads
             ? undefined
-            : (taskId, executionId) => {
+            : (taskId, executionId, tx) => {
                 claimed = uploads.attachWithinTransaction(taskId, uploadIds);
                 if (approved && deps.consents) deps.consents.attachToTask(approved.id, taskId);
-                deps.preflight?.persist(executionId, resolved);
+                deps.preflight?.persist(executionId, resolved, tx);
               },
+          timeZone,
         );
         // Files move only after commit; a failed move marks that upload, never the task.
         if (uploads && claimed.length > 0)
@@ -111,6 +114,7 @@ export function taskRoute(deps: TaskRouteDependencies): Router {
       response.json({
         task: presentTask(row),
         executions: deps.executions.listByTask(id).map(presentExecution),
+        counts: deps.history?.taskCounts(id) ?? { runs: deps.executions.listByTask(id).length, inputs: 0, outputs: 0, openRunId: null },
       });
     } catch (cause) {
       next(cause);

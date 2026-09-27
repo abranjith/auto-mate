@@ -30,6 +30,7 @@ const execution: ExecutionSummary = {
   id: 9,
   taskId: 3,
   status: 'generating',
+  trigger: 'manual', retryOfExecutionId: null,
   provider: null,
   model: null,
   usage: {},
@@ -110,5 +111,19 @@ describe('useExecutionStream', () => {
     await waitFor(() =>
       expect(result.current.events.map((event) => event.seq)).toEqual([1, 2]),
     );
+  });
+});
+
+describe('useExecutionStream on a finished run (FEAT-110)', () => {
+  it('opens no WebSocket for a terminal run, and one for a parked run', async () => {
+    mocks.execution.mockResolvedValue({ ...execution, status: 'completed', completedAt: at });
+    const done = renderHook(() => useExecutionStream(9), { wrapper });
+    await waitFor(() => expect(done.result.current.connection).toBe('closed'));
+    expect(done.result.current.events).toHaveLength(1);
+    expect(MockSocket.instances).toHaveLength(0);
+    done.unmount();
+    mocks.execution.mockResolvedValue({ ...execution, status: 'awaiting_approval' });
+    renderHook(() => useExecutionStream(10), { wrapper });
+    await waitFor(() => expect(MockSocket.instances).toHaveLength(1));
   });
 });

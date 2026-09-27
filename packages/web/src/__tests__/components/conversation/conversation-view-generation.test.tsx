@@ -49,7 +49,7 @@ describe('ConversationView with generation events', () => {
 });
 
 describe('GenerationSection', () => {
-  const base: ExecutionSummary = { id: 2, taskId: 1, status: 'generating', provider: 'fake', model: 'fake', usage: {}, startedAt: at, completedAt: null, durationMs: null, error: null, createdAt: at };
+  const base: ExecutionSummary = { id: 2, taskId: 1, status: 'generating', trigger: 'manual', retryOfExecutionId: null, provider: 'fake', model: 'fake', usage: {}, startedAt: at, completedAt: null, durationMs: null, error: null, createdAt: at };
   const loadAttempts = vi.fn().mockResolvedValue({ attempts: [], limits: { maxAttempts: 3, timeoutMs: 600_000 } });
 
   it('does nothing for a text-only run', () => {

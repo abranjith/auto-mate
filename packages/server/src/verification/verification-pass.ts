@@ -40,6 +40,7 @@ export interface PassInputs {
   readonly uploads: readonly ProfiledInput[];
   /** `runs/{executionId}/verify/` — fixtures are rebuilt into `input/` beneath it. */
   readonly verifyDir: string;
+  readonly asOfEnv?: Readonly<Record<string, string>>;
 }
 
 export interface PassDependencies {
@@ -93,7 +94,7 @@ export async function runVerificationPass(deps: PassDependencies, inputs: PassIn
   ledger.record('contract_inputs', checkInputs(inputs.version, inputs.uploads));
   ledger.record('contract_outputs', checkOutputs(inputs.version));
   if (!signal.aborted) await staticChecks(deps, integrity.versionDir, ledger, signal);
-  if (!signal.aborted) ledger.record('tests', await runTestCheck({ runner: deps.runner, executionId: inputs.executionId, versionDir: integrity.versionDir, fixtures: integrity.fixtures, verifyDir: inputs.verifyDir, timeoutMs: deps.limits.testRunTimeoutMs, signal }));
+  if (!signal.aborted) ledger.record('tests', await runTestCheck({ runner: deps.runner, executionId: inputs.executionId, versionDir: integrity.versionDir, fixtures: integrity.fixtures, verifyDir: inputs.verifyDir, timeoutMs: deps.limits.testRunTimeoutMs, asOfEnv: inputs.asOfEnv, signal }));
   const interrupted = signal.aborted;
   return { checks: ledger.complete(interrupted ? 'Not run: checking was stopped first.' : 'Not run.'), interrupted };
 }

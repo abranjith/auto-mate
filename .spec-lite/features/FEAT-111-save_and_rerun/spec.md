@@ -372,7 +372,7 @@ Neither migration rewrites a row.
 
 ### TASK-001: Reuse contracts in `packages/core`: input contract, rules, type compatibility, the compatibility check, as-of, clock scan, mapping, wording, and errors
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Input contract.** `buildInputContract({ inputs, declaredInputs, answeredFindings, notes })` takes each input's `{ position, inputName, label, format, sourceSha256, tables: TableProfile[] }`.
     - For each input it collects the `DeclaredInput`s whose `fileRole` equals `inputName`. A declared `sheet` becomes a `sheet` selector. None declared for an XLSX becomes `first`, named after `sheetIndex 0`. A CSV is `only`. When no entry names the file, it is `declared: false` with no tables.
     - Each table lists **every** profiled column with `sourceType` and `temporalFormat`. `required` and `declaredType` are set from the matching `requiredColumns`.
@@ -450,7 +450,7 @@ Neither migration rewrites a row.
     - `template-api.ts` schemas, each `additionalProperties: false`.
     - `ExecutionSummarySchema.asOf` and `.reuse`, and `TaskCreateRequestSchema.timeZone`, all additive.
     - The `pending → verifying` edge, commented *"FEAT-111: a saved task's run has no generation phase."*
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Contract.**
     - A CSV input, a workbook with a declared sheet, a workbook with no declared sheet (`first`), and an input the agent never declared (`declared: false`) each produce the documented shape.
     - Column order and required flags match the declaration.
@@ -512,12 +512,12 @@ Neither migration rewrites a row.
     - A test named for FEAT-111 asserts `pending`'s outgoing set, so a later change to it is deliberate.
     - FEAT-107's full matrix test still passes.
   - **Hygiene.** `grep -rE "from 'node:" packages/core/src/reuse` returns nothing.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the input contract, the compatibility codes, the as-of parameter, and the mapping sentences.
+- [x] **Documentation Update**: Invoke **Document** update mode for the input contract, the compatibility codes, the as-of parameter, and the mapping sentences.
 - **Verify**: `pnpm --filter @automate/core test reuse execution-state code-contract` and `pnpm --filter @automate/core typecheck` pass.
 
 ### TASK-002: Persistence: saved tasks, immutable revisions, reuse links, bindings, as-of columns, and the two migrations
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Schema.** Extend `schema.ts` with the four tables and the four `execution` columns exactly as §2 specifies. Generate the migration.
     - **Read the generated SQL before committing it.** `execution` must change by four `ADD COLUMN` statements only; hand-edit it if drizzle-kit emitted a rebuild, and record that in the spec's implementation notes, as FEAT-106 did.
     - Add the custom migration with the three triggers and the two `conversation_event_kind` inserts, each insert `INSERT … WHERE NOT EXISTS` so re-application is a no-op.
@@ -536,7 +536,7 @@ Neither migration rewrites a row.
 
     Memory's Design Patterns rule forbids calling a repository write that opens its own transaction from inside another. **This also fixes TODO.md's FEAT-105 nested-transaction bug** for every caller that passes `tx`. If an earlier row already fixed it, this is a no-op.
   - Wrap driver errors as `RepositoryError`.
-- [ ] **Unit Tests** (against a temporary database, never the developer's `~/.automate`):
+- [x] **Unit Tests** (against a temporary database, never the developer's `~/.automate`):
   - **Round trips.**
     - A template with one revision and three files round-trips.
     - `appendRevision` yields 2, then 3.
@@ -567,13 +567,13 @@ Neither migration rewrites a row.
     - **`sqlite_master.sql` for `execution` is the old definition plus four columns** (proof there was no rebuild), and every child row is still present.
     - The three triggers and the two kind rows exist.
     - Applying both migrations twice is a no-op.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the reuse schema, the immutability triggers, and why the column list on the first trigger is exact.
+- [x] **Documentation Update**: Invoke **Document** update mode for the reuse schema, the immutability triggers, and why the column list on the first trigger is exact.
 - **Verify**: `pnpm --filter @automate/server test template-repository execution-reuse-repository migration-reuse` passes. `pnpm drizzle-kit generate` then reports no pending diff.
 - **Depends on**: TASK-001
 
 ### TASK-003: The as-of date on every run, from creation to the Python process
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Creation.** Every execution-creating path resolves and writes the four as-of columns:
     - FEAT-103's `POST /api/tasks` resolves `now` in the request's optional `timeZone`, validated by `isSupportedTimeZone`, and falls back to the server's `Intl` zone.
     - FEAT-106's guidance retry and FEAT-107's feedback retry **copy** the source run's as-of with `source = 'copied'`. A source with `NULL` as-of resolves `now` instead.
@@ -590,7 +590,7 @@ Neither migration rewrites a row.
     - `presentExecution` adds `asOf: { date, timeZone, source } | null`.
     - FEAT-107's `buildRunIntent` adds `asOf`, so **the intent digest covers the date a person approved running as of**.
     - The run header shows *"As of 25 Sep 2026 · Europe/London"*, followed by *"· the date you chose"* or *"· the same date as the run it repeats"* when that applies.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Creation.**
     - A new task gets `now` in the given zone.
     - An unsupported zone returns `VALIDATION_ERROR`.
@@ -604,13 +604,13 @@ Neither migration rewrites a row.
     - No other `AUTOMATE_*` variable leaks. This is FEAT-106's assertion, re-run.
   - **Contract.** `renderCodeContract` contains rules 7 and 8 verbatim, and FEAT-106's existing verbatim test of `SYNTHETIC_DATA_WARNING` still passes.
   - **Intent.** The intent digest differs for two executions that differ only in `as_of_date`.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the as-of parameter, the three environment variables, and the two new contract rules.
+- [x] **Documentation Update**: Invoke **Document** update mode for the as-of parameter, the three environment variables, and the two new contract rules.
 - **Verify**: `pnpm --filter @automate/server test task-route generation-service verification run-intent script-run` passes. In the browser, a new task's run header shows today's date and zone.
 - **Depends on**: TASK-002
 
 ### TASK-004: One answer to "which upload, under which name?": the `ExecutionInputs` resolver
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **The resolver.** Add `src/execution/execution-inputs.ts`. `resolve(executionId)` returns `ResolvedInput[] { position, uploadId, inputName, upload }`:
     - from `execution_input_binding` when the execution has bindings;
     - otherwise from the task's uploads in attach order, with `inputName = upload.storedFilename`. This is FEAT-106's behavior, byte for byte.
@@ -621,7 +621,7 @@ Neither migration rewrites a row.
     - FEAT-107 `InputStager`, which copies to `runs/{id}/input/<inputName>` and adds `inputName` to each `input_manifest` entry;
     - FEAT-107 `buildRunIntent`'s input list.
   - **Header.** The module header states the invariant: a saved-code run's directories never contain the new upload's stored name, and generated runs are unchanged.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **No regression.** For a generated execution, every consumer yields exactly what it yielded before. FEAT-106's fixture, FEAT-107's contract-check, and FEAT-107's stager suites pass unchanged.
   - **Bindings.** For an execution with a binding `{ inputName: '12-sales_q1.csv', uploadId: 30 }`:
     - the fixture file is `scripts/{id}/fixtures/12-sales_q1.csv`;
@@ -629,13 +629,13 @@ Neither migration rewrites a row.
     - `contract_inputs` finds upload 30's profile for `fileRole: '12-sales_q1.csv'`;
     - **a recursive scan of `scripts/{id}` and `runs/{id}` finds no entry named `30-…`**.
   - **Source scan.** No module under `src/generation/`, `src/verification/`, or `src/execution/` other than `execution-inputs.ts` reads `storedFilename` to build a path.
-- [ ] **Documentation Update**: Invoke **Document** update mode for input resolution and why saved code keeps its original input names.
+- [x] **Documentation Update**: Invoke **Document** update mode for input resolution and why saved code keeps its original input names.
 - **Verify**: `pnpm --filter @automate/server test execution-inputs fixture-service contract-checks input-stager` passes.
 - **Depends on**: TASK-002
 
 ### TASK-005: Save an accepted run as a saved task
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Preview.** `SaveService.preview(executionId)` returns `{ saveable, reason, alreadySaved: { templateId, name, revisionNumber } | null, defaultName, promoteTarget: { templateId, name, nextRevisionNumber } | null, keeps: { inputs: [{ label, format, sheets, requiredColumns }], ruleCount, noteCount }, readsWallClock: [{ path, line }] }`. The dialog therefore shows exactly what will be kept before anything is written.
   - **`save(executionId, { name, templateId })`.**
     1. Require `completed`. Otherwise raise `ExecutionNotSaveableError`, naming the state in `describeRunState`'s words and saying *"Only a run you accepted can be saved."*
@@ -655,7 +655,7 @@ Neither migration rewrites a row.
     10. After commit, append `task_saved` to the source execution's transcript at the next `seq`.
   - **Routes.** `GET /api/executions/:id/save-preview`, and `POST /api/executions/:id/save` behind `originGuard` returning `201 { template, revision }`.
   - **Logging.** Log `info` with `{ executionId, templateId, revisionNumber, fileCount, readsWallClock }`. **Never the name, the description, a column name, a rule, or a filename.**
-- [ ] **Unit Tests** (driving a real accepted run through FEAT-104–109 with `FakeAgentProvider` and `FakePythonRunner`):
+- [x] **Unit Tests** (driving a real accepted run through FEAT-104–109 with `FakeAgentProvider` and `FakePythonRunner`):
   - **The saved revision.**
     - Revision 1's files equal the `code_file` rows byte for byte, and its digest equals the version's.
     - The contract lists every input, table, and column with the right required flags and declared types.
@@ -670,13 +670,13 @@ Neither migration rewrites a row.
   - **Validation.** A 121-character name returns `VALIDATION_ERROR`, and a blank name uses the task name.
   - **Origin.** A foreign `Origin` returns 403.
   - **Logs.** A Pino spy shows no log line containing the name, the description, or a column name.
-- [ ] **Documentation Update**: Invoke **Document** update mode for saving a task: what is kept, what is not, and what promotion is.
+- [x] **Documentation Update**: Invoke **Document** update mode for saving a task: what is kept, what is not, and what promotion is.
 - **Verify**: `pnpm --filter @automate/server test save-service template-route` passes. `curl -s -X POST -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:4317/api/executions/1/save` on a completed run returns 201.
 - **Depends on**: TASK-003, TASK-004
 
 ### TASK-006: The compatibility check
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`checkStaged(templateId, { uploadIds, asOfDate, timeZone })`.**
     1. Load the current revision and parse its contract, validated by TypeBox; a stored contract that fails validation is a `RevisionIntegrityError`.
     2. Load each upload, which must be **staged** (`task_id IS NULL`). An attached one fails with *"That file belongs to another task."*
@@ -687,7 +687,7 @@ Neither migration rewrites a row.
   - **`checkExecution(executionId)`.** The same check for an existing saved-code run's task uploads against its reuse row's revision. Repair after failure uses it (TASK-009).
   - **Routes.** `GET /api/templates/:id/compatibility?uploadIds=&asOfDate=&timeZone=` follows FEAT-105's preview route, which is a read. So does `GET /api/executions/:id/compatibility`. Both are validated against TypeBox, and neither carries a guard, as is FEAT-110's rule for reads.
   - **Logging.** Log `debug` with `{ templateId, status, blocking, advisory }`. Never a column name.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Happy path.** A staged file identical in shape to the source is `compatible`.
   - **Staging rules.** An attached upload is refused. An upload still profiling yields `file_not_analyzed`.
   - **Slot order.** Two uploads in swapped slot order yield blocking findings on both.
@@ -695,13 +695,13 @@ Neither migration rewrites a row.
   - **Digest.** It is identical across two calls and changes when a different upload is chosen, or when a revision is appended between calls.
   - **Sentinels.** No sample-row or top-value sentinel appears in the JSON.
   - **Performance.** A two-file, three-sheet check runs no process (asserted on the spawn fake) and reads no upload bytes (asserted by a pass-through `node:fs` mock that fails on any read under `uploads/`, per memory's module-mock pattern).
-- [ ] **Documentation Update**: Invoke **Document** update mode for the compatibility check and each finding in plain words.
+- [x] **Documentation Update**: Invoke **Document** update mode for the compatibility check and each finding in plain words.
 - **Verify**: `pnpm --filter @automate/server test compatibility-service template-route` passes.
 - **Depends on**: TASK-005
 
 ### TASK-007: Run a saved task on another file, with nothing sent to the AI
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`ReuseRunService.start(templateId, { uploadIds, compatibilityDigest, asOfDate, timeZone })`.**
     1. Recompute the check.
        - A different digest raises `CompatibilityStaleError` (*"The check changed since you looked. Please look again."*).
@@ -726,7 +726,7 @@ Neither migration rewrites a row.
     - `ReviewService.review` with `rejected` on a saved-code run stores the feedback, transitions to `rejected`, and **creates no retry**. It returns `{ nextExecutionId: null, nextSteps: ['repair', 'replay'] }`.
   - **Change to FEAT-106.** `GenerationService.retry` refuses a saved-code run with `RetryUsesSavedCodeError`: *"This run used a saved task's code, so it can't be retried by writing new code. Run it again exactly, or repair it with AI."*
   - **Route.** `POST /api/templates/:id/runs` behind `originGuard` returns `201 { task, execution }`.
-- [ ] **Unit Tests** (`FakeAgentProvider` whose `open()` **fails the test** if called, and `FakePythonRunner`):
+- [x] **Unit Tests** (`FakeAgentProvider` whose `open()` **fails the test** if called, and `FakePythonRunner`):
   - **The start.**
     - One task, one execution, bindings, one reuse row, and one final version whose digest equals the revision's.
     - The execution moves `pending → verifying → awaiting_approval`.
@@ -743,13 +743,13 @@ Neither migration rewrites a row.
   - **Failing tests.** A version whose own tests fail against the new fixture settles `failed` with the saved-task wording.
   - **Deletion mid-run.** Deleting the saved task mid-run leaves the run unaffected and its reuse snapshots intact.
   - **Cancel.** Aborting during `verifying` settles `aborted` and kills the checker, per FEAT-107's matrix.
-- [ ] **Documentation Update**: Invoke **Document** update mode for running a saved task, what is checked, and what is never sent.
+- [x] **Documentation Update**: Invoke **Document** update mode for running a saved task, what is checked, and what is never sent.
 - **Verify**: `pnpm --filter @automate/server test reuse-run-service review-service generation-service` passes. In the browser, a saved task runs on a second file with no model call.
 - **Depends on**: TASK-006
 
 ### TASK-008: Historical replay: run again exactly
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`ReuseRunService.replay(executionId)`.**
     - The source must be a saved-code run. Otherwise raise `ReplayNotAvailableError`: *"Only a run of a saved task can be run again exactly."*
     - It must be terminal, and it must have a final version and bindings.
@@ -762,7 +762,7 @@ Neither migration rewrites a row.
     - FEAT-107's stager re-digests each copy against `upload.sha256`, so a changed original file is caught.
     - A source with `NULL` as-of resolves `now`, and `reuse_started` carries `asOfNotRecorded: true`, which the transcript states in `REPLAY_LIMITS`' words.
   - **Route.** `POST /api/executions/:id/replay` behind `originGuard` returns `201 { execution }`.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **The replay.**
     - Same digest, same upload ids, and same `inputName`s.
     - The as-of at, date, and zone are equal, with `copied`.
@@ -776,13 +776,13 @@ Neither migration rewrites a row.
     - A tampered original upload fails at staging with FEAT-107's typed error.
   - **Legacy.** A pre-migration source resolves `now` and says so.
   - **No AI.** No provider session opens.
-- [ ] **Documentation Update**: Invoke **Document** update mode for replay and the limits of "exactly".
+- [x] **Documentation Update**: Invoke **Document** update mode for replay and the limits of "exactly".
 - **Verify**: `pnpm --filter @automate/server test reuse-run-service template-route` passes.
 - **Depends on**: TASK-007
 
 ### TASK-009: Mapping, AI repair, and promotion to a new revision
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`RepairService.startFromTemplate(templateId, { uploadIds, mapping, consent: { consentId, payloadDigest }, asOfDate, timeZone })`.**
     1. Recompute the report and run `validateMapping` against it. With an empty mapping, a note is required, so *"Repair anyway"* is allowed on a compatible file.
     2. Verify the consent with FEAT-105's `verifyAcknowledgement`.
@@ -803,7 +803,7 @@ Neither migration rewrites a row.
     This is the **"widen an existing task's approval"** mechanism TODO.md asks for, built for this case and reusable for FEAT-106's.
   - **Promotion.** TASK-005's `save` with `templateId`.
   - **Routes.** `POST /api/templates/:id/repairs` and `POST /api/executions/:id/repair`, both behind `originGuard`, returning 201.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Mapping validation.** Each rule rejects before any row is written (counted).
   - **Consent.** A stale consent returns FEAT-105's `DISCLOSURE_CONSENT_STALE`.
   - **The prompt**, captured by `FakeAgentProvider`:
@@ -821,13 +821,13 @@ Neither migration rewrites a row.
     - Revision 1's digest and files are byte-identical, and an `UPDATE` on it raises.
     - The **next** `start` materializes revision 2 and sends nothing.
   - **Deleted saved task.** A mapping-based `repairExecution` on a run whose saved task was deleted is refused with a message offering a note-only repair. A note-only repair succeeds.
-- [ ] **Documentation Update**: Invoke **Document** update mode for mapping, repair, what is sent during a repair, and promotion.
+- [x] **Documentation Update**: Invoke **Document** update mode for mapping, repair, what is sent during a repair, and promotion.
 - **Verify**: `pnpm --filter @automate/server test repair-service save-service template-route` passes.
 - **Depends on**: TASK-007
 
 ### TASK-010: The saved-tasks API: list, detail, revisions, runs, and delete
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **`GET /api/templates?cursor=&limit=`** returns `{ items: [{ id, name, currentRevisionNumber, revisionCount, runCount, lastRunAt, createdAt }], nextCursor, hasMore }`.
   - **`GET /api/templates/:id`** returns `{ template, currentRevision, revisions }`:
     - `currentRevision` is `{ id, number, createdAt, contentDigestShort, summary, declaredOutputs, inputs, rules, notes, runtimeLine, readsWallClock, note }`, where `inputs` is the contract rendered for display and `readsWallClock` lists `[{ path, line }]`;
@@ -839,7 +839,7 @@ Neither migration rewrites a row.
   - **Changes to FEAT-110.**
     - The deletion-completeness test's list of non-task-owned tables gains `task_template`, `template_revision`, and `template_revision_file`, each commented *"FEAT-111: a saved task outlives its source task (D11 ownership decision)"*.
     - Its "every production path creates a task with an execution" test gains `POST /api/templates/:id/runs` and `/repairs`.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **List.** It pages 45 templates as 20/20/5 in four queries per page. `runCount` counts tasks, not executions, so a replay does not inflate it.
   - **Detail.** It carries every section, and **no sentinel value**.
   - **Revision.** The revision route returns code, and no other route's JSON contains a planted code sentinel.
@@ -850,13 +850,13 @@ Neither migration rewrites a row.
     - The runs' timeline labels still read *"Ran your saved task 'X'"* from the snapshots.
     - An unknown id returns 404, and a foreign `Origin` returns 403.
   - **FEAT-110 tests.** Deleting a task that was saved leaves exactly the three template tables non-empty, and FEAT-110's completeness test passes.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the saved-tasks API.
+- [x] **Documentation Update**: Invoke **Document** update mode for the saved-tasks API.
 - **Verify**: `pnpm --filter @automate/server test template-route history-route task-deletion` passes.
 - **Depends on**: TASK-005
 
 ### TASK-011: Saving from the run page, and the Saved tasks pages
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Save dialog.** `save-task-dialog.tsx` appears on a `completed` run that is not a saved-code run.
     - It opens from **Save this task**. It reads `useSavePreview` and shows:
       - a name field, defaulting to the task's name, `maxLength` 120;
@@ -880,7 +880,7 @@ Neither migration rewrites a row.
       - **Show the code** (`revision-code-view`, lazy and fetched on open, rendering files the way FEAT-106's code view does);
       - **Delete saved task**, whose `delete-template-dialog` copy reads *"Delete 'X' and its N revisions? Runs you made from it stay in History."*
   - **Navigation and styling.** Add **Saved tasks** to `app-nav.tsx`. Add the tokens (`savedList`, `savedItem`, `contractTable`, `ruleList`, `revisionItem`, `keepsNote`). No raw Tailwind.
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Dialog.**
     - It renders the preview's inputs and the keeps text verbatim.
     - The save fires exactly once on a double click.
@@ -891,13 +891,13 @@ Neither migration rewrites a row.
   - **Detail.** Every section renders from a fixture. The code viewer mounts lazily and issues one request.
   - **Delete dialog.** Focus handling and copy are correct, and it navigates to `/saved` on success.
   - **Navigation.** The link is marked `aria-current` on `/saved`.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the Save dialog and the Saved tasks pages.
+- [x] **Documentation Update**: Invoke **Document** update mode for the Save dialog and the Saved tasks pages.
 - **Verify**: `pnpm --filter @automate/web test save-task saved` passes, and `node packages/web/scripts/check-design-tokens.mjs` exits 0.
 - **Depends on**: TASK-010
 
 ### TASK-012: Run with another file: slots, as-of, the compatibility report, mapping, and repair review
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Slots.** `routes/saved.$templateId.run.tsx` renders one `slot-composer` per contract input, labelled *"File 1 — was “sales_q1.xlsx” (Excel workbook)"*. Each reuses FEAT-104's attachment components: upload, analyze, remove, and retry, with the same messages.
   - **As-of.** `as-of-field` reads *"Run as of today (25 Sep 2026)"*. **Choose another date** reveals `<input type="date" max={today}>`, and the time zone is shown.
   - **Report.** When every slot is analyzed, `useCompatibility` fetches the report and `compatibility-report` renders it:
@@ -913,7 +913,7 @@ Neither migration rewrites a row.
     `instruction-preview` renders `renderMappingInstructions` output under *"These instructions will be sent to the AI along with a description of your new file:"*.
   - **Repair review.** **Continue to review** opens `repair-review`, which wraps FEAT-105's disclosure review (literal file description, recipient, diagnostics choice) with the instruction block above it, unedited. **Approve** grants consent, then posts `/repairs`, then navigates to the task.
   - **Start.** It posts `/runs` with the digest and navigates to `/tasks/$taskId`. On `COMPATIBILITY_STALE` it refetches and says *"The check changed; please look again."*
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Compatible path.** It issues exactly one start carrying the report's digest.
   - **Incompatible path.**
     - No **Start** exists and the mapping form renders.
@@ -925,13 +925,13 @@ Neither migration rewrites a row.
   - **Slots.** A two-slot template requires both files before any check. Removing a file clears the report.
   - **Untrusted text.** Column names and sheet names containing `<script>` render literally.
   - **Stale digest.** It refetches, and no second start is issued.
-- [ ] **Documentation Update**: Invoke **Document** update mode for running a saved task, the report's wording, and the repair review.
+- [x] **Documentation Update**: Invoke **Document** update mode for running a saved task, the report's wording, and the repair review.
 - **Verify**: `pnpm --filter @automate/web test saved-run compatibility mapping repair-review` passes. In the browser, dropping a file with a renamed column leads to the mapping question and then to FEAT-105's review with the instruction shown.
 - **Depends on**: TASK-007, TASK-009, TASK-011
 
 ### TASK-013: History, the run page, and the review panel for saved tasks
 
-- [ ] **Implementation**:
+- [x] **Implementation**:
   - **Wording (core).** `describeTrigger(trigger, { hasGuidance, reuseKind })` gives:
     - `run`: *"Ran your saved task"*;
     - `replay`: *"Ran again exactly"*;
@@ -953,7 +953,7 @@ Neither migration rewrites a row.
     - FEAT-106's `code-version-card` labels a materialized version *"From saved task revision N"* rather than *"Attempt 1"*.
     - FEAT-107's `run-intent-panel` renders the `reuse` section and `REUSE_INTENT_CAVEAT`.
     - FEAT-110's `delete-task-dialog` adds, when the task has a revision saved from it: *"This task was saved as 'X'. The saved task keeps its own copy of the code and column names and is not deleted."*
-- [ ] **Unit Tests**:
+- [x] **Unit Tests**:
   - **Wording.** It is total over trigger × reuse kind, and no label contains an error code.
   - **Records.** A saved-code run's record has the `reuse` section, and a generated run's is `null`.
   - **Timeline.** A task with run, replay, and repair shows three labelled items linked by `chain`.
@@ -965,13 +965,13 @@ Neither migration rewrites a row.
   - **Delete dialog.** Its copy includes the saved-task sentence exactly when a revision's source is in the task.
   - **Code card.** It shows the materialized label.
   - **Deleted saved task.** The header reads *"since deleted"* with no link.
-- [ ] **Documentation Update**: Invoke **Document** update mode for how saved-task runs appear in History and on the run page.
+- [x] **Documentation Update**: Invoke **Document** update mode for how saved-task runs appear in History and on the run page.
 - **Verify**: `pnpm --filter @automate/web test history run-again review-panel delete-task code-version-card` and `pnpm --filter @automate/server test history-repository history-route` pass.
 - **Depends on**: TASK-008, TASK-009
 
 ### TASK-014: End-to-end proof: the second run is the acceptance test
 
-- [ ] **Implementation**: Add `packages/server/src/__tests__/save-and-rerun-e2e.test.ts`, run against a temporary `AUTOMATE_HOME`, `FakeAgentProvider`, and `FakePythonRunner`, with real HTTP. Every scenario asserts on stored rows, files on disk, and responses:
+- [x] **Implementation**: Add `packages/server/src/__tests__/save-and-rerun-e2e.test.ts`, run against a temporary `AUTOMATE_HOME`, `FakeAgentProvider`, and `FakePythonRunner`, with real HTTP. Every scenario asserts on stored rows, files on disk, and responses:
   1. **Repeat use.**
      - A first run is generated, verified, approved, run, accepted, and saved.
      - A second file with reordered columns and one extra column is checked (`compatible`), started, verified, approved, run, and accepted.
@@ -1011,14 +1011,14 @@ Neither migration rewrites a row.
   - `packages/core/src/reuse` imports no Node built-in.
 
   Fix whatever the scenarios expose. The scenarios are the deliverable.
-- [ ] **Unit Tests**: N/A. This task *is* the test. Its bar is that an implementation that sends anything on a compatible rerun, or overwrites a revision, fails at least one scenario.
-- [ ] **Documentation Update**: Invoke **Document** update mode for the save-and-rerun acceptance suite and the second-run criterion it proves.
+- [x] **Unit Tests**: N/A. This task *is* the test. Its bar is that an implementation that sends anything on a compatible rerun, or overwrites a revision, fails at least one scenario.
+- [x] **Documentation Update**: Invoke **Document** update mode for the save-and-rerun acceptance suite and the second-run criterion it proves.
 - **Verify**: `pnpm --filter @automate/server test save-and-rerun-e2e` passes on Windows and on Linux or macOS. `pnpm test` stays hermetic, with no real process spawned.
 - **Depends on**: TASK-012, TASK-013
 
 ### TASK-015: Documentation, memory, backlog, and the four claims this feature must not overstate
 
-- [ ] **Implementation**: Invoke **Document** update mode across the areas this feature adds, per `.spec-lite.json`:
+- [x] **Implementation**: Invoke **Document** update mode across the areas this feature adds, per `.spec-lite.json`:
   - **`docs/features/save-and-rerun.md`**: saving, what a saved task keeps, running with another file, every compatibility message (generated from `wording.ts` in a test), mapping and repair, promotion, replay, as-of dates, and deleting.
   - **`docs/usage.md`**: the monthly-file walkthrough from §1.
   - **`docs/architecture.md`**:
@@ -1045,11 +1045,11 @@ Neither migration rewrites a row.
   - **Close** *"Template input schema validation"* (Data Integrity).
   - **Mark** *"Let a person widen an existing task's approval"* as partly done: the mechanism exists in `repairExecution`, and FEAT-106's retry can adopt it.
   - **Keep** the entries this row adds (see §6).
-- [ ] **Unit Tests**: N/A; this is a documentation task. Three kinds of documented content are generated from code in tests, so a code change that makes any of them wrong fails the build:
+- [x] **Unit Tests**: N/A; this is a documentation task. Three kinds of documented content are generated from code in tests, so a code change that makes any of them wrong fails the build:
   - the compatibility messages;
   - the kept-items sentence;
   - the rendered mapping examples.
-- [ ] **Documentation Update**: This task is the documentation update.
+- [x] **Documentation Update**: This task is the documentation update.
 - **Verify**:
   - The `docs/` pages exist and describe the shipped behavior.
   - Every route in `template-route.ts` appears in the API reference.
@@ -1134,22 +1134,55 @@ Neither migration rewrites a row.
 
 > Captured by hooks (`capture-baseline` / `capture-changeset`), not hand-maintained. See `.spec-lite/features/FEAT-111-save_and_rerun/changeset.json`, the authoritative deterministic review scope. `.spec-lite/hooks.json` currently registers no hooks, so that file will be absent until hooks are configured. Until then, fall back to the **Files** list in §3 as the review scope.
 
+## Implementation notes (review, 2026-09-26)
+
+A review against this spec found and fixed the following. Each fix has a test.
+
+- **Rules (TASK-001).** `evaluateRules` judged a recorded date order against `detectedFormat` even when the new column was ambiguous, so a recorded `DD/MM` on a new ambiguous column came out `notNeeded` or a false `conflict`. It now respects FEAT-104's `TemporalStats.ambiguous`. `evaluateRules` and `rekeyRules` share one key builder, so `multiple_sheets`/`hidden_sheet` rules key as FEAT-105 does.
+- **Mapping sentences (TASK-001).** Decisions were rendered as `For decision 0:when:ambiguous_date_format, use …`, which sent an internal key to the AI. They are now worded in work terms (`For the column “when” (how its dates are read), use “DD/MM/YYYY”.`).
+- **Wording (TASK-001/007).** The saved-code failure sentences moved from `verification-service.ts` into `wording.ts` (`SAVED_CODE_CHECKS_FAILED`, `SAVED_CODE_TESTS_FAILED`). `CompatibilityStaleError`, `ReplayNotAvailableError`, `RetryUsesSavedCodeError`, and `ExecutionNotSaveableError` now use this spec's words. A refused save names the state in `describeRunState`'s words.
+- **Repairs write no bindings (TASK-009).** Repairs were writing `execution_input_binding` rows; §2 says bindings are written only for `run` and `replay`. A repair is a generated run and resolves inputs by stored name.
+- **Promotion note (TASK-005).** The note repeated the mapping sentences, because the repair's guidance already contains them. It is now the guidance.
+- **Replay at the gate (TASK-008).** A replay copies its source's report, so the gate showed that run's runtime changes, not today's. The run intent now compares the replayed run's verification runtime with this run's.
+- **A saved-code start failure** was recorded as `REVISION_INTEGRITY` whatever the cause. It now records the actual code and logs `warn` with short digests only for an integrity failure. A replay of a pre-migration run records `as_of_source = 'now'`, not `copied`.
+- **Required dependencies.** `reuse` is now a required dependency of `GenerationService`, `ReviewService`, and `VerificationService`. It was optional, and the generation test harness omitted it, so the saved-code refusal was silently absent there.
+- **Typed repository errors (TASK-002).** Driver failures in the template and reuse repositories (unique indexes, triggers) are wrapped as `RepositoryError`. The compatibility query is validated against `TemplateCompatibilityQuerySchema`.
+- **UI (TASK-011–013).**
+  - **Start** and **Run again exactly** could each post twice on a double click; both now use a ref guard.
+  - The run page shows *"As of 25 Sep 2026 · Europe/London · the date you chose"* (`describeAsOf`), and *not recorded* for older runs.
+  - A materialized version reads *"From saved task revision N"*.
+  - The delete-task dialog names saved tasks made from the task, via an additive `TaskCounts.savedAs`.
+  - Column types use plain words (`describeColumnType`).
+  - The saved list shows a relative last-run time.
+- **Docs (TASK-015).** `docs/usage.md` gained the monthly-file walkthrough and all routes. The feature page's mapping example now matches the renderer. `server/__tests__/reuse/docs-sync.test.ts` generates the checks from code.
+
+**Deviations, recorded rather than changed:**
+- The web components live in `src/components/saved/`, not `src/components/reuse/`. Several listed files are inlined in route modules: the list, the detail sections, the delete dialog, and the revision code view.
+- The TASK-003 test *"all four columns are set after every creation path"* exists only for the ordinary paths. The saved-task paths are asserted by the service suites.
+- There are thirteen saved-task routes, not the "eleven" in TASK-015. All thirteen are documented and checked.
+- `attachWithinTransaction`, `attachToTask`, and the reuse writes run on the same connection inside the outer transaction without an explicit `tx` parameter. None of them opens its own transaction, so memory's nested-transaction rule holds.
+- TASK-014's scenarios are spread across `reuse/save-service`, `reuse-run-service`, `repair-service`, `template-route`, `docs-sync`, `save-and-rerun-e2e` (server), and `reuse/reuse-scenarios` (core):
+  - Scenario 5, recorded rules, is proven at the core level through FEAT-105's real classifier, not over HTTP.
+  - Scenario 6, restart, simulates reconciliation with `markInterrupted`, not a process restart.
+  - The suite was run on Windows only.
+- Documentation was edited directly rather than through a fresh **Document** update run.
+
 ## 8. State Tracking
 
-- [ ] TASK-001: Reuse contracts in `packages/core`: input contract, rules, type compatibility, the compatibility check, as-of, clock scan, mapping, wording, and errors
-- [ ] TASK-002: Persistence: saved tasks, immutable revisions, reuse links, bindings, as-of columns, and the two migrations
-- [ ] TASK-003: The as-of date on every run, from creation to the Python process
-- [ ] TASK-004: One answer to "which upload, under which name?": the `ExecutionInputs` resolver
-- [ ] TASK-005: Save an accepted run as a saved task
-- [ ] TASK-006: The compatibility check
-- [ ] TASK-007: Run a saved task on another file, with nothing sent to the AI
-- [ ] TASK-008: Historical replay: run again exactly
-- [ ] TASK-009: Mapping, AI repair, and promotion to a new revision
-- [ ] TASK-010: The saved-tasks API: list, detail, revisions, runs, and delete
-- [ ] TASK-011: Saving from the run page, and the Saved tasks pages
-- [ ] TASK-012: Run with another file: slots, as-of, the compatibility report, mapping, and repair review
-- [ ] TASK-013: History, the run page, and the review panel for saved tasks
-- [ ] TASK-014: End-to-end proof: the second run is the acceptance test
-- [ ] TASK-015: Documentation, memory, backlog, and the four claims this feature must not overstate
+- [x] TASK-001: Reuse contracts in `packages/core`: input contract, rules, type compatibility, the compatibility check, as-of, clock scan, mapping, wording, and errors
+- [x] TASK-002: Persistence: saved tasks, immutable revisions, reuse links, bindings, as-of columns, and the two migrations
+- [x] TASK-003: The as-of date on every run, from creation to the Python process
+- [x] TASK-004: One answer to "which upload, under which name?": the `ExecutionInputs` resolver
+- [x] TASK-005: Save an accepted run as a saved task
+- [x] TASK-006: The compatibility check
+- [x] TASK-007: Run a saved task on another file, with nothing sent to the AI
+- [x] TASK-008: Historical replay: run again exactly
+- [x] TASK-009: Mapping, AI repair, and promotion to a new revision
+- [x] TASK-010: The saved-tasks API: list, detail, revisions, runs, and delete
+- [x] TASK-011: Saving from the run page, and the Saved tasks pages
+- [x] TASK-012: Run with another file: slots, as-of, the compatibility report, mapping, and repair review
+- [x] TASK-013: History, the run page, and the review panel for saved tasks
+- [x] TASK-014: End-to-end proof: the second run is the acceptance test
+- [x] TASK-015: Documentation, memory, backlog, and the four claims this feature must not overstate
 
 Legend: [ ] Not started | [/] In progress | [x] Completed

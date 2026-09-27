@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt } from 'drizzle-orm';
 import { RepositoryError } from '@automate/core';
 import type { DatabaseConnection } from '../client';
 import { disclosureConsent } from '../schema';
@@ -75,6 +75,12 @@ export class DisclosureConsentRepository {
   revoke(id: number): DisclosureConsentRow | undefined {
     try { return this.connection.db.update(disclosureConsent).set({ revokedAt: this.now() }).where(eq(disclosureConsent.id, id)).returning().get(); }
     catch (cause) { throw new RepositoryError('The disclosure approval could not be revoked.', cause); }
+  }
+
+  /** Expire only approvals never attached to a task, alongside their staged files. */
+  deleteUnattachedBefore(cutoff: Date): number {
+    try { return this.connection.db.delete(disclosureConsent).where(and(isNull(disclosureConsent.taskId), lt(disclosureConsent.grantedAt, cutoff))).returning({ id: disclosureConsent.id }).all().length; }
+    catch (cause) { throw new RepositoryError('Unattached disclosure approvals could not be removed.', cause); }
   }
 
   private findEquivalent(input: GrantConsentInput): DisclosureConsentRow | undefined {

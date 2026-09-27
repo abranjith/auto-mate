@@ -336,6 +336,8 @@ async function* rebased(
 export interface XlsxWorkbook {
   readonly sheets: AsyncIterable<XlsxSheet>;
   readonly facts: WorkbookFacts;
+  /** Worksheet names in tab order, as far as the workbook part has been read (FEAT-109's table preview); empty until then. */
+  sheetNames(): readonly string[];
   /** Release the file and the unzipper. Idempotent; call it in a `finally`. */
   close(): void;
 }
@@ -446,6 +448,7 @@ export function openWorkbook(filePath: string, options: XlsxReaderOptions): Xlsx
   return {
     sheets: sheetsOf(context, facts),
     facts,
+    sheetNames: () => (reader.model?.sheets ?? []).map(({ name }) => name),
     close: () => {
       options.signal?.removeEventListener('abort', onAbort);
       guard.shutdown();

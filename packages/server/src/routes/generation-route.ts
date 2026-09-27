@@ -18,10 +18,10 @@ function idOf(raw: unknown, what: string): number {
 }
 
 /** Parse the retry body; blank guidance is no guidance. */
-function parseRetry(body: unknown): string | null {
+function parseRetry(body: unknown): { guidance: string | null; preflightDecisions: NonNullable<RetryRequest['preflightDecisions']> } {
   if (!Value.Check(RetryRequestSchema, body ?? {})) throw new ValidationError(`Guidance must be text of at most ${MAX_GUIDANCE_CHARS.toLocaleString('en-US')} characters.`);
   const guidance = (body as RetryRequest | undefined)?.guidance?.trim();
-  return guidance ? guidance : null;
+  return { guidance: guidance ? guidance : null, preflightDecisions: (body as RetryRequest | undefined)?.preflightDecisions ?? [] };
 }
 
 /** Code versions, attempts, fixtures, and the guidance retry (FEAT-106). */
@@ -42,7 +42,8 @@ export function generationRoute(deps: GenerationRouteDependencies): Router {
   router.post('/api/executions/:id/retry', originGuard(deps.config), (request, response, next) => {
     try {
       const id = idOf(request.params.id, 'execution');
-      const created = deps.generation.retry(id, parseRetry(request.body));
+      const retry = parseRetry(request.body);
+      const created = deps.generation.retry(id, retry.guidance, 'rerun', retry.preflightDecisions);
       response.status(201).json({ task: presentTask(created.task), execution: presentExecution(created.execution) });
     } catch (cause) { next(cause); }
   });

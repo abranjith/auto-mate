@@ -125,7 +125,7 @@ describe('ScriptRunService', () => {
     const before = await sha256File(uploadPath(h));
     const row = await approveAndRun(h);
     expect(await sha256File(uploadPath(h))).toBe(before);
-    expect(JSON.parse(row!.inputManifest)).toEqual([{ uploadId: h.upload!.id, storedFilename: h.upload!.storedFilename, sha256: h.upload!.sha256, byteSize: h.upload!.byteSize }]);
+    expect(JSON.parse(row!.inputManifest)).toEqual([{ uploadId: h.upload!.id, inputName: h.upload!.storedFilename, storedFilename: h.upload!.storedFilename, sha256: h.upload!.sha256, byteSize: h.upload!.byteSize }]);
   });
 
   it('refuses when the copy does not match the uploaded file, before spawning', async () => {

@@ -207,7 +207,7 @@ export class TaskSessionRegistry {
     const jobs = [...this.jobs.entries()];
     for (const [id] of sessions) this.deps.clarifications?.cancelForExecution(id);
     for (const [, job] of jobs) job.abort();
-    await Promise.all(sessions.map(([, session]) => session.abort()));
+    await Promise.all(sessions.map(([, session]) => session.abort('shutdown')));
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
       Promise.allSettled([...sessions.map(([, session]) => session.settled), ...jobs.map(([, job]) => job.settled)]),
@@ -218,6 +218,7 @@ export class TaskSessionRegistry {
     if (timer !== undefined) clearTimeout(timer);
     for (const id of new Set([...sessions.map(([id]) => id), ...jobs.map(([id]) => id)])) {
       const row = this.deps.executions.getById(id);
+      if (row?.status === 'aborted' && row.errorCode === null) this.deps.executions.markStoppedOnShutdown(id);
       if (row && !isTerminal(row.status as ExecutionStatus) && !survivesRestart(row.status as ExecutionStatus)) this.interrupt(row);
     }
   }

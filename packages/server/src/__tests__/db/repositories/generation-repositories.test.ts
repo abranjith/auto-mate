@@ -214,10 +214,12 @@ describe('execution retries and cascades', () => {
   it('creates a retry linked to its source without touching the source, and survives the source being deleted', () => {
     const context = setup();
     const { executions, execution, connection } = context;
+    executions.markSettled(execution.id, { status: 'failed' });
     const before = executions.getById(execution.id);
     const retry = executions.createRetry(execution.id, 'Group by month.');
     expect(retry).toMatchObject({ taskId: execution.taskId, trigger: 'rerun', retryOfExecutionId: execution.id, guidance: 'Group by month.', status: 'pending' });
     expect(executions.getById(execution.id)).toEqual(before);
+    executions.markSettled(retry.id, { status: 'failed' });
     const again = executions.createRetry(retry.id, null);
     expect(executions.getRetryChain(again.id).map(({ id }) => id)).toEqual([execution.id, retry.id, again.id]);
     connection.client.prepare('DELETE FROM execution WHERE id = ?').run(execution.id);

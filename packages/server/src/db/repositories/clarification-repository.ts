@@ -7,20 +7,22 @@ export type ClarificationRow = typeof clarification.$inferSelect;
 export type ClarificationQuestionRow = typeof clarificationQuestion.$inferSelect;
 export interface ClarificationWithQuestions extends ClarificationRow { readonly questions: readonly ClarificationQuestionRow[] }
 export interface NewQuestion { readonly findingKey?: string | null; readonly impact: 'data_loss' | 'meaning'; readonly promptText: string; readonly rationale: string; readonly options?: readonly FindingOption[] | null; readonly proposedDefault: string; readonly answer?: string | null; readonly answerSource?: 'user' | 'default' | 'seeded' | null }
+export type ClarificationTransaction = Parameters<Parameters<DatabaseConnection['db']['transaction']>[0]>[0];
 
 /** Exclusive persistence boundary for clarification batches and answers. */
 export class ClarificationRepository {
   constructor(private readonly connection: DatabaseConnection, private readonly now: () => Date = () => new Date()) {}
 
   /** Insert a whole batch atomically. */
-  open(input: { executionId: number; source: 'preflight' | 'agent'; callId?: string | null; status?: 'pending' | 'answered'; questions: readonly NewQuestion[] }): ClarificationWithQuestions {
+  open(input: { executionId: number; source: 'preflight' | 'agent'; callId?: string | null; status?: 'pending' | 'answered'; questions: readonly NewQuestion[] }, transaction?: ClarificationTransaction): ClarificationWithQuestions {
     try {
-      return this.connection.db.transaction((tx) => {
+      const insert = (tx: ClarificationTransaction) => {
         const settled = input.status === 'answered' ? this.now() : null;
         const batch = tx.insert(clarification).values({ executionId: input.executionId, source: input.source, callId: input.callId ?? null, status: input.status ?? 'pending', askedAt: this.now(), settledAt: settled, createdAt: this.now() }).returning().get();
         const questions = input.questions.map((question, position) => tx.insert(clarificationQuestion).values({ clarificationId: batch.id, position, findingKey: question.findingKey ?? null, impact: question.impact, promptText: question.promptText, rationale: question.rationale, options: question.options ? JSON.stringify(question.options) : null, proposedDefault: question.proposedDefault, answer: question.answer ?? null, answerSource: question.answerSource ?? null, answeredAt: question.answer ? this.now() : null, createdAt: this.now() }).returning().get());
         return { ...batch, questions };
-      });
+      };
+      return transaction ? insert(transaction) : this.connection.db.transaction(insert);
     } catch (cause) { throw new RepositoryError('The clarification could not be opened.', cause); }
   }
 

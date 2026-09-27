@@ -31,8 +31,8 @@ export async function getFixtures(executionId: number): Promise<readonly Synthet
   return (await getJson(`/executions/${executionId}/fixtures`, (value): value is SyntheticFixtureListResponse => Value.Check(SyntheticFixtureListResponseSchema, value))).fixtures;
 }
 /** Start a new run of a finished run's task, with the person's guidance. */
-export function retryExecution(executionId: number, guidance: string): Promise<CreateTaskResponse> {
-  return sendJson(`/executions/${executionId}/retry`, 'POST', guidance.trim() ? { guidance } : {}, (value): value is CreateTaskResponse => Value.Check(CreateTaskResponseSchema, value));
+export function retryExecution(executionId: number, guidance: string, preflightDecisions?: readonly { findingKey: string; choice: string }[]): Promise<CreateTaskResponse> {
+  return sendJson(`/executions/${executionId}/retry`, 'POST', { ...(guidance.trim() ? { guidance } : {}), ...(preflightDecisions ? { preflightDecisions } : {}) }, (value): value is CreateTaskResponse => Value.Check(CreateTaskResponseSchema, value));
 }
 
 const fixtureCache = new Map<number, Promise<readonly SyntheticFixture[]>>();

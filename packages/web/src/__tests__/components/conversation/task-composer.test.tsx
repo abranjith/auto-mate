@@ -101,7 +101,7 @@ describe('TaskComposer', () => {
     await user.type(screen.getByRole('textbox'), '  hello  ');
     await user.keyboard('{Control>}{Enter}{/Control}');
     expect(mocks.mutation.mutate).toHaveBeenCalledTimes(1);
-    expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'hello' }, expect.any(Object));
+    expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'hello', timeZone: expect.any(String) }, expect.any(Object));
     await user.dblClick(startButton());
     expect(mocks.mutation.mutate).toHaveBeenCalledTimes(1);
   });
@@ -170,7 +170,7 @@ describe('TaskComposer', () => {
     expect(startButton().disabled).toBe(false);
     await user.click(startButton());
     await user.click(await screen.findByRole('button', { name: /approve and start/i }));
-    await waitFor(() => expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'Summarize', uploadIds: [11, 12], disclosureAck: { consentId: 7, payloadDigest: 'a'.repeat(64) }, preflightDecisions: [] }, expect.any(Object)));
+    await waitFor(() => expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'Summarize', uploadIds: [11, 12], disclosureAck: { consentId: 7, payloadDigest: 'a'.repeat(64) }, preflightDecisions: [], timeZone: expect.any(String) }, expect.any(Object)));
   });
 
   it('removes a file: the delete mutation runs and its id is no longer submitted', async () => {
@@ -184,7 +184,7 @@ describe('TaskComposer', () => {
     expect(mocks.deleteUpload).toHaveBeenCalledWith(21);
     await user.click(startButton());
     await user.click(await screen.findByRole('button', { name: /approve and start/i }));
-    await waitFor(() => expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'Go', uploadIds: [22], disclosureAck: { consentId: 7, payloadDigest: 'a'.repeat(64) }, preflightDecisions: [] }, expect.any(Object)));
+    await waitFor(() => expect(mocks.mutation.mutate).toHaveBeenCalledWith({ prompt: 'Go', uploadIds: [22], disclosureAck: { consentId: 7, payloadDigest: 'a'.repeat(64) }, preflightDecisions: [], timeZone: expect.any(String) }, expect.any(Object)));
   });
 
   it('renders a failed upload\'s plain-English message, keeps the others, and retries', async () => {

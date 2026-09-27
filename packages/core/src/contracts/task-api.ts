@@ -6,6 +6,9 @@ import {
 import { EXECUTION_STATUSES } from '../conversation/execution-state';
 import { UPLOAD_LIMIT_DEFAULTS } from '../ingestion/limits';
 import { DisclosureAckSchema, PreflightDecisionSchema } from './disclosure-api';
+import { TaskCountsSchema } from './history-api';
+import { AsOfSchema } from '../reuse/as-of';
+import { REUSE_KINDS } from '../reuse/reuse-kind';
 
 const StatusSchema = Type.Union(
   EXECUTION_STATUSES.map((status) => Type.Literal(status)),
@@ -21,6 +24,7 @@ export const CreateTaskRequestSchema = Type.Object({
   ),
   disclosureAck: Type.Optional(DisclosureAckSchema),
   preflightDecisions: Type.Optional(Type.Array(PreflightDecisionSchema)),
+  timeZone: Type.Optional(Type.String()),
 });
 export const TaskSchema = Type.Object({
   id: Type.Integer(),
@@ -39,6 +43,10 @@ export const ExecutionSummarySchema = Type.Object({
   id: Type.Integer(),
   taskId: Type.Integer(),
   status: StatusSchema,
+  trigger: Type.Union([Type.Literal('manual'), Type.Literal('rerun'), Type.Literal('feedback')]),
+  retryOfExecutionId: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
+  asOf: Type.Optional(Type.Union([AsOfSchema, Type.Null()])),
+  reuse: Type.Optional(Type.Union([Type.Object({ kind: Type.Union(REUSE_KINDS.map((kind) => Type.Literal(kind))), templateName: Type.String(), revisionNumber: Type.Integer(), revisionDigest: Type.String() }), Type.Null()])),
   provider: Type.Union([Type.String(), Type.Null()]),
   model: Type.Union([Type.String(), Type.Null()]),
   usage: UsageSummarySchema,
@@ -58,6 +66,7 @@ export const ExecutionSummarySchema = Type.Object({
 export const TaskResponseSchema = Type.Object({
   task: TaskSchema,
   executions: Type.Array(ExecutionSummarySchema),
+  counts: TaskCountsSchema,
 });
 export const CreateTaskResponseSchema = Type.Object({
   task: TaskSchema,

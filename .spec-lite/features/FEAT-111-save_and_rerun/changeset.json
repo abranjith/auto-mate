@@ -1,0 +1,1382 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-26T15:59:32.860Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-26T16:04:28.182Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-26T16:07:42.565Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-26T23:04:53.448Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-26T23:05:16.867Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-26T23:05:48.440Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-27T01:03:20.759Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-008",
+      "at": "2026-09-27T01:03:28.667Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-009",
+      "at": "2026-09-27T01:03:36.568Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-010",
+      "at": "2026-09-27T01:03:44.412Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-011",
+      "at": "2026-09-27T01:03:52.297Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-012",
+      "at": "2026-09-27T01:04:00.249Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-013",
+      "at": "2026-09-27T01:04:08.166Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-014",
+      "at": "2026-09-27T01:04:16.023Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-015",
+      "at": "2026-09-27T01:04:23.892Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-27T01:04:31.060Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-27T01:04:42.895Z",
+      "head": "e7f090499af9f2ddb9b3ba662698298d73304343"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "docs/features/save-and-rerun.md",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/history-api.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/conversation/execution-state.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/reuse/reuse-scenarios.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/reuse/reuse.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/history-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/contracts/task-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/template-api.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/verification-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/conversation/conversation-event.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/core/src/conversation/execution-state.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/error-codes.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/errors/reuse-errors.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/generation/code-contract.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/history/run-wording.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/as-of.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/compatibility.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/input-contract.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/limits.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/mapping.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/reuse-kind.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/rules.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/type-compatibility.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/wall-clock-scan.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/reuse/wording.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/verification/run-intent.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260926160041_save_and_rerun/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/drizzle/20260926160041_save_and_rerun/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/drizzle/20260926160051_save_and_rerun_triggers/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/drizzle/20260926160051_save_and_rerun_triggers/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/artifact-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/history-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/template-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/as-of-storage.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/execution-inputs.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/input-stager.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/__tests__/execution/script-run-service.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/tools/run-tests-tool.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/history-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0005.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-0007.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-reuse.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/docs-sync.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/repair-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/reuse-run-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/save-and-rerun-e2e.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/save-service.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/reuse-harness.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/verification-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/template-route.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/__tests__/verification/checks/contract-integrity.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/app.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/conversation/presenters.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/clarification-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/db/repositories/code-version-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/execution-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/execution-reuse-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/history-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/db/repositories/script-run-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/db/repositories/task-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/db/repositories/template-repository.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/disclosure/preflight-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/execution/as-of-storage.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/execution/execution-inputs.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/input-stager.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/execution/script-run-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/generation/code-generation-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/fixture-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/generation-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/generation/generation-stack.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/generation/tools/run-tests-tool.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/middleware/error-handler.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/reuse/compatibility-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/reuse/index.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/reuse/presenters.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/reuse/repair-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/reuse/reuse-run-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/reuse/save-service.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/routes/task-route.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/routes/template-route.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/verification/checks/contract-checks.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/server/src/verification/checks/test-check.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/verification/review-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/server/src/verification/run-intent-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/verification/verification-pass.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/verification/verification-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/server/src/verification/verification-stack.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/api/history-queries.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/no-outputs-panel.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/task-composer.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/delete-task.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-again.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-record.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/saved/save-task.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/saved/saved-components.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/routes/saved-routes.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/routes/task-routes.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/api/template-queries.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/app-nav.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/task-composer.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/web/src/components/disclosure/disclosure-review-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/generation/code-version-card.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/delete-task-dialog.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/history-item.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/record-detail.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/record-section.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/run-again-button.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/run-record-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/run-timeline-item.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/task-header.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/review/review-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/as-of-field.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/compatibility-report.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/instruction-preview.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/mapping-form.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/repair-review.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/save-task-dialog.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/saved/slot-composer.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/verification/gate-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/verification/run-intent-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/saved.$templateId.index.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/saved.$templateId.run.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/saved.$templateId.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/saved.index.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/saved.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.runs.$executionId.index.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.runs.$executionId.repair.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.runs.$executionId.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-111-save_and_rerun/changeset.json",
+    ".spec-lite/features/FEAT-111-save_and_rerun/spec.md",
+    ".spec-lite/plan_mvp.md"
+  ],
+  "baseline": {
+    "sha": "e7f090499af9f2ddb9b3ba662698298d73304343",
+    "capturedAt": "2026-09-26T15:52:46.815Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/feature-summary.md",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/spec.md",
+      ".spec-lite/features/FEAT-110-execution_history/spec.md",
+      ".spec-lite/memory.md",
+      ".spec-lite/plan_mvp.md",
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture.md",
+      "docs/features/verification-execution-gate.md",
+      "docs/quickstart.md",
+      "docs/usage.md",
+      "packages/core/README.md",
+      "packages/core/src/__tests__/conversation/conversation-event.test.ts",
+      "packages/core/src/contracts/disclosure-api.ts",
+      "packages/core/src/contracts/generation-api.ts",
+      "packages/core/src/contracts/task-api.ts",
+      "packages/core/src/conversation/conversation-event.ts",
+      "packages/core/src/conversation/execution-state.ts",
+      "packages/core/src/conversation/index.ts",
+      "packages/core/src/errors/error-codes.ts",
+      "packages/core/src/generation/code-contract.ts",
+      "packages/core/src/generation/index.ts",
+      "packages/core/src/index.ts",
+      "packages/server/README.md",
+      "packages/server/src/__tests__/conversation/task-session-generation.test.ts",
+      "packages/server/src/__tests__/conversation/task-session-registry.test.ts",
+      "packages/server/src/__tests__/db/repositories/generation-repositories.test.ts",
+      "packages/server/src/__tests__/db/repositories/verification-repositories.test.ts",
+      "packages/server/src/__tests__/disclosure-e2e.test.ts",
+      "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap",
+      "packages/server/src/__tests__/generation/code-generation-run-strategy.test.ts",
+      "packages/server/src/__tests__/migrate.test.ts",
+      "packages/server/src/__tests__/migration-0005.test.ts",
+      "packages/server/src/__tests__/support/verification-harness.ts",
+      "packages/server/src/__tests__/verification-route.test.ts",
+      "packages/server/src/app.ts",
+      "packages/server/src/config/app-paths.ts",
+      "packages/server/src/config/env.ts",
+      "packages/server/src/conversation/presenters.ts",
+      "packages/server/src/conversation/task-session-registry.ts",
+      "packages/server/src/conversation/task-session.ts",
+      "packages/server/src/db/repositories/disclosure-consent-repository.ts",
+      "packages/server/src/db/repositories/execution-repository.ts",
+      "packages/server/src/db/repositories/script-run-repository.ts",
+      "packages/server/src/db/repositories/task-repository.ts",
+      "packages/server/src/db/schema.ts",
+      "packages/server/src/disclosure/disclosure-service.ts",
+      "packages/server/src/execution/script-run-service.ts",
+      "packages/server/src/generation/generation-service.ts",
+      "packages/server/src/index.ts",
+      "packages/server/src/ingestion/xlsx-reader.ts",
+      "packages/server/src/middleware/error-handler.ts",
+      "packages/server/src/routes/generation-route.ts",
+      "packages/server/src/routes/task-route.ts",
+      "packages/server/src/verification/verification-stack.ts",
+      "packages/web/README.md",
+      "packages/web/src/__tests__/api/use-execution-stream.test.tsx",
+      "packages/web/src/__tests__/components/conversation/conversation-view-generation.test.tsx",
+      "packages/web/src/__tests__/components/conversation/run-controls.test.tsx",
+      "packages/web/src/__tests__/components/generation/generation-components.test.tsx",
+      "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "packages/web/src/__tests__/shell.test.tsx",
+      "packages/web/src/api/generation-queries.ts",
+      "packages/web/src/api/use-execution-stream.ts",
+      "packages/web/src/components/conversation/assistant-message.tsx",
+      "packages/web/src/components/conversation/conversation-view.tsx",
+      "packages/web/src/components/disclosure/disclosure-receipt.tsx",
+      "packages/web/src/components/execution/run-result.tsx",
+      "packages/web/src/components/generation/code-version-card.tsx",
+      "packages/web/src/components/verification/gate-section.tsx",
+      "packages/web/src/design-system/tokens.ts",
+      "packages/web/src/routes/history.tsx",
+      "packages/web/src/routes/tasks.$taskId.tsx",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/changeset.json",
+      ".spec-lite/features/FEAT-110-execution_history/changeset.json",
+      "docs/features/execution-history.md",
+      "docs/features/results-outputs-downloads.md",
+      "packages/core/src/__tests__/artifacts/artifact-safety.test.ts",
+      "packages/core/src/__tests__/artifacts/artifact-type.test.ts",
+      "packages/core/src/__tests__/artifacts/artifact.test.ts",
+      "packages/core/src/__tests__/artifacts/next-step.test.ts",
+      "packages/core/src/__tests__/contracts/artifact-api.test.ts",
+      "packages/core/src/__tests__/contracts/history-api.test.ts",
+      "packages/core/src/__tests__/errors/artifact-errors.test.ts",
+      "packages/core/src/__tests__/errors/history-errors.test.ts",
+      "packages/core/src/__tests__/generation/output-contract.test.ts",
+      "packages/core/src/__tests__/history/history-status.test.ts",
+      "packages/core/src/artifacts/artifact-safety.ts",
+      "packages/core/src/artifacts/artifact-type.ts",
+      "packages/core/src/artifacts/artifact.ts",
+      "packages/core/src/artifacts/index.ts",
+      "packages/core/src/artifacts/limits.ts",
+      "packages/core/src/artifacts/next-step.ts",
+      "packages/core/src/contracts/artifact-api.ts",
+      "packages/core/src/contracts/history-api.ts",
+      "packages/core/src/errors/artifact-errors.ts",
+      "packages/core/src/errors/history-errors.ts",
+      "packages/core/src/history/history-status.ts",
+      "packages/core/src/history/index.ts",
+      "packages/core/src/history/limits.ts",
+      "packages/core/src/history/run-wording.ts",
+      "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/migration.sql",
+      "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/snapshot.json",
+      "packages/server/drizzle/20260926014135_history_index/migration.sql",
+      "packages/server/drizzle/20260926014135_history_index/snapshot.json",
+      "packages/server/src/__tests__/api-hygiene.test.ts",
+      "packages/server/src/__tests__/artifact-e2e.test.ts",
+      "packages/server/src/__tests__/artifact-route.test.ts",
+      "packages/server/src/__tests__/artifacts/artifact-reader.test.ts",
+      "packages/server/src/__tests__/artifacts/artifact-registrar.test.ts",
+      "packages/server/src/__tests__/artifacts/artifact-sweeper.test.ts",
+      "packages/server/src/__tests__/artifacts/docs-examples.test.ts",
+      "packages/server/src/__tests__/artifacts/output-contract.test.ts",
+      "packages/server/src/__tests__/artifacts/zip-writer.test.ts",
+      "packages/server/src/__tests__/db/repositories/artifact-repository.test.ts",
+      "packages/server/src/__tests__/db/repositories/history-repository.test.ts",
+      "packages/server/src/__tests__/execution/script-run-artifacts.test.ts",
+      "packages/server/src/__tests__/fixtures/artifacts/formula-cells.csv",
+      "packages/server/src/__tests__/fixtures/artifacts/hostile-report.html",
+      "packages/server/src/__tests__/fixtures/artifacts/plotly-cdn.html",
+      "packages/server/src/__tests__/fixtures/artifacts/plotly-inline.html",
+      "packages/server/src/__tests__/history-e2e.test.ts",
+      "packages/server/src/__tests__/history-route.test.ts",
+      "packages/server/src/__tests__/history/docs-sync.test.ts",
+      "packages/server/src/__tests__/history/retention-sweeper.test.ts",
+      "packages/server/src/__tests__/history/run-state-invariants.test.ts",
+      "packages/server/src/__tests__/history/safe-remove.test.ts",
+      "packages/server/src/__tests__/history/task-deletion.test.ts",
+      "packages/server/src/__tests__/migration-0007.test.ts",
+      "packages/server/src/__tests__/migration-history-index.test.ts",
+      "packages/server/src/__tests__/support/artifact-app.ts",
+      "packages/server/src/__tests__/support/artifact-fixtures.ts",
+      "packages/server/src/__tests__/support/history-app.ts",
+      "packages/server/src/__tests__/support/zip-reader.ts",
+      "packages/server/src/artifacts/artifact-bytes.ts",
+      "packages/server/src/artifacts/artifact-reader.ts",
+      "packages/server/src/artifacts/artifact-registrar.ts",
+      "packages/server/src/artifacts/artifact-scanner.ts",
+      "packages/server/src/artifacts/artifact-service.ts",
+      "packages/server/src/artifacts/artifact-sweeper.ts",
+      "packages/server/src/artifacts/zip-writer.ts",
+      "packages/server/src/db/repositories/artifact-repository.ts",
+      "packages/server/src/db/repositories/history-repository.ts",
+      "packages/server/src/db/status-sql.ts",
+      "packages/server/src/history/index.ts",
+      "packages/server/src/history/retention-sweeper.ts",
+      "packages/server/src/history/safe-remove.ts",
+      "packages/server/src/history/task-deletion-service.ts",
+      "packages/server/src/history/task-owned-trees.ts",
+      "packages/server/src/middleware/api-headers.ts",
+      "packages/server/src/routes/artifact-route.ts",
+      "packages/server/src/routes/history-route.ts",
+      "packages/web/src/__tests__/api/history-queries.test.tsx",
+      "packages/web/src/__tests__/components/artifacts/artifact-fixtures.ts",
+      "packages/web/src/__tests__/components/artifacts/artifact-frame.test.tsx",
+      "packages/web/src/__tests__/components/artifacts/artifact-list.test.tsx",
+      "packages/web/src/__tests__/components/artifacts/artifact-renderers.test.tsx",
+      "packages/web/src/__tests__/components/artifacts/no-outputs-panel.test.tsx",
+      "packages/web/src/__tests__/components/history/delete-task.test.tsx",
+      "packages/web/src/__tests__/components/history/history-list.test.tsx",
+      "packages/web/src/__tests__/components/history/run-again.test.tsx",
+      "packages/web/src/__tests__/components/history/run-record.test.tsx",
+      "packages/web/src/__tests__/components/history/run-view.test.tsx",
+      "packages/web/src/__tests__/routes/task-routes.test.tsx",
+      "packages/web/src/api/artifact-queries.ts",
+      "packages/web/src/api/history-queries.ts",
+      "packages/web/src/components/artifacts/artifact-card.tsx",
+      "packages/web/src/components/artifacts/artifact-frame.tsx",
+      "packages/web/src/components/artifacts/artifact-image.tsx",
+      "packages/web/src/components/artifacts/artifact-list.tsx",
+      "packages/web/src/components/artifacts/artifact-markdown.tsx",
+      "packages/web/src/components/artifacts/artifact-table.tsx",
+      "packages/web/src/components/artifacts/artifact-text.tsx",
+      "packages/web/src/components/artifacts/download-controls.tsx",
+      "packages/web/src/components/artifacts/no-outputs-panel.tsx",
+      "packages/web/src/components/history/delete-task-dialog.tsx",
+      "packages/web/src/components/history/history-filters.tsx",
+      "packages/web/src/components/history/history-item.tsx",
+      "packages/web/src/components/history/history-list.tsx",
+      "packages/web/src/components/history/needs-you-strip.tsx",
+      "packages/web/src/components/history/record-detail.tsx",
+      "packages/web/src/components/history/record-section.tsx",
+      "packages/web/src/components/history/relative-time.tsx",
+      "packages/web/src/components/history/run-again-button.tsx",
+      "packages/web/src/components/history/run-record-panel.tsx",
+      "packages/web/src/components/history/run-timeline-item.tsx",
+      "packages/web/src/components/history/run-timeline.tsx",
+      "packages/web/src/components/history/run-view.tsx",
+      "packages/web/src/components/history/task-header.tsx",
+      "packages/web/src/components/history/task-inputs.tsx",
+      "packages/web/src/routes/tasks.$taskId.index.tsx",
+      "packages/web/src/routes/tasks.$taskId.runs.$executionId.tsx"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/feature-summary.md": "c06ad6be2681eb208a96bf69050aececdce3abea",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/spec.md": "d4b1a40622d54c65fc137e38255b6f77a9f3a850",
+      ".spec-lite/features/FEAT-110-execution_history/spec.md": "728a8a546fba44d7b544e07d837e7ac40f5b89d0",
+      ".spec-lite/memory.md": "a9ee1d76c10dc1423e139a8f46a985eb01ac522c",
+      ".spec-lite/plan_mvp.md": "da25cf8055b1bf39e89df61f15e1df68f74cb7e5",
+      "CHANGELOG.md": "bca95ab9dec89505cc09713d2aff76f0af0d5fbb",
+      "README.md": "94552b22e905534ff22a869f38a796a12a81e61d",
+      "docs/architecture.md": "3383ba8d3bf033f8eafba4d22066a5990a3236f4",
+      "docs/features/verification-execution-gate.md": "22b3666524bfd341f0f58e6b39551c3c6a1e3613",
+      "docs/quickstart.md": "9ecf8e98e951182c90638d422756290cafddad44",
+      "docs/usage.md": "a0836aaa82c422c1275ebf107345e00c88118841",
+      "packages/core/README.md": "a414c543ed10d70c48526fafbbccda897376581f",
+      "packages/core/src/__tests__/conversation/conversation-event.test.ts": "35c3ae774ade978b8145d9caa30c13fce86fdc77",
+      "packages/core/src/contracts/disclosure-api.ts": "e78497145ca289d7f6365779209556c748b13827",
+      "packages/core/src/contracts/generation-api.ts": "7721373a6e84469bb806f6f7181b8c17690a4371",
+      "packages/core/src/contracts/task-api.ts": "86e91fa47b98926474d48e370bad1c3ba9c38c70",
+      "packages/core/src/conversation/conversation-event.ts": "81397b1bc4b12611bb77e3443ff8a725aa2ddd9f",
+      "packages/core/src/conversation/execution-state.ts": "78ce88693aab939eb3ccb88bb1b925f667528491",
+      "packages/core/src/conversation/index.ts": "25cc2f06d837dbc2b33ea93c2a382570801620fc",
+      "packages/core/src/errors/error-codes.ts": "7f3bf9ecde894dd79ba287bc08d7d676617a9df0",
+      "packages/core/src/generation/code-contract.ts": "53d8ff3fbae1a016730bec5557fb2e14ced6707b",
+      "packages/core/src/generation/index.ts": "d4c3b2caef9c68171d74a7c1e46db18b9f5d48cf",
+      "packages/core/src/index.ts": "46dd907b532563972a9d3536f28964adfacd2201",
+      "packages/server/README.md": "deb0580ec188b36f83a1e358756bc4e15162b47b",
+      "packages/server/src/__tests__/conversation/task-session-generation.test.ts": "ccb4e283c387485f860182fcde09449b0b602ecf",
+      "packages/server/src/__tests__/conversation/task-session-registry.test.ts": "750da9128d9cbf1a0b0a53990fb0e3b576a6f517",
+      "packages/server/src/__tests__/db/repositories/generation-repositories.test.ts": "ed80dc54dd0bd42980154f57b6cd9de75c5a6a4a",
+      "packages/server/src/__tests__/db/repositories/verification-repositories.test.ts": "3052732abdb2d78ff125b47a3b6163bf6815c131",
+      "packages/server/src/__tests__/disclosure-e2e.test.ts": "1f3546db1530e4b85f5f57300dad89dab2e06c3d",
+      "packages/server/src/__tests__/generation/__snapshots__/code-generation-run-strategy.test.ts.snap": "82b3401a4f8613fe8c8baaa29dd39da294611786",
+      "packages/server/src/__tests__/generation/code-generation-run-strategy.test.ts": "0c0eda7a62df08c14a731341e9e7537accce7ec2",
+      "packages/server/src/__tests__/migrate.test.ts": "7735d20868b8188cf2f237763f6bd84b9e3e82d4",
+      "packages/server/src/__tests__/migration-0005.test.ts": "824c59cd905dea73b549c30e1b9379b9a5c96da1",
+      "packages/server/src/__tests__/support/verification-harness.ts": "a4dfe5e4eb416eafc8ef772f110b132abb21c823",
+      "packages/server/src/__tests__/verification-route.test.ts": "65f737946347def9258874cf49054e4d5d3ab793",
+      "packages/server/src/app.ts": "51d97f4362035dae753842e0f0646af8621248b1",
+      "packages/server/src/config/app-paths.ts": "51d45b4120fa42cc748e2c6fbba188d9bd777480",
+      "packages/server/src/config/env.ts": "fcd37b8cbc8d3c6e47da1eacd130e2168bca7517",
+      "packages/server/src/conversation/presenters.ts": "6948308ed9ac2e781c38adc27dc45c1515c3d0ab",
+      "packages/server/src/conversation/task-session-registry.ts": "3a173cc032e5a73e6bd7b5816701e5f3f2972356",
+      "packages/server/src/conversation/task-session.ts": "8ad1037518a217110863a7a25cc01804441b9da7",
+      "packages/server/src/db/repositories/disclosure-consent-repository.ts": "5ec2598fdb8581ae67423edb0b567457eaa1e82b",
+      "packages/server/src/db/repositories/execution-repository.ts": "980bfb325d95f6450a2d5d138221aa97ffac0b31",
+      "packages/server/src/db/repositories/script-run-repository.ts": "1f8cfee67c5a8a5edd949d6a5f32774388a3370e",
+      "packages/server/src/db/repositories/task-repository.ts": "2c3cfc30bcc1b5ea48cda8018b5c252f4e3653bd",
+      "packages/server/src/db/schema.ts": "5addf945eb23f12acff5224cef7f552718ec8697",
+      "packages/server/src/disclosure/disclosure-service.ts": "b2645bd5bbfc1d94819afbc9b9b4d1e201bfe68b",
+      "packages/server/src/execution/script-run-service.ts": "08d6e055bc925a4267f61caf91b219b88a455df3",
+      "packages/server/src/generation/generation-service.ts": "0991bf9687ab7345a2502fc69b463bea06d0eb36",
+      "packages/server/src/index.ts": "85ad6ae3ccf67f89d5be87949bedbf9d84228651",
+      "packages/server/src/ingestion/xlsx-reader.ts": "8266bfe66fbaedcef8ffab90a0ae47073c812f20",
+      "packages/server/src/middleware/error-handler.ts": "296386cbb5e29a6eb3c6d971a84d36007cbb1470",
+      "packages/server/src/routes/generation-route.ts": "78a517fa7e8b91fb0349911c41aefd69aeb09e89",
+      "packages/server/src/routes/task-route.ts": "02d7676c8292abeb938158302ef224e9b32c1476",
+      "packages/server/src/verification/verification-stack.ts": "04e1b893f5f78163fb21b384e94136fe7954f595",
+      "packages/web/README.md": "3443eda32aa7e3d4ced0fd3bb93257ccbcd1d6c1",
+      "packages/web/src/__tests__/api/use-execution-stream.test.tsx": "bb4bd9e89e8928ff0c704aa9de17931e9821214d",
+      "packages/web/src/__tests__/components/conversation/conversation-view-generation.test.tsx": "5c5e4e4bd883e24a9c4f72cde0309e18310d1ef5",
+      "packages/web/src/__tests__/components/conversation/run-controls.test.tsx": "1fc8ca885f226c7a21854b4370f7c08f4d5fa4b6",
+      "packages/web/src/__tests__/components/generation/generation-components.test.tsx": "91cee0805d94c59455747e91f2b3ba97afd04c01",
+      "packages/web/src/__tests__/components/verification/verification-components.test.tsx": "241258727da3ebb657af1a1932c5d2d386bd69bd",
+      "packages/web/src/__tests__/shell.test.tsx": "2620b48d056950b401aa56beacc1608053e2baeb",
+      "packages/web/src/api/generation-queries.ts": "25ab3d0cbc372e0f7b9188d07e441bc92aac49ed",
+      "packages/web/src/api/use-execution-stream.ts": "76c96d2fc09d29598645fc9535003f14d19513d7",
+      "packages/web/src/components/conversation/assistant-message.tsx": "af5dc73d9d0ce1521959403120ebd3ebcb783eb0",
+      "packages/web/src/components/conversation/conversation-view.tsx": "3c97c6ba0a8eed4f9ef87d5d4033da4f42ce841f",
+      "packages/web/src/components/disclosure/disclosure-receipt.tsx": "50869b9bce425b646a2ebf3e5d568b68597361ce",
+      "packages/web/src/components/execution/run-result.tsx": "1a5de9261fea1fa5f7c84ee41c995d039b0ab5a4",
+      "packages/web/src/components/generation/code-version-card.tsx": "b72af50468cb4edcd528107f38ff95249eba4e04",
+      "packages/web/src/components/verification/gate-section.tsx": "528f5bd7cbbb3d3f07c8cdd9b417bfa33cef5718",
+      "packages/web/src/design-system/tokens.ts": "cbc8e546bf3471867ace2f4b67a1188bc8d3b0ca",
+      "packages/web/src/routes/history.tsx": "706e208f797c8cfaf7ff2d6f86175fee84430cf3",
+      "packages/web/src/routes/tasks.$taskId.tsx": "36161175955ff8edca9c03e37404c512eadcbaa3",
+      ".spec-lite/features/FEAT-109-results_outputs_downloads/changeset.json": "d8429c7afa8e857e77f8eec4427aef66ad48b96d",
+      ".spec-lite/features/FEAT-110-execution_history/changeset.json": "bb978156f39c1067059a4269ed9c3fd1f59c9d6f",
+      "docs/features/execution-history.md": "89c6a0ebba265a94c9189e30e944d8cf784a9182",
+      "docs/features/results-outputs-downloads.md": "26402a141a2e3c41aa9b23f6a56e6b8f9491865d",
+      "packages/core/src/__tests__/artifacts/artifact-safety.test.ts": "93e57474a3744d8fb5b3c5bf854984d4ba8fdf1d",
+      "packages/core/src/__tests__/artifacts/artifact-type.test.ts": "1cf0fd07f50e4ae663f4a2d488ca42b756bbf3f7",
+      "packages/core/src/__tests__/artifacts/artifact.test.ts": "daeacdd1ddd07d047028b00084dd7334e96769a0",
+      "packages/core/src/__tests__/artifacts/next-step.test.ts": "737c18dad84000fc546f01d0819b3fa7871aa703",
+      "packages/core/src/__tests__/contracts/artifact-api.test.ts": "5d9d2c68e3b1d432ebac50fe5cb9e845aefb2ea9",
+      "packages/core/src/__tests__/contracts/history-api.test.ts": "071db0d16c7821fbf52a6616a2ac5a345a164af9",
+      "packages/core/src/__tests__/errors/artifact-errors.test.ts": "6638a5765c7ca61f155ee4d95d1da8429db4e873",
+      "packages/core/src/__tests__/errors/history-errors.test.ts": "1a3d9ea5a87ec23ca83e328f5ee48d4220d836d8",
+      "packages/core/src/__tests__/generation/output-contract.test.ts": "2772e1597be3bd4da902f8affcd02bcbf7366e81",
+      "packages/core/src/__tests__/history/history-status.test.ts": "091a68cd4145a703bd6674b5db7448327cf31f10",
+      "packages/core/src/artifacts/artifact-safety.ts": "9898c0a89e3270c9c4273896e675c5fdf72f3b74",
+      "packages/core/src/artifacts/artifact-type.ts": "e356c6132261a56148031885f4f6569c2cf69bcf",
+      "packages/core/src/artifacts/artifact.ts": "b3486aea47f973b2bc6e5af141f188f06b1d3726",
+      "packages/core/src/artifacts/index.ts": "d65802b120287a0b093182d4dbb479f4b92a3e93",
+      "packages/core/src/artifacts/limits.ts": "6fc2a4a898ad3e1d110e976f94df86071fff0382",
+      "packages/core/src/artifacts/next-step.ts": "9e8d2842dba37af2064c3edb244956aafad9f6c8",
+      "packages/core/src/contracts/artifact-api.ts": "dff7d78ada792724420e288ec65da86e2a0031e3",
+      "packages/core/src/contracts/history-api.ts": "e77278d127a42fe5ca6acadfcde4cd957f018db6",
+      "packages/core/src/errors/artifact-errors.ts": "c26aa950264b6eb3eefb596bdef5a2c9ed9d770b",
+      "packages/core/src/errors/history-errors.ts": "cb57d40366dde2d55527f5fdea003af18b482945",
+      "packages/core/src/history/history-status.ts": "9028991c6073842e231afccbc78cedeb3bcf04c5",
+      "packages/core/src/history/index.ts": "309efeef480f5ebab570b95e007efb330c4f381f",
+      "packages/core/src/history/limits.ts": "ce15dec9dcc2a989201467d2fd73111841a92e42",
+      "packages/core/src/history/run-wording.ts": "a6662c99fb8a2494a11509c181222fec6ab05457",
+      "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/migration.sql": "b5cdfdbb2f94d11a6961bfaa07a193c34b285a8f",
+      "packages/server/drizzle/20260925211027_artifacts_and_event_kinds/snapshot.json": "1f6b7ea7c9a25a1192e96c379353f9503c3137e8",
+      "packages/server/drizzle/20260926014135_history_index/migration.sql": "1b7c235d5571b491b0a1269a8a55de3bf8c7d0d8",
+      "packages/server/drizzle/20260926014135_history_index/snapshot.json": "a8ee8508f9e753d78c8f923b5706a0b629d6e1dc",
+      "packages/server/src/__tests__/api-hygiene.test.ts": "7f2f73412c9b6b20180e156aaa1f35a97ff482ea",
+      "packages/server/src/__tests__/artifact-e2e.test.ts": "0dfcf5a35d961b0c1ea790f8f3893c941d7a6164",
+      "packages/server/src/__tests__/artifact-route.test.ts": "771c85382ed15572b38f0c95649eba83c2b7da89",
+      "packages/server/src/__tests__/artifacts/artifact-reader.test.ts": "2edb753adc5fdb9a64f5a9e1780ed66873034835",
+      "packages/server/src/__tests__/artifacts/artifact-registrar.test.ts": "a2fd25fc8a5663be3ea365322b159d5c713c2cc2",
+      "packages/server/src/__tests__/artifacts/artifact-sweeper.test.ts": "2cb25a3024a42176a246010b11ce70e5c8a5bdcd",
+      "packages/server/src/__tests__/artifacts/docs-examples.test.ts": "2be6fa158f636c0d199a1ae9e1cb2f054c1a1ae5",
+      "packages/server/src/__tests__/artifacts/output-contract.test.ts": "a2f64cb77099d2faed5aa40031a6de93d5760669",
+      "packages/server/src/__tests__/artifacts/zip-writer.test.ts": "cdd41a78e2270315b3352f2c0c2d8cc73e7160e5",
+      "packages/server/src/__tests__/db/repositories/artifact-repository.test.ts": "e863aa5c30e9804cc65012da8b4c46f89c4e18b1",
+      "packages/server/src/__tests__/db/repositories/history-repository.test.ts": "3355f26777f9ad80a427ed51891386d5813746cc",
+      "packages/server/src/__tests__/execution/script-run-artifacts.test.ts": "ae9b096543bfa4fb4c71ce468fd012e510ae85e2",
+      "packages/server/src/__tests__/fixtures/artifacts/formula-cells.csv": "3b0e748960f634129355837d3debd59d4b4912e7",
+      "packages/server/src/__tests__/fixtures/artifacts/hostile-report.html": "466717de6cda9a5a6af6588cfa2b68ebad7497cc",
+      "packages/server/src/__tests__/fixtures/artifacts/plotly-cdn.html": "943c1a13ab7b5e669f5e9c17b8d74b5060c7a8c4",
+      "packages/server/src/__tests__/fixtures/artifacts/plotly-inline.html": "c21275c6b79105c8f7594d5eb8b8abe31429852f",
+      "packages/server/src/__tests__/history-e2e.test.ts": "376b28b87306c2dcc737d048b9c5663d3ffa1a68",
+      "packages/server/src/__tests__/history-route.test.ts": "4c95897249fa0797c228a79a4cdba998cc188747",
+      "packages/server/src/__tests__/history/docs-sync.test.ts": "91c01f84ec385526b700560d6e48e3904c98f6ca",
+      "packages/server/src/__tests__/history/retention-sweeper.test.ts": "6820155003381d956250c49182232f5dab8001b5",
+      "packages/server/src/__tests__/history/run-state-invariants.test.ts": "6e39e8665f6a34d0bcbfd0743366ffaf0dc063e8",
+      "packages/server/src/__tests__/history/safe-remove.test.ts": "8f9b1cac5a3731719df860314c462b8206d81ee2",
+      "packages/server/src/__tests__/history/task-deletion.test.ts": "4290a3359a4794e271e31b7134e1afa6ff52dc8b",
+      "packages/server/src/__tests__/migration-0007.test.ts": "a9628c4c42639b543c1b1e50f55f6b4c9ded08ae",
+      "packages/server/src/__tests__/migration-history-index.test.ts": "b2d906c832aab431e7d7a9a471a08d5e1defa335",
+      "packages/server/src/__tests__/support/artifact-app.ts": "a0bc9511c7162dfbf75497665dec2503f1173b88",
+      "packages/server/src/__tests__/support/artifact-fixtures.ts": "24b0a231969d7742147b95b92f3061fbaed7b735",
+      "packages/server/src/__tests__/support/history-app.ts": "fcbd9b761e7e62722ea7859d3616f2684fba6850",
+      "packages/server/src/__tests__/support/zip-reader.ts": "96e7b94d427ee3671150a27eec6485d730687f88",
+      "packages/server/src/artifacts/artifact-bytes.ts": "b4f886f10cc694918f83920e8d58e786f39f94b0",
+      "packages/server/src/artifacts/artifact-reader.ts": "b786da52f922f925f72c3aa23bbf728541638ee8",
+      "packages/server/src/artifacts/artifact-registrar.ts": "08102627c279cb729b14f57461ac5a30e655dc4b",
+      "packages/server/src/artifacts/artifact-scanner.ts": "d45f13de456eb403358ebbfdc748defba81dd56e",
+      "packages/server/src/artifacts/artifact-service.ts": "1933260da1367d27cbf8041ce5920f917d7c2e2b",
+      "packages/server/src/artifacts/artifact-sweeper.ts": "fe5f8349ccb2b88f5755c2e19433c892c52046c4",
+      "packages/server/src/artifacts/zip-writer.ts": "9b52204324d956768511d875dcecd5112eeca0a2",
+      "packages/server/src/db/repositories/artifact-repository.ts": "9b47ebe497c428f5fb2ea9a37a82aef6a50f9421",
+      "packages/server/src/db/repositories/history-repository.ts": "7768d3e8eecab9fffdf6fa553537e873fe969447",
+      "packages/server/src/db/status-sql.ts": "12850f27ed9a4c217e3034fb62f265c426c32549",
+      "packages/server/src/history/index.ts": "831acc154ca0bc5dee73fec81c9c1f0dc3ba61ac",
+      "packages/server/src/history/retention-sweeper.ts": "658c4798123a3a6bfb6a5dff830ef1f23e55da35",
+      "packages/server/src/history/safe-remove.ts": "9a45339a6d21eff7988c04048f77b8752626b2ea",
+      "packages/server/src/history/task-deletion-service.ts": "169ae43ab52e031af09a1313fc46d5233f302089",
+      "packages/server/src/history/task-owned-trees.ts": "c7c84a2e1435edb67e4499ea95e7fd092fa0d169",
+      "packages/server/src/middleware/api-headers.ts": "b46fadc9091dd08e019e5f6cf4cfe46ec83fa4af",
+      "packages/server/src/routes/artifact-route.ts": "69f4de7e376b8ed3c8add03b3cead12a1d2cb0b7",
+      "packages/server/src/routes/history-route.ts": "b826ef1adbd4723e99f499f167b8f4a1275efb99",
+      "packages/web/src/__tests__/api/history-queries.test.tsx": "e6210548e76f3c327281e43e1423bcc4bf1c22f5",
+      "packages/web/src/__tests__/components/artifacts/artifact-fixtures.ts": "b1524b40c79d5efcbc0ac6b4c174b0ec9bcc379e",
+      "packages/web/src/__tests__/components/artifacts/artifact-frame.test.tsx": "a10e2e8810b8e6d25570d70c9ad8ceeeaf95b26f",
+      "packages/web/src/__tests__/components/artifacts/artifact-list.test.tsx": "0347ffaef8260ccdf440136ae0cf1ae0ff553f53",
+      "packages/web/src/__tests__/components/artifacts/artifact-renderers.test.tsx": "7f059f9dfd338eb7eb838801638136a06b87dea0",
+      "packages/web/src/__tests__/components/artifacts/no-outputs-panel.test.tsx": "da1e89bafac8e4d5ba23e1f96c4676dd46cb01e2",
+      "packages/web/src/__tests__/components/history/delete-task.test.tsx": "9b7b17bda6dec764751811be79532595862b4089",
+      "packages/web/src/__tests__/components/history/history-list.test.tsx": "336692474036f2f3d51f2be896b9d73596f2ea7f",
+      "packages/web/src/__tests__/components/history/run-again.test.tsx": "5a6d64dbbe7612115b148f39622f3cf4a8645ede",
+      "packages/web/src/__tests__/components/history/run-record.test.tsx": "66458d15e91ffa6b59f737ae0cfc5fb236af04c0",
+      "packages/web/src/__tests__/components/history/run-view.test.tsx": "36664c1a5215fe78717c6eb55c557672cc8d0df5",
+      "packages/web/src/__tests__/routes/task-routes.test.tsx": "d809cacf1781a6e2c9a1da3e5390529ef27a82a1",
+      "packages/web/src/api/artifact-queries.ts": "427b807e07f3fa2d2997212ac4aa3bc93e23e94a",
+      "packages/web/src/api/history-queries.ts": "73603d4d551029c4a330414e6ea3bf90ec99177f",
+      "packages/web/src/components/artifacts/artifact-card.tsx": "639a945566d4ed66fd165b928febc4e6930b2e25",
+      "packages/web/src/components/artifacts/artifact-frame.tsx": "e5ece9587af805d6c3bae0a629a25a2130ab6120",
+      "packages/web/src/components/artifacts/artifact-image.tsx": "9dce555300259686c163417de4512bf9fd2d66ce",
+      "packages/web/src/components/artifacts/artifact-list.tsx": "68c5d669276b646902c64102a22c1a853b2b6fce",
+      "packages/web/src/components/artifacts/artifact-markdown.tsx": "f4797e5a80a01a78303dcbf0723d815170efea6f",
+      "packages/web/src/components/artifacts/artifact-table.tsx": "ab7421298330adb50e86c14f703368b7094622cd",
+      "packages/web/src/components/artifacts/artifact-text.tsx": "f5a190fdfe8052c5917986eb2247a09593641b89",
+      "packages/web/src/components/artifacts/download-controls.tsx": "74d18f27eae216138fdbbecaabc28d7707b252fd",
+      "packages/web/src/components/artifacts/no-outputs-panel.tsx": "8561bf707bec5041da8a086ab1c99645d7bf3ec9",
+      "packages/web/src/components/history/delete-task-dialog.tsx": "66e8beb62a93d007f6c62ca44f3c04acd481c194",
+      "packages/web/src/components/history/history-filters.tsx": "d8059436838f0b6a9af2fd2b104ac08f68adee43",
+      "packages/web/src/components/history/history-item.tsx": "4b74db67520841376e071f99f8c70ddc62d86954",
+      "packages/web/src/components/history/history-list.tsx": "7a6d724897fe54128334e46d3bd36ffebd2e36c9",
+      "packages/web/src/components/history/needs-you-strip.tsx": "6b3435b96bb014c25fddd9f65ceecf3279701e72",
+      "packages/web/src/components/history/record-detail.tsx": "a79eff699471f4d9ad8d9e8307a83f86322beddd",
+      "packages/web/src/components/history/record-section.tsx": "18e11e11504b17ca3d63974ff498fd053363a9f1",
+      "packages/web/src/components/history/relative-time.tsx": "b3bb83bc75f170970951e1694560cf8b381f0c9b",
+      "packages/web/src/components/history/run-again-button.tsx": "9c53018ed1384fcaf34f427d5195b70e65b53b58",
+      "packages/web/src/components/history/run-record-panel.tsx": "ca43f06720bcd5b8d0616f5e7ca5fd29c4a3bc84",
+      "packages/web/src/components/history/run-timeline-item.tsx": "68e7cf0eb3620ea47cca1ea8b5b43c9643dadeae",
+      "packages/web/src/components/history/run-timeline.tsx": "004fa35c6c4cc9134d2a48682fb573a6e95f15f3",
+      "packages/web/src/components/history/run-view.tsx": "ceb83613c88b081ec77d87c0a3e0f1256cd41289",
+      "packages/web/src/components/history/task-header.tsx": "ab910720e7a746fbcd46b4907e752b56271f0eb9",
+      "packages/web/src/components/history/task-inputs.tsx": "beae641da39401b968b99b056d01a77f8c308e51",
+      "packages/web/src/routes/tasks.$taskId.index.tsx": "564d22872f85dd65ba4dc7f2d6b3de9c41a611a9",
+      "packages/web/src/routes/tasks.$taskId.runs.$executionId.tsx": "72da6a0eca5a6cd0b8cc9c037090759fb3b1f3cb"
+    }
+  },
+  "featureId": "FEAT-111"
+}

@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased — FEAT-111 Save and rerun
+
+- Added **Save this task** for accepted runs and a Saved tasks library with immutable code revisions, input contracts, runtime fingerprints, recorded decisions, and as-of dates. Saved tasks outlive their source tasks and can be deleted independently.
+- Added file-slot compatibility checks and a second-run path that materializes the saved code, verifies it against new synthetic fixtures, and waits for approval without opening an AI provider session or recording a transmission. Compatibility checks structure, not the meaning of values; generated code still runs with this application's access.
+- Added repair with explicit mappings and a fresh disclosure review. The AI receives the person's repair instructions and approved description of the new file, not the saved code. An accepted repair can be promoted as a new revision.
+- Added historical replay of the same code, input bindings, and as-of date, including after saved-task deletion. Replay uses the current locked Python runtime, which may have changed.
+- Added saved-task provenance to History and run pages, eleven saved-task API routes, transaction-safe preflight choice persistence, as-of environment variables for Python, and migration triggers that prevent application updates to accepted revisions.
+
+## Unreleased — FEAT-110 Execution history
+
+- Replaced the History placeholder with a searchable, paged task list, a **Needs you** strip, a run timeline, stable run URLs, prior outputs, and a provenance record that opens the existing feature views.
+- Added **Run again** for the latest finished run, including renewed disclosure review when recipient consent is stale, and refused a retry when the task already has an open run.
+- Added whole-task deletion through the UI and API. Rows are deleted first, then uploads, artifacts, copied inputs and run workspaces, scripts, and raw provider session logs; startup cleanup removes leftover orphan trees. Task-owned records live until deletion, without age purges.
+- Defined restart outcomes for every open status: five in-memory phases, including `waiting`, interrupt with phase-specific messages; approval and review gates survive. Graceful shutdown is shown separately from cancellation.
+- Added four History API routes, the task counts field, the `execution_parked` index update, the history integration suite, and `/api` `nosniff` response headers. Browser same-origin policy and absent CORS headers limit other web pages; this preview has no local account access control. A test sweeps every registered `/api` route, including error and 404 responses, for CORS allow headers and `nosniff`.
+- Fixed restart reconciliation, the parked-run lookup, and the **Needs you** list scanning the whole `execution` table: their status lists were bound as parameters, which SQLite cannot match to a partial index. They now use the `execution_active` and `execution_parked` indexes, and `EXPLAIN QUERY PLAN` tests hold them to it.
+- The run record now counts questions by where each answer came from (you, an earlier run, or the proposed default), shows whether the code's own tests passed and whether warnings were acknowledged, and puts an interrupted run's explanation and **Run again** first. Deleting a task now also clears its cached transcripts and input list in the browser.
+- Removed `TaskRepository.delete` and its file-sweep hooks; whole-task deletion has one path, `TaskDeletionService`.
+
+## Unreleased — FEAT-109 Results, outputs, and downloads
+
+- Output files are now registered when a run settles: each file the script wrote, declared or not, is moved into `artifacts/{taskId}/{artifactId}{ext}`, fingerprinted with SHA-256, typed from a fixed nine-type policy, and recorded. Undeclared files are kept and marked; files that cannot be kept (a disallowed extension such as `.svg`, or more than 200 files) are counted and shown. A failed run still keeps what it wrote.
+- All nine output types render in the app: CSV and Excel as server-paged tables, images, Markdown with raw HTML disabled, text and JSON heads, and HTML, Plotly, and PDF in a preview frame shown only after **Show preview**. The frame grants scripts and nothing else, and the bytes carry a deny-by-default Content-Security-Policy with no network destination. That protects the browser only: the script that wrote the report ran unisolated with this application's access.
+- Every output downloads, and **Download all** streams a store-only ZIP. Download names are sanitized; ZIP entries cannot extract outside their folder.
+- Formula-like cells in generated CSV and Excel files are counted and reported, not rewritten.
+- A run with nothing, or less than promised, to show now explains what happened with next steps that are real controls: retry with more detail, ask for less, download what was produced, see the transcript, or prepare Python.
+- The code contract now requires self-contained outputs (Plotly inlined, images as `data:` URIs), allowed extensions only, and never `.svg`.
+- Added the `artifact` and `conversation_event_kind` tables and two `script_run` counters in migration `0007`. `conversation_event.kind` is now a foreign key to the lookup table, so new event kinds no longer rebuild the transcript table. Added seven endpoints, the `artifacts_registered` event, seven error codes, and six provisional limits.
+- Outputs live for the life of the task: deleting a task removes its rows and files together, a startup sweep removes orphaned artifact folders, and nothing is purged by age.
+
 ## Unreleased — FEAT-108 Locked Python runtime execution
 
 - Added committed script and checker `uv.lock` manifests, exact CPython 3.14.6 provisioning, persisted runtime readiness, background preparation, runtime status and prepare endpoints, and a Settings status panel. Script packages: pandas 3.0.6, openpyxl 3.1.5, xlsxwriter 3.2.9, plotly 7.1.0, matplotlib 3.11.2, jinja2 3.1.6, python-dateutil 2.9.0.post0, pytest 9.1.1. Checkers: ruff 0.16.9 and bandit 1.9.4.

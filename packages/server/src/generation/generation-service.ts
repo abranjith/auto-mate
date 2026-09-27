@@ -10,6 +10,8 @@ import {
   ExecutionNotRetryableError,
   FIXTURE_PREVIEW_ROWS,
   isTerminal,
+  isSavedCodeRun,
+  RetryUsesSavedCodeError,
   type CodeVersionDetail,
   type CodeVersionSummary,
   type ExecutionStatus,
@@ -28,6 +30,7 @@ import type { TaskRepository, TaskRow } from '../db/repositories/task-repository
 import type { UploadRepository } from '../db/repositories/upload-repository';
 import type { DisclosureService } from '../disclosure/disclosure-service';
 import type { PreflightService } from '../disclosure/preflight-service';
+import type { ExecutionReuseRepository } from '../db/repositories/execution-reuse-repository';
 import type { FixtureService } from './fixture-service';
 import { presentAttempt, presentCodeVersionDetail, presentCodeVersionSummary } from './presenters';
 
@@ -42,6 +45,8 @@ export interface GenerationServiceDependencies {
   readonly uploads: UploadRepository;
   readonly disclosure: DisclosureService;
   readonly preflight: PreflightService;
+  /** FEAT-111: a saved-code run is never retried by writing new code. */
+  readonly reuse: Pick<ExecutionReuseRepository, 'getByExecution'>;
   readonly registry: Pick<TaskSessionRegistry, 'assertCapacity' | 'start'>;
   readonly logger: Pick<Logger, 'info'>;
   /** The attempt and time limits runs are held to, reported with the attempts. */
@@ -107,13 +112,14 @@ export class GenerationService {
    * @param trigger `rerun` for a person's "try again" (FEAT-106); `feedback` for a rejected result (FEAT-107), whose words are the guidance.
    * @throws ExecutionNotRetryableError while the source is still active; FEAT-105's consent errors when approval is stale.
    */
-  retry(executionId: number, guidance: string | null, trigger: 'rerun' | 'feedback' = 'rerun'): { task: TaskRow; execution: ExecutionRow } {
+  retry(executionId: number, guidance: string | null, trigger: 'rerun' | 'feedback' = 'rerun', preflightDecisions: readonly { findingKey: string; choice: string }[] = []): { task: TaskRow; execution: ExecutionRow } {
     const source = this.requireExecution(executionId);
+    if (isSavedCodeRun(this.deps.reuse.getByExecution(executionId)?.kind as 'run' | 'replay' | 'repair' | null)) throw new RetryUsesSavedCodeError();
     if (!isTerminal(source.status as ExecutionStatus)) throw new ExecutionNotRetryableError(executionId, source.status);
     const task = this.deps.tasks.getById(source.taskId)!;
     const uploadIds = this.deps.uploads.listByTask(task.id).map(({ id }) => id);
     if (uploadIds.length > 0) this.deps.disclosure.verifyForTransmission(task.id, 'context');
-    const answers = uploadIds.length > 0 ? this.deps.preflight.resolveDecisions(uploadIds, [], task.id) : [];
+    const answers = uploadIds.length > 0 ? this.deps.preflight.resolveDecisions(uploadIds, preflightDecisions, task.id) : [];
     this.deps.registry.assertCapacity();
     const execution = trigger === 'feedback' && guidance !== null ? this.deps.executions.createFeedbackRetry(executionId, guidance) : this.deps.executions.createRetry(executionId, guidance);
     try { this.deps.preflight.persist(execution.id, answers); }

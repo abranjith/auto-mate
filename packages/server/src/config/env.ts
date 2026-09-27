@@ -1,4 +1,4 @@
-import { ConfigurationError, LINT_TIMEOUT_MS, MAX_REVIEW_FEEDBACK_CHARS, MAX_RUN_OUTPUT_BYTES, SCRIPT_RUN_TIMEOUT_MS, SCRIPT_MEMORY_LIMIT_BYTES, SCRIPT_MAX_OUTPUT_FILE_BYTES, SCRIPT_MAX_OUTPUT_TOTAL_BYTES, SCRIPT_MAX_OUTPUT_FILES, OUTPUT_WATCH_INTERVAL_MS, RUNTIME_PREPARE_TIMEOUT_MS, PYTHON_INSTALL_TIMEOUT_MS, SECURITY_TIMEOUT_MS, VERIFICATION_TIMEOUT_MS, FIXTURE_ROW_COUNT, GENERATION_TIMEOUT_MS, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_GENERATION_ATTEMPTS, MAX_GENERATION_COST_USD, MAX_PREFLIGHT_DECISIONS, MAX_SCRIPT_BYTES, TEST_RUN_TIMEOUT_MS, UPLOAD_LIMIT_DEFAULTS, UV_SYNC_TIMEOUT_MS } from '@automate/core';
+import { ConfigurationError, LINT_TIMEOUT_MS, MAX_REVIEW_FEEDBACK_CHARS, MAX_RUN_OUTPUT_BYTES, SCRIPT_RUN_TIMEOUT_MS, SCRIPT_MEMORY_LIMIT_BYTES, SCRIPT_MAX_OUTPUT_FILE_BYTES, SCRIPT_MAX_OUTPUT_TOTAL_BYTES, SCRIPT_MAX_OUTPUT_FILES, OUTPUT_WATCH_INTERVAL_MS, RUNTIME_PREPARE_TIMEOUT_MS, PYTHON_INSTALL_TIMEOUT_MS, SECURITY_TIMEOUT_MS, VERIFICATION_TIMEOUT_MS, FIXTURE_ROW_COUNT, GENERATION_TIMEOUT_MS, MAX_AGENT_CLARIFICATIONS, MAX_DIAGNOSTIC_BYTES, MAX_GENERATION_ATTEMPTS, MAX_GENERATION_COST_USD, MAX_PREFLIGHT_DECISIONS, MAX_SCRIPT_BYTES, TEST_RUN_TIMEOUT_MS, UPLOAD_LIMIT_DEFAULTS, UV_SYNC_TIMEOUT_MS, MAX_ARTIFACTS_PER_RUN, MAX_ARTIFACT_PREVIEW_BYTES, MAX_TABLE_PAGE_ROWS, MAX_TABLE_SCAN_ROWS, FORMULA_SCAN_ROWS, MAX_ARCHIVE_BYTES } from '@automate/core';
 
 export interface ServerConfig {
   host: string;
@@ -205,5 +205,41 @@ export function getRuntimeConfig(env = process.env): RuntimeConfig {
     outputWatchIntervalMs: positiveInteger(env, 'AUTOMATE_OUTPUT_WATCH_INTERVAL_MS', OUTPUT_WATCH_INTERVAL_MS),
     prepareTimeoutMs: positiveInteger(env, 'AUTOMATE_RUNTIME_PREPARE_TIMEOUT_MS', RUNTIME_PREPARE_TIMEOUT_MS),
     pythonInstallTimeoutMs: positiveInteger(env, 'AUTOMATE_PYTHON_INSTALL_TIMEOUT_MS', PYTHON_INSTALL_TIMEOUT_MS),
+  };
+}
+
+/**
+ * Artifact limits (FEAT-109, D12/D14). Every value is PROVISIONAL against the
+ * remainder of open D14. Each may be lowered; `maxTablePageRows` may not be
+ * raised past the request schema's ceiling, and `maxArchiveBytes` may not
+ * pass the ZIP writer's 4 GiB boundary (no Zip64).
+ */
+export interface ArtifactConfig {
+  /** `AUTOMATE_MAX_ARTIFACTS_PER_RUN` — files registered per run; the rest are counted as unregistered. */
+  readonly maxArtifactsPerRun: number;
+  /** `AUTOMATE_MAX_ARTIFACT_PREVIEW_BYTES` — largest text/JSON/Markdown file the preview route returns the head of. */
+  readonly maxPreviewBytes: number;
+  /** `AUTOMATE_MAX_TABLE_PAGE_ROWS` — largest table page a client may ask for. */
+  readonly maxTablePageRows: number;
+  /** `AUTOMATE_MAX_TABLE_SCAN_ROWS` — rows a table page request streams past before reporting the cap. */
+  readonly maxTableScanRows: number;
+  /** `AUTOMATE_FORMULA_SCAN_ROWS` — rows the registrar scans for formula-prefixed cells. */
+  readonly formulaScanRows: number;
+  /** `AUTOMATE_MAX_ARCHIVE_BYTES` — largest "Download all" archive. */
+  readonly maxArchiveBytes: number;
+}
+
+/** The ZIP writer's hard boundary: store-only ZIP without Zip64 cannot describe more. */
+export const ZIP32_MAX_BYTES = 0xffff_ffff;
+
+/** Parse the six artifact limits. @param env Environment variables to read. @returns Limits with the provisional defaults. */
+export function getArtifactConfig(env = process.env): ArtifactConfig {
+  return {
+    maxArtifactsPerRun: positiveInteger(env, 'AUTOMATE_MAX_ARTIFACTS_PER_RUN', MAX_ARTIFACTS_PER_RUN),
+    maxPreviewBytes: positiveInteger(env, 'AUTOMATE_MAX_ARTIFACT_PREVIEW_BYTES', MAX_ARTIFACT_PREVIEW_BYTES),
+    maxTablePageRows: positiveInteger(env, 'AUTOMATE_MAX_TABLE_PAGE_ROWS', MAX_TABLE_PAGE_ROWS, MAX_TABLE_PAGE_ROWS),
+    maxTableScanRows: positiveInteger(env, 'AUTOMATE_MAX_TABLE_SCAN_ROWS', MAX_TABLE_SCAN_ROWS),
+    formulaScanRows: positiveInteger(env, 'AUTOMATE_FORMULA_SCAN_ROWS', FORMULA_SCAN_ROWS),
+    maxArchiveBytes: positiveInteger(env, 'AUTOMATE_MAX_ARCHIVE_BYTES', MAX_ARCHIVE_BYTES, ZIP32_MAX_BYTES),
   };
 }

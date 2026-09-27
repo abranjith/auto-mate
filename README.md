@@ -1,6 +1,6 @@
 # Auto-Mate
 
-Auto-Mate is a local app in development for turning plain-language data tasks into repeatable outputs. The developer preview includes the application shell, AI provider configuration, a task conversation surface, CSV/TSV/XLSX attachment with local profiling, a review of exactly what will be sent before a task starts, agent clarification questions, code generation with an agent repair loop, and an independent verification and execution gate. You can describe a task, follow the persisted agent conversation live, reconnect without losing its ordered transcript, and cancel an active run. Settings provides provider, model, and reasoning-effort selection plus credential status and a live connection test. For a task with approved files, the agent writes a Python script and its own tests, tests them against synthetic data built from the approved file description (the real file is not opened during generation), repairs the script within a limited number of attempts, and offers a guidance retry when a run fails. Auto-Mate then checks the final script itself without contacting an AI, asks you before running it once on a copy of your file, and asks whether the result is what you wanted. Viewing and downloading output files and browsable task history are not available yet.
+Auto-Mate is a local app in development for turning plain-language data tasks into repeatable outputs. The developer preview includes the application shell, AI provider configuration, a task conversation surface, CSV/TSV/XLSX attachment with local profiling, a review of exactly what will be sent before a task starts, agent clarification questions, code generation with an agent repair loop, independent verification and execution, output viewing and downloads, and browsable task history. You can describe a task, follow the persisted agent conversation live, reconnect without losing its ordered transcript, and cancel an active run. Settings provides provider, model, and reasoning-effort selection plus credential status and a live connection test. For a task with approved files, the agent writes a Python script and its own tests, tests them against synthetic data built from the approved file description (the real file is not opened during generation), repairs the script within a limited number of attempts, and offers a guidance retry when a run fails. Auto-Mate then checks the final script itself without contacting an AI, asks you before running it once on a copy of your file, and asks whether the result is what you wanted. History lets you reopen past runs and their results or delete a whole task.
 
 > **Developer preview — no enforced execution isolation.** Generated code runs without an isolation boundary in this milestone: the agent's generated tests, and the approved script's run on a copy of your file, run as Python with this application's own access to your files and network. It can read any file this application can read. The agent itself has no file, shell, or network tool, but that limits the agent, not the code it writes. Working directories, locked dependencies, the pinned interpreter, `PYTHONSAFEPATH`, the input copy (which protects your original only from a buggy script), origin checks, and the loopback address are not security boundaries or network restrictions. Restricted execution is required before a target-user pilot.
 
@@ -60,6 +60,8 @@ To work with data, attach up to five `.csv`, `.tsv`, or `.xlsx` files before **S
 
 Real script runs have provisional time and output limits on every platform. A stopped run names the limit it reached. A memory cap is enforced on macOS and Linux: **A memory limit is enforced with RLIMIT_AS on macOS and Linux.** **No memory limit is enforced on Windows.** See [Usage](docs/usage.md#understand-and-change-runtime-limits) for values and settings.
 
+Open **History** at <http://127.0.0.1:5173/history> to find a task by name or latest run state. Each task page lists its runs; open a run to revisit its saved transcript, checks, and outputs. **Run again** starts a linked run after the latest one finishes. **Delete task** removes the task's local records and owned files after you confirm; finish or cancel an open run first. There is no control to delete just one run or output. See [Execution History](docs/features/execution-history.md) and [Results, Outputs, and Downloads](docs/features/results-outputs-downloads.md).
+
 The API binds to `127.0.0.1` by default. `AUTOMATE_HOST` and `AUTOMATE_PORT` can change that address, but this preview has no authentication or local session protection. D10 in the [MVP plan](.spec-lite/plan_mvp.md) owns the final local-access design; the current loopback default does not settle it or isolate code execution.
 
 ## Workspace commands
@@ -89,7 +91,7 @@ Server startup creates the following under `~/.automate/` (your user home direct
 ├── config/agent.json  AI provider and model selection (never a credential)
 ├── pi/                agent credential store and model definitions
 ├── agent-sessions/    raw agent session logs, one directory per execution
-├── artifacts/         reserved for later outputs
+├── artifacts/         registered output files, grouped by task
 ├── uploads/           attached input files: staged/ until a task claims them, then <taskId>/
 ├── scripts/           generated code attempts and synthetic test data, written from the database
 ├── env/               locked Python project for generated scripts/tests and its launcher
@@ -98,6 +100,8 @@ Server startup creates the following under `~/.automate/` (your user home direct
 ```
 
 Set `AUTOMATE_HOME` before starting the server to use another writable data root. The [Quickstart](docs/quickstart.md) shows PowerShell and Unix shell examples.
+
+Task records and owned files stay until you delete the whole task; there is no age-based purge of task history. Unattached staged uploads have a separate short cleanup window. Deleting local data cannot recall material already sent to an AI provider.
 
 ## Documentation
 
@@ -112,6 +116,8 @@ Set `AUTOMATE_HOME` before starting the server to use another writable data root
 - [Code generation and agent repair loop](docs/features/code-generation-repair.md) — FEAT-106 generated scripts and tests, synthetic test data, attempts and limits, guidance retry, APIs, and configuration.
 - [Verification and execution gate](docs/features/verification-execution-gate.md) — FEAT-107 independent checks, the approval gate, running on a copy of your file, result review, and feedback retry.
 - [Python runtime and script execution](docs/features/python-runtime-execution.md) — FEAT-108 locked environments, runtime status, limits, and maintainer workflow.
+- [Results, outputs, and downloads](docs/features/results-outputs-downloads.md) — FEAT-109 registered outputs, previews, and downloads.
+- [Execution history](docs/features/execution-history.md) — FEAT-110 task search, past run records, linked retries, restart recovery, and whole-task deletion.
 - [Python run limits](docs/runtime-limits.md) — what a stopped run means and which platform enforces each limit.
 - [Runtime maintenance](docs/runtime-maintenance.md) — committed locks, upgrades, and live verification.
 - [Core package](packages/core/README.md), [server package](packages/server/README.md), and [web package](packages/web/README.md) — package-level development notes.

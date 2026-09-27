@@ -20,22 +20,31 @@ import {
   describeRuntime,
   parseOutputManifest,
   shortDigest,
+  REUSE_INTENT_CAVEAT,
+  isSavedCodeRun,
+  describeCompatibilityFinding,
+  describeRuntimeChange,
+  type CompatibilityReport,
   type CheckKey,
   type CheckStatus,
   type RunIntent,
   type RuntimeDetail,
 } from '@automate/core';
 import type { CodeVersionRepository, CodeVersionWithFiles } from '../db/repositories/code-version-repository';
-import type { ExecutionRepository } from '../db/repositories/execution-repository';
+import type { ExecutionRepository, ExecutionRow } from '../db/repositories/execution-repository';
 import type { UploadProfileRepository } from '../db/repositories/upload-profile-repository';
 import type { UploadRepository } from '../db/repositories/upload-repository';
 import type { VerificationRepository, VerificationRunWithChecks } from '../db/repositories/verification-repository';
+import { resolveGeneratedInputs, type ExecutionInputs } from '../execution/execution-inputs';
+import type { ExecutionReuseRepository } from '../db/repositories/execution-reuse-repository';
 
 export interface RunIntentServiceDependencies {
   readonly executions: ExecutionRepository;
   readonly versions: CodeVersionRepository;
   readonly verifications: VerificationRepository;
   readonly uploads: UploadRepository;
+  readonly inputResolver?: ExecutionInputs;
+  readonly reuse?: ExecutionReuseRepository;
   readonly profiles: UploadProfileRepository;
 }
 
@@ -76,12 +85,15 @@ export class RunIntentService {
   private assemble(taskId: number, executionId: number, version: CodeVersionWithFiles, run: VerificationRunWithChecks): RunIntent {
     const tests = detailOf(run, 'tests');
     const runtime = JSON.parse(run.runtimeDetail) as RuntimeDetail;
+    const execution = this.deps.executions.getById(executionId)!;
+    const reuse = this.deps.reuse?.getByExecution(executionId);
+    const report = reuse?.compatibilityReport ? JSON.parse(reuse.compatibilityReport) as CompatibilityReport : null;
     return {
       executionId,
       codeVersion: { id: version.id, shortDigest: shortDigest(run.contentDigest), contentDigest: run.contentDigest, fileCount: version.files.length, lineCount: version.files.reduce((sum, { content }) => sum + countLines(content), 0), entrypoint: version.entrypoint },
       verificationRunId: run.id,
       summary: version.summary,
-      inputs: this.inputs(taskId),
+      inputs: this.inputs(taskId, executionId),
       outputs: this.outputs(version),
       checks: run.checks.map(({ checkKey, status, isBlocking, summary }) => ({ checkKey: checkKey as CheckKey, status: status as CheckStatus, isBlocking, summary })),
       verdict: run.summary ?? '',
@@ -89,13 +101,28 @@ export class RunIntentService {
       advisoryCount: run.advisoryCount,
       tests: { total: count(tests.total), passed: count(tests.passed), fixtureRowCount: count(tests.fixtureRowCount) },
       runtime: { fingerprint: run.runtimeFingerprint, description: describeRuntime(runtime), packages: runtime.packages.map(({ name, version: packageVersion }) => ({ name, version: packageVersion })) },
-      caveats: [...RUN_INTENT_CAVEATS],
+      asOf: execution.asOfAt && execution.asOfDate && execution.asOfTimezone && execution.asOfSource ? { at: Math.floor(execution.asOfAt.getTime() / 1000), date: execution.asOfDate, timeZone: execution.asOfTimezone, source: execution.asOfSource as 'now' | 'chosen' | 'copied' } : null,
+      reuse: reuse && isSavedCodeRun(reuse.kind as 'run' | 'replay' | 'repair') ? { templateName: reuse.templateName, revisionNumber: reuse.revisionNumber, revisionDigestShort: shortDigest(reuse.revisionDigest), compatibility: { status: report?.status ?? 'compatible', advisories: report?.findings.filter((finding) => finding.severity === 'advisory').map((finding) => describeCompatibilityFinding(finding).headline) ?? [] }, runtimeChanges: this.runtimeChanges(execution, reuse.kind, report, runtime) } : null,
+      caveats: reuse && isSavedCodeRun(reuse.kind as 'run' | 'replay' | 'repair') ? [...RUN_INTENT_CAVEATS, REUSE_INTENT_CAVEAT] : [...RUN_INTENT_CAVEATS],
     };
   }
 
+  /**
+   * The runtime differences a person approves past. A fresh saved-code run's fit check
+   * compared the revision with today's runtime moments ago, so its report is current. A
+   * replay copies an older report, so it compares the run it repeats with the runtime this
+   * run was just checked on (FEAT-111: "any runtime difference is named in the approval gate").
+   */
+  private runtimeChanges(execution: ExecutionRow, kind: string, report: CompatibilityReport | null, current: RuntimeDetail): string[] {
+    const before = kind === 'replay' && execution.retryOfExecutionId !== null ? this.deps.verifications.getLatest(execution.retryOfExecutionId) : undefined;
+    if (!before) return report?.runtime.changes ?? [];
+    return describeRuntimeChange(JSON.parse(before.runtimeDetail) as RuntimeDetail, current);
+  }
+
   /** What will be read: the person's own files, by display name, size, and short digest. */
-  private inputs(taskId: number): RunIntent['inputs'] {
-    return this.deps.uploads.listByTask(taskId).map((upload) => ({
+  private inputs(taskId: number, executionId: number): RunIntent['inputs'] {
+    const resolved = this.deps.inputResolver?.resolve(executionId) ?? resolveGeneratedInputs(this.deps.uploads.listByTask(taskId));
+    return resolved.map(({ upload }) => ({
       uploadId: upload.id,
       originalFilename: upload.originalFilename,
       byteSize: upload.byteSize,

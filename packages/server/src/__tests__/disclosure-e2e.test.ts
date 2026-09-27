@@ -112,4 +112,18 @@ describe('disclosure and clarification end to end', () => {
     expect(JSON.parse(h.consent!.uploadIds)).toEqual(h.uploads.map(({ id }) => id));
     expect(h.repos.transmissions.listByExecution(h.execution.id).map(({ kind }) => kind)).toEqual(['context']);
   });
+
+  it('renews a changed recipient for an existing task only with that task\'s files', async () => {
+    const h = await harness({ steps: () => [] });
+    h.model.value = 'new-model';
+    expect(() => h.disclosure.verifyForTransmission(h.task.id, 'context')).toThrow(/changed|stale/i);
+    const uploadIds = h.uploads.map(({ id }) => id);
+    const preview = h.disclosure.buildPreview(uploadIds);
+    const renewed = h.disclosure.grantConsent({ taskId: h.task.id, uploadIds, payloadDigest: preview.digest, scopeDiagnostics: true });
+    expect(renewed.taskId).toBe(h.task.id);
+    expect(h.disclosure.verifyForTransmission(h.task.id, 'context').id).toBe(renewed.id);
+    const other = h.repos.tasks.createWithExecution('Other task');
+    expect(() => h.disclosure.grantConsent({ taskId: other.task.id, uploadIds, payloadDigest: preview.digest, scopeDiagnostics: true })).toThrow(/belong to the task/i);
+    expect(h.repos.consents.findLiveForTask(other.task.id)).toBeUndefined();
+  });
 });

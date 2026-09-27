@@ -26,6 +26,7 @@ const base: ExecutionSummary = {
   id: 1,
   taskId: 1,
   status: 'generating',
+  trigger: 'manual', retryOfExecutionId: null,
   provider: null,
   model: null,
   usage: {},

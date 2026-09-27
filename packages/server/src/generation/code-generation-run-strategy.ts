@@ -32,11 +32,13 @@ import { DEFAULT_BUDGET_LIMITS, GenerationBudget, type BudgetLimits } from './ge
 import { GenerationLifecycle } from './generation-lifecycle';
 import { GenerationRun, type GenerationRuns } from './generation-run';
 import type { GenerationTools } from './generation-tools';
+import { resolveGeneratedInputs, type ExecutionInputs } from '../execution/execution-inputs';
 
 export interface CodeGenerationRunStrategyDependencies {
   readonly inner: DisclosureRunStrategy;
   readonly disclosure: DisclosureService;
   readonly uploads: UploadRepository;
+  readonly inputs?: ExecutionInputs;
   readonly profiles: UploadProfileRepository;
   readonly executions: ExecutionRepository;
   readonly versions: CodeVersionRepository;
@@ -67,13 +69,14 @@ export class CodeGenerationRunStrategy implements RunStrategy {
 
   async buildRun(task: TaskRow, execution: ExecutionRow): Promise<BuiltRun> {
     const uploads = this.deps.uploads.listByTask(task.id);
+    const resolved = this.deps.inputs?.resolve(execution.id) ?? resolveGeneratedInputs(uploads);
     if (uploads.length === 0) return this.deps.inner.buildRun(task, execution, { guidance: execution.guidance });
     // Verify before writing anything: a revoked or stale approval leaves no fixture behind.
     this.deps.disclosure.verifyForTransmission(task.id, 'context');
     const budget = new GenerationBudget({ executionId: execution.id, attempts: this.deps.attempts, executions: this.deps.executions, limits: this.deps.limits ?? DEFAULT_BUDGET_LIMITS });
     const run = new GenerationRun(execution.id, task.id, budget);
-    await this.deps.fixtures.materializeFixtures(execution.id, uploads.map(({ id }) => id), run.signal);
-    const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: uploads.map((upload) => this.inputFile(upload)), attemptLimit: budget.limits.maxAttempts });
+    await this.deps.fixtures.materializeFixtures(execution.id, resolved, run.signal);
+    const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: resolved.map((input) => this.inputFile(input.upload, input.inputName)), attemptLimit: budget.limits.maxAttempts });
     const appText = execution.guidance ? [contract, 'The person reviewed an earlier attempt that did not succeed and added guidance; it follows their original request above. Use it.'] : [contract];
     const built = this.deps.inner.buildRun(task, execution, { appText, guidance: execution.guidance });
     this.deps.runs.open(run);
@@ -82,10 +85,10 @@ export class CodeGenerationRunStrategy implements RunStrategy {
   }
 
   /** How the contract names one input: its stored filename and, for a workbook, its disclosed sheets in order. */
-  private inputFile(upload: UploadRow): ContractInputFile {
+  private inputFile(upload: UploadRow, inputName: string): ContractInputFile {
     const format = upload.format as FileFormat;
     const source = format === 'xlsx' ? this.deps.profiles.getDisclosureSource(upload.id) : undefined;
     const sheets = source ? buildDisclosurePayload(source.upload, source.profiles).tables.flatMap(({ sheetName }) => (sheetName === null ? [] : [sheetName])) : [];
-    return { filename: upload.storedFilename, format, sheets };
+    return { filename: inputName, format, sheets };
   }
 }

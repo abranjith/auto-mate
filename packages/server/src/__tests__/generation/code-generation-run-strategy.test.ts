@@ -75,6 +75,7 @@ describe('CodeGenerationRunStrategy', () => {
 
   it('adds a retry\'s guidance to the person\'s words in the same prompt, and changes nothing when there is none', async () => {
     const h = await harness();
+    h.repos.executions.markSettled(h.execution.id, { status: 'failed' });
     const retry = h.repos.executions.createRetry(h.execution.id, 'Group by month, not by day.');
     await h.run(retry);
     const [prompt] = h.provider.sessions[0]!.prompts;

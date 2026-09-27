@@ -14,6 +14,14 @@ const AssistantMessage = lazy(() =>
   })),
 );
 type ToolFinished = Extract<ConversationEvent, { type: 'tool_finished' }>;
+type ArtifactsRegistered = Extract<ConversationEvent, { type: 'artifacts_registered' }>;
+
+/** The transcript line for a registration: numbers only, in words. */
+export function describeRegistration(event: Pick<ArtifactsRegistered, 'artifactCount' | 'undeclaredCount' | 'unregisteredOutputCount'>): string {
+  const files = (count: number) => `${count} file${count === 1 ? '' : 's'}`;
+  const kept = event.artifactCount === 0 ? 'No output files were kept.' : `Kept ${files(event.artifactCount)} from this run${event.undeclaredCount > 0 ? `, ${event.undeclaredCount} of them not listed by the script` : ''}.`;
+  return event.unregisteredOutputCount > 0 ? `${kept} ${files(event.unregisteredOutputCount)} could not be kept.` : kept;
+}
 function assertNever(value: never): never {
   throw new Error(`Unknown conversation event: ${JSON.stringify(value)}`);
 }
@@ -143,6 +151,13 @@ export function ConversationView({
               return <p key={event.seq} className={ds.eventLine}>{event.verdict === 'accepted' ? 'You accepted the result.' : `You said the result was wrong${event.retryExecutionId === null ? '.' : `; run ${event.retryExecutionId} is trying again with your feedback.`}`}</p>;
             case 'runtime_prepared':
               return <p key={event.seq} className={ds.eventLine}>Python {event.pythonVersion} is ready with {event.packageCount} packages.</p>;
+            // FEAT-109: counts only; the files themselves are listed and shown below the transcript.
+            case 'artifacts_registered':
+              return <p key={event.seq} className={ds.eventLine}>{describeRegistration(event)}</p>;
+            case 'task_saved':
+              return <p key={event.seq} className={ds.eventLine}>Saved as {event.name} (revision {event.revisionNumber}).</p>;
+            case 'reuse_started':
+              return <p key={event.seq} className={ds.eventLine}>Running saved task {event.templateName} (revision {event.revisionNumber}) as of {event.asOfDate} in {event.timeZone}. {event.asOfNotRecorded ? 'The earlier run did not record its as-of date.' : null}</p>;
             default:
               return assertNever(event);
           }

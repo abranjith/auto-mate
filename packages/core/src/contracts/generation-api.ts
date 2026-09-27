@@ -120,7 +120,7 @@ export const SyntheticFixtureSchema = Type.Object({
   preview: Type.Array(FixturePreviewTableSchema),
 });
 /** `POST /api/executions/:id/retry`. */
-export const RetryRequestSchema = Type.Object({ guidance: Type.Optional(Type.String({ maxLength: MAX_GUIDANCE_CHARS })) }, Closed);
+export const RetryRequestSchema = Type.Object({ guidance: Type.Optional(Type.String({ maxLength: MAX_GUIDANCE_CHARS })), preflightDecisions: Type.Optional(Type.Array(Type.Object({ findingKey: Type.String({ minLength: 1 }), choice: Type.String({ minLength: 1 }) }))) }, Closed);
 
 /** `write_script` parameters. The content is stored and versioned, never written to a shared directory. */
 export const WriteScriptArgsSchema = Type.Object({

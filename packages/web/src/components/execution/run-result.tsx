@@ -1,9 +1,7 @@
-import { describeLimitBreach, formatBytes, type ScriptRun } from '@automate/core';
+import { describeLimitBreach, formatBytes, type ArtifactListResponse, type ScriptRun } from '@automate/core';
 import { ds } from '../../design-system/tokens';
 import { UntrustedText } from '../verification/run-intent-panel';
-
-/** An honest absence, rather than a dead control. */
-export const OUTPUTS_ARRIVE_LATER = 'Viewing and downloading these files arrives with the next feature; for now they are listed here by name.';
+import { ArtifactList } from '../artifacts/artifact-list';
 
 const TAIL_LINES = 40;
 
@@ -25,15 +23,19 @@ function tail(text: string | null): string {
   return text.split(/\r?\n/).slice(-TAIL_LINES).join('\n');
 }
 
-/** A settled run: the outcome, the declared outputs with type and size, and the tail of its output. */
-export function RunResult({ run }: { run: ScriptRun }) {
+/**
+ * A settled run: the outcome, its outputs — viewable and downloadable once
+ * registered (FEAT-109), listed by name while they load — and the tail of its
+ * output.
+ */
+export function RunResult({ run, artifacts }: { run: ScriptRun; artifacts?: ArtifactListResponse }) {
   const output = [tail(run.stdout), tail(run.stderr)].filter(Boolean).join('\n');
   return (
     <section className={ds.runResult} aria-label="Run result">
       <p className={run.status === 'succeeded' ? ds.verdictPassed : ds.verdictBlocked}>{describeRunStatus(run)}</p>
       {run.limitBreached ? <p className={ds.statusDanger}>{describeLimitBreach(run.limitBreached)}</p> : null}
       {run.outputByteCount !== null ? <p className={ds.hint}>Output files used {formatBytes(run.outputByteCount)}.</p> : null}
-      {run.declaredOutputs.length > 0 ? (
+      {artifacts ? <ArtifactList list={artifacts} /> : run.declaredOutputs.length > 0 ? (
         <div className={ds.stackTight}>
           <h3 className={ds.label}>What it produced</h3>
           <ul className={ds.gateList}>
@@ -43,7 +45,6 @@ export function RunResult({ run }: { run: ScriptRun }) {
               </li>
             ))}
           </ul>
-          <p className={ds.hint}>{OUTPUTS_ARRIVE_LATER}</p>
         </div>
       ) : null}
       {output ? (

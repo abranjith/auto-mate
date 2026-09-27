@@ -120,7 +120,7 @@ After **Run it**:
 
 A result panel shows the outcome in words, the declared outputs with type and size, and the script's output under **Show the script's output**. Output on each of the two streams (normal output and error output) is capped at 1 MiB. When the cap is hit, the first half and the last half are kept, a marker shows where the middle was removed, and the panel says **The output was long, so only its beginning and end were kept.** The script's output can contain values from your file. It is stored in the local database, never written to the application log, and never sent to an AI.
 
-Opening, viewing, and downloading the output files arrive with the next feature (FEAT-109). For now the panel says **Viewing and downloading these files arrives with the next feature; for now they are listed here by name.**
+Since FEAT-109 the output files are registered when the run settles and appear in the panel with a viewer and a download each; see [Results, Outputs, and Downloads](results-outputs-downloads.md).
 
 ### The review
 
@@ -289,6 +289,5 @@ The test re-run in the `tests` check uses the existing `AUTOMATE_TEST_RUN_TIMEOU
 - **Checks are evidence, not proof.** The static checks read the code, and the tests run on synthetic rows. None of them shows that the script is correct for your real file. That is why the review step exists.
 - **No AI code review.** Only the deterministic checks described here run. A second model reviewing the code was deliberately not adopted, because its answers cannot be repeated. It is tracked for reconsideration in `.spec-lite/TODO.md`.
 - **The run step is minimal.** It has a time limit and an output cap, but no memory or resource limits, no locked dependency policy, and no concurrency of its own. FEAT-108 replaces it.
-- **Outputs cannot be opened yet.** Output files are listed by name, type, and size only. Viewing and downloading arrive with FEAT-109.
 - **No automatic repair after a failed run.** A failed real run stops and tells you why. The script's output is never sent back to the agent.
 - **Nothing expires.** `runs/` folders hold a full copy of every input file plus the outputs, and nothing cleans them up in this build.

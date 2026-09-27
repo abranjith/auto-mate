@@ -30,6 +30,7 @@ import { DEFAULT_BUDGET_LIMITS, type BudgetLimits } from '../../generation/gener
 import { GenerationRuns } from '../../generation/generation-run';
 import { GenerationTools } from '../../generation/generation-tools';
 import { createTempStore, type TempStore } from './ingestion-fixtures';
+import { ExecutionReuseRepository } from '../../db/repositories/execution-reuse-repository';
 import { sentinelCsv, stageProfiledUpload } from './generation-fixtures';
 
 export const MAIN_PY = 'import os\nimport pandas as pd\n\ndef main():\n    frame = pd.read_csv(os.path.join(os.environ["AUTOMATE_INPUT_DIR"], "INPUT"))\n    frame.groupby("region")["amount"].sum().to_csv(os.path.join(os.environ["AUTOMATE_OUTPUT_DIR"], "totals.csv"))\n\nif __name__ == "__main__":\n    main()\n';
@@ -39,7 +40,7 @@ const COMPLETED = { outcome: 'completed' as const, stopReason: 'stop', usage: { 
 /** Steps a scripted agent takes to write a script and its test. */
 export function writeSteps(input: string, script = MAIN_PY): FakeAgentStep[] {
   return [
-    { call: { tool: 'write_script', args: { path: 'main.py', content: script.replace('INPUT', input) } } },
+    { call: { tool: 'write_script', args: { path: 'main.py', content: script.replace('"INPUT"', JSON.stringify(input)) } } },
     { call: { tool: 'write_test', args: { path: 'test_main.py', content: TEST_PY } } },
   ];
 }
@@ -100,7 +101,7 @@ export async function createGenerationHarness(options: HarnessOptions = {}) {
   const registry = new TaskSessionRegistry({ provider, executions: repos.executions, events: repos.events, strategy, paths: store.paths, model: () => ({ provider: 'fake', id: model.value }), auth: () => ({ mode: 'managed' }), logger, maxConcurrentExecutions: 5, clarifications: clarificationService, onInterrupted: (id) => repos.attempts.abortRunning(id), ...(options.onHandOff ? { onHandOff: (row: ExecutionRow) => options.onHandOff!(row) } : {}) });
   registryRef.current = registry;
   const preflight = new PreflightService(repos.profiles, repos.clarifications);
-  const service = new GenerationService({ tasks: repos.tasks, executions: repos.executions, versions: repos.versions, attempts: repos.attempts, fixtures: repos.fixtures, fixtureService, transmissions: repos.transmissions, uploads: repos.uploads, disclosure, preflight, registry, logger, limits });
+  const service = new GenerationService({ tasks: repos.tasks, executions: repos.executions, versions: repos.versions, attempts: repos.attempts, fixtures: repos.fixtures, fixtureService, transmissions: repos.transmissions, uploads: repos.uploads, disclosure, preflight, reuse: new ExecutionReuseRepository(store.connection), registry, logger, limits });
   const servers: Server[] = [];
   return {
     service, preflight,

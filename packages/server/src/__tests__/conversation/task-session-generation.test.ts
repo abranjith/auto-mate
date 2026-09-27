@@ -47,6 +47,7 @@ function harness(steps: readonly FakeAgentStep[], lifecycle?: RunLifecycle, guid
   const executions = new ExecutionRepository(connection);
   const events = new ConversationEventRepository(connection);
   const created = tasks.createWithExecution('Summarize sales');
+  if (guidance !== null) executions.markSettled(created.execution.id, { status: 'failed' });
   const execution = guidance === null ? created.execution : executions.createRetry(created.execution.id, guidance);
   const session = new TaskSession({ task: created.task, execution, provider, executions, events, strategy, paths, model: { provider: 'fake', id: 'fake' }, auth: { mode: 'managed' }, logger: createLogger('silent') });
   const transcript = () => events.listAfter(execution.id, 0, 500).events;
@@ -114,7 +115,7 @@ describe('generation transcript events', () => {
 
   it('rejects an unknown kind at the database', () => {
     const { executionId } = harness([]);
-    expect(() => connection.client.prepare("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (?, 99, 'code_written', '{}', 'x')").run(executionId)).toThrow(/CHECK/);
+    expect(() => connection.client.prepare("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (?, 99, 'code_written', '{}', 'x')").run(executionId)).toThrow(/FOREIGN KEY/); // FEAT-109: kinds are a lookup table now, not a CHECK.
   });
 });
 

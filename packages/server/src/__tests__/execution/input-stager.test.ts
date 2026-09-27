@@ -22,7 +22,7 @@ describe('stageInputs', () => {
     const result = await stageInputs(store.paths, [upload], inputDir);
     const copy = path.join(inputDir, upload.storedFilename);
     expect(await sha256File(copy)).toBe(upload.sha256);
-    expect(result).toEqual([{ uploadId: upload.id, storedFilename: upload.storedFilename, sha256: upload.sha256, byteSize: upload.byteSize }]);
+    expect(result).toEqual([{ uploadId: upload.id, storedFilename: upload.storedFilename, inputName: upload.storedFilename, sha256: upload.sha256, byteSize: upload.byteSize }]);
   });
   it('raises for a copy that does not match the recorded digest, naming the file by position only', async () => {
     const { store, upload, inputDir } = await staged();

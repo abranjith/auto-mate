@@ -6,7 +6,11 @@ import pino from 'pino';
 import type { ExecutionRow } from '../../db/repositories/execution-repository';
 import { VerificationRepository } from '../../db/repositories/verification-repository';
 import { ApprovalRepository } from '../../db/repositories/approval-repository';
+import { ExecutionReuseRepository } from '../../db/repositories/execution-reuse-repository';
+import { ExecutionInputs } from '../../execution/execution-inputs';
 import { ScriptRunRepository } from '../../db/repositories/script-run-repository';
+import { ArtifactRepository } from '../../db/repositories/artifact-repository';
+import { ArtifactRegistrar, type ArtifactRegistrarDependencies } from '../../artifacts/artifact-registrar';
 import { ExecutionStateWriter } from '../../verification/execution-state-writer';
 import { VerificationService } from '../../verification/verification-service';
 import { RunIntentService } from '../../verification/run-intent-service';
@@ -29,6 +33,9 @@ export interface VerificationHarnessOptions extends HarnessOptions {
   readonly scriptRunTimeoutMs?: number;
   readonly maxRunOutputBytes?: number;
   readonly provisioner?: Pick<RuntimeProvisioner, 'ensureRuntime' | 'getReadiness' | 'getLauncherDigest'>;
+  /** FEAT-109: `false` runs without registration (as FEAT-107 did); a function replaces the registrar. Registers by default, as production does. */
+  readonly registrar?: false | ((deps: ArtifactRegistrarDependencies) => Pick<ArtifactRegistrar, 'registerRunOutputs'>);
+  readonly maxArtifactsPerRun?: number;
 }
 
 /** Build generation plus the FEAT-107 gate; runs are started by `run()` and hand off to verification. */
@@ -42,20 +49,23 @@ export async function createVerificationHarness(options: VerificationHarnessOpti
   });
   const c = h.store.connection;
   const logger = pino({ level: 'silent' });
-  const repos = { ...h.repos, verifications: new VerificationRepository(c), approvals: new ApprovalRepository(c), scriptRuns: new ScriptRunRepository(c) };
+  const repos = { ...h.repos, verifications: new VerificationRepository(c), approvals: new ApprovalRepository(c), scriptRuns: new ScriptRunRepository(c), artifacts: new ArtifactRepository(c), reuse: new ExecutionReuseRepository(c) };
+  const inputs = new ExecutionInputs(repos.executions, repos.reuse, repos.uploads);
+  const registrarDeps: ArtifactRegistrarDependencies = { paths: h.store.paths, artifacts: repos.artifacts, logger, maxArtifactsPerRun: options.maxArtifactsPerRun ?? 200, scan: { formulaScanRows: 5_000, maxInflatedBytes: 1 << 30 } };
+  const registrar = options.registrar === false ? undefined : options.registrar ? options.registrar(registrarDeps) : new ArtifactRegistrar(registrarDeps);
   const publish = (executionId: number, event: Parameters<typeof h.registry.publish>[1]) => h.registry.publish(executionId, event);
   const state = new ExecutionStateWriter(repos.executions, publish);
   const probe = new FakeRuntimeProbe();
   const checkers = new FakeCheckerEnvironment(options.checkers);
   const pass = { integrity: { project: (id: number) => h.workspace.project(id), fixtures: h.fixtureService }, checkers, runner: h.runner, limits: { lintTimeoutMs: 60_000, securityTimeoutMs: 120_000, testRunTimeoutMs: 120_000 } };
-  const verification = new VerificationService({ executions: repos.executions, versions: repos.versions, verifications: repos.verifications, fixtures: repos.fixtures, uploads: repos.uploads, profiles: repos.profiles, probe, pass, paths: h.store.paths, state, publish, track: (id, job) => h.registry.track(id, job), logger, ...(options.verificationTimeoutMs ? { timeoutMs: options.verificationTimeoutMs } : {}) });
+  const verification = new VerificationService({ executions: repos.executions, versions: repos.versions, verifications: repos.verifications, fixtures: repos.fixtures, uploads: repos.uploads, inputs, reuse: repos.reuse, profiles: repos.profiles, probe, pass, paths: h.store.paths, state, publish, track: (id, job) => h.registry.track(id, job), logger, ...(options.verificationTimeoutMs ? { timeoutMs: options.verificationTimeoutMs } : {}) });
   ref.verification = verification;
-  const intents = new RunIntentService({ executions: repos.executions, versions: repos.versions, verifications: repos.verifications, uploads: repos.uploads, profiles: repos.profiles });
+  const intents = new RunIntentService({ executions: repos.executions, versions: repos.versions, verifications: repos.verifications, uploads: repos.uploads, inputResolver: inputs, reuse: repos.reuse, profiles: repos.profiles });
   const approved: number[] = [];
-  const scriptRun = new ScriptRunService({ executions: repos.executions, versions: repos.versions, uploads: repos.uploads, scriptRuns: repos.scriptRuns, runner: h.runner, probe, project: (id) => h.workspace.project(id), paths: h.store.paths, state, publish, track: (id, job) => h.registry.track(id, job), logger, ...(options.provisioner ? { provisioner: options.provisioner } : {}), ...(options.scriptRunTimeoutMs ? { timeoutMs: options.scriptRunTimeoutMs } : {}), ...(options.maxRunOutputBytes ? { maxOutputBytes: options.maxRunOutputBytes } : {}) });
+  const scriptRun = new ScriptRunService({ executions: repos.executions, versions: repos.versions, uploads: repos.uploads, inputs, scriptRuns: repos.scriptRuns, runner: h.runner, probe, project: (id) => h.workspace.project(id), paths: h.store.paths, state, publish, track: (id, job) => h.registry.track(id, job), logger, ...(options.provisioner ? { provisioner: options.provisioner } : {}), ...(options.scriptRunTimeoutMs ? { timeoutMs: options.scriptRunTimeoutMs } : {}), ...(options.maxRunOutputBytes ? { maxOutputBytes: options.maxRunOutputBytes } : {}), ...(registrar ? { registrar, artifacts: repos.artifacts } : {}) });
   const hooks = { onApproved: (id: number) => { approved.push(id); if (options.onApproved) options.onApproved(id); else scriptRun.start(id); } };
   const approval = new ApprovalService({ executions: repos.executions, approvals: repos.approvals, intents, probe, state, publish, assertCapacity: () => h.registry.assertCapacity(), onApproved: (id) => hooks.onApproved(id), reverify: (id) => { verification.start(id); }, logger });
-  const review = new ReviewService({ executions: repos.executions, state, publish, retry: (id, feedback) => h.service.retry(id, feedback, 'feedback'), logger });
+  const review = new ReviewService({ executions: repos.executions, reuse: repos.reuse, state, publish, retry: (id, feedback) => h.service.retry(id, feedback, 'feedback'), logger });
   /** Run generation and wait until the hand-off's verification has settled too. */
   async function runToGate(execution: ExecutionRow = h.execution): Promise<ExecutionRow> {
     await h.run(execution);
@@ -74,7 +84,7 @@ export async function createVerificationHarness(options: VerificationHarnessOpti
   function approve(executionId = h.execution.id, acknowledgedWarnings = true) {
     return approval.decide(executionId, { intentDigest: intents.buildRunIntent(executionId).intentDigest, decision: 'approved', acknowledgedWarnings });
   }
-  return { ...h, repos, state, probe, checkers, verification, intents, approval, scriptRun, review, approved, hooks, pass, logger, publish, runToGate, settledPhases, quiesce, approve,
+  return { ...h, repos, inputs, state, probe, checkers, verification, intents, approval, scriptRun, review, approved, hooks, pass, logger, publish, runToGate, settledPhases, quiesce, approve,
     /** Stop everything live before the data root is removed. */
     async dispose(): Promise<void> { await quiesce(); await h.dispose(); } };
 }

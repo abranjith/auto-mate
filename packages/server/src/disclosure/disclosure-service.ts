@@ -55,10 +55,11 @@ export class DisclosureService {
   }
 
   /** Grant only when the browser acknowledges the preview the server currently derives. */
-  grantConsent(request: { readonly uploadIds: readonly number[]; readonly payloadDigest: string; readonly scopeDiagnostics: boolean }): DisclosureConsentRow {
+  grantConsent(request: { readonly uploadIds: readonly number[]; readonly payloadDigest: string; readonly scopeDiagnostics: boolean; readonly taskId?: number }): DisclosureConsentRow {
     const preview = this.buildPreview(request.uploadIds);
     if (preview.digest !== request.payloadDigest) throw new DisclosureConsentStaleError(preview.provider, preview.model, preview.provider, preview.model, 'the file description changed after it was shown');
-    return this.deps.consents.grant({ uploadIds: preview.uploadIds, payloadDigest: preview.digest, payloadSnapshot: preview.text, byteSize: preview.byteSize, provider: preview.provider, model: preview.model, scopeDiagnostics: request.scopeDiagnostics });
+    if (request.taskId !== undefined && preview.uploadIds.some((id) => this.deps.uploads.getById(id)?.taskId !== request.taskId)) throw new ValidationError('Every file must belong to the task being approved.');
+    return this.deps.consents.grant({ ...(request.taskId === undefined ? {} : { taskId: request.taskId }), uploadIds: preview.uploadIds, payloadDigest: preview.digest, payloadSnapshot: preview.text, byteSize: preview.byteSize, provider: preview.provider, model: preview.model, scopeDiagnostics: request.scopeDiagnostics });
   }
 
   /** Verify a pre-task acknowledgement before creating any task rows. */

@@ -11,8 +11,8 @@ type Sealed = Extract<ConversationEvent, { type: 'code_version_sealed' }>;
  * default and one click from open. The content is fetched only when opened;
  * the transcript event never carries code.
  */
-export function CodeVersionCard({ event, load = getCodeVersion }: { event: Sealed; load?: (id: number) => Promise<CodeVersionDetail> }) {
-  const [detail, setDetail] = useState<CodeVersionDetail>();
+export function CodeVersionCard({ event, load = getCodeVersion, initialDetail, savedRevisionNumber }: { event: Sealed; load?: (id: number) => Promise<CodeVersionDetail>; initialDetail?: CodeVersionDetail; /** FEAT-111: set for a version copied from a saved task rather than written by an attempt. */ savedRevisionNumber?: number }) {
+  const [detail, setDetail] = useState<CodeVersionDetail | undefined>(initialDetail);
   const [error, setError] = useState<string>();
   const open = async () => {
     if (detail) return;
@@ -24,7 +24,7 @@ export function CodeVersionCard({ event, load = getCodeVersion }: { event: Seale
   return (
     <details className={ds.codeCard} onToggle={(toggle) => { if (toggle.currentTarget.open) void open(); }}>
       <summary className={ds.codeCardSummary}>
-        <span>Attempt {event.attempt} — {event.files.length} file{event.files.length === 1 ? '' : 's'}, {lines} lines</span>
+        <span>{savedRevisionNumber === undefined ? `Attempt ${event.attempt}` : `From saved task revision ${savedRevisionNumber}`} — {event.files.length} file{event.files.length === 1 ? '' : 's'}, {lines} lines</span>
         <span className={ds.digest} title={event.digest}>{shortDigest(event.digest)}</span>
         {verdict}
       </summary>

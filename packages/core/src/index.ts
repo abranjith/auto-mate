@@ -1,4 +1,8 @@
 export { AutoMateError } from './errors/automate-error';
+export { canonicalStringify } from './disclosure/canonical-json';
+export * from './reuse/index';
+export * from './errors/reuse-errors';
+export * from './contracts/template-api';
 export * from './disclosure/index';
 export * from './contracts/disclosure-api';
 export * from './errors/disclosure-errors';
@@ -28,6 +32,7 @@ export {
   renderCodeContract,
   MANIFEST_FILENAME,
   SYNTHETIC_DATA_WARNING,
+  OUTPUT_CONTRACT_RULES,
 } from './generation/index';
 export type { CodeVersionStatus, CodeFileRole, DigestInput, AttemptSummaryInput, AttemptSummaryOptions, SyntheticColumn, SyntheticSource, SyntheticTable, SyntheticOptions, CodeContractContext, ContractInputFile } from './generation/index';
 export type { PythonRunner, PythonRunRequest, PythonRunResult, PythonRunOutcome, PythonRuntimeInfo } from './execution/index';
@@ -181,10 +186,15 @@ export type {
 } from './contracts/agent-api';
 export {
   ConversationEventSchema,
+  AGENT_EVENT_TYPES,
+  CONVERSATION_EVENT_KINDS,
   EXECUTION_STATUSES,
   TERMINAL_STATUSES,
   PARKED_STATUSES,
   RESTART_SURVIVING_STATUSES,
+  INTERRUPTED_ON_RESTART,
+  SURVIVES_RESTART,
+  INTERRUPTION_MESSAGES,
   consumesConcurrencySlot,
   survivesRestart,
   TRANSITIONS,
@@ -197,6 +207,7 @@ export {
 } from './conversation/index';
 export type {
   ConversationEvent,
+  ConversationEventKindRow,
   UnnumberedConversationEvent,
   ExecutionStatus,
   ServerToClientMessage,
@@ -341,3 +352,11 @@ export type {
 export * from './verification/index';
 export * from './contracts/verification-api';
 export * from './errors/verification-errors';
+// FEAT-109: artifact types, rendering postures, safety constants, run outcomes, and the artifact API.
+export * from './artifacts/index';
+export * from './contracts/artifact-api';
+export * from './errors/artifact-errors';
+// FEAT-110: task-level history, run provenance summaries, and recovery wording.
+export * from './history/index';
+export * from './contracts/history-api';
+export * from './errors/history-errors';

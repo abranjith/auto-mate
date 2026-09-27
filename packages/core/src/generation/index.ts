@@ -21,5 +21,5 @@ export { describeAttempt, summarizeAttempts } from './attempt';
 export type { AttemptSummaryInput, AttemptSummaryOptions } from './attempt';
 export { buildSyntheticFixture } from './synthetic-fixture';
 export type { SyntheticColumn, SyntheticSource, SyntheticTable, SyntheticOptions } from './synthetic-fixture';
-export { renderCodeContract, MANIFEST_FILENAME, SYNTHETIC_DATA_WARNING } from './code-contract';
+export { renderCodeContract, MANIFEST_FILENAME, SYNTHETIC_DATA_WARNING, OUTPUT_CONTRACT_RULES } from './code-contract';
 export type { CodeContractContext, ContractInputFile } from './code-contract';

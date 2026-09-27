@@ -34,7 +34,7 @@ it('applies and seeds the initial migration exactly once', () => {
     const count = connection.client
       .prepare('SELECT count(*) AS count FROM __drizzle_migrations')
       .get() as { count: number };
-    expect(count.count).toBe(7);
+    expect(count.count).toBe(11);
     const objects = connection.client
       .prepare(
         "SELECT name FROM sqlite_master WHERE name IN ('task','execution','conversation_event','conversation_event_execution_seq','execution_task_id','execution_active') ORDER BY name",
@@ -70,7 +70,7 @@ it('creates the ingestion tables and indexes in one additional migration (FEAT-1
     const staged = connection.client.prepare("SELECT sql FROM sqlite_master WHERE name = 'upload_staged'").get() as { sql: string };
     expect(staged.sql).toMatch(/WHERE .*task_id.* is null/i);
     const applied = connection.client.prepare('SELECT count(*) AS count FROM __drizzle_migrations').get() as { count: number };
-    expect(applied.count).toBe(7);
+    expect(applied.count).toBe(11);
   } finally {
     connection.close();
   }
@@ -95,7 +95,7 @@ it('creates the generation tables and indexes in one additional migration (FEAT-
     const partial = connection.client.prepare("SELECT sql FROM sqlite_master WHERE name = 'code_version_final'").get() as { sql: string };
     expect(partial.sql).toMatch(/WHERE .*is_final.* = 1/i);
     const applied = connection.client.prepare('SELECT count(*) AS count FROM __drizzle_migrations').get() as { count: number };
-    expect(applied.count).toBe(7);
+    expect(applied.count).toBe(11);
   } finally {
     connection.close();
   }
@@ -124,7 +124,7 @@ it('keeps every conversation event, its seq, kind, and payload across the FEAT-1
     expect(after).toEqual(rows.map(([kind, payload], index) => ({ seq: index + 1, kind, payload })));
     for (const kind of ['code_version_sealed', 'test_run_finished', 'generation_settled', 'disclosure_sent']) connection.client.prepare('INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (1, (SELECT max(seq) + 1 FROM conversation_event), ?, ?, ?)').run(kind, '{}', 'x');
     expect(() => connection.client.prepare("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (1, 1, 'user_prompt', '{}', 'x')").run()).toThrow(/UNIQUE/);
-    expect(() => connection.client.prepare("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (1, 99, 'mystery', '{}', 'x')").run()).toThrow(/CHECK/);
+    expect(() => connection.client.prepare("INSERT INTO conversation_event (execution_id, seq, kind, payload, at) VALUES (1, 99, 'mystery', '{}', 'x')").run()).toThrow(/FOREIGN KEY/); // FEAT-109's 0007 replaced the CHECK with the kind lookup table.
     expect(connection.client.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   } finally {
     connection.close();

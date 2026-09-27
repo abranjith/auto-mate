@@ -22,6 +22,14 @@
 //
 // Nothing here is a security boundary: the script runs unisolated, with this
 // application's access, and can reach files other than its input copy (D03).
+//
+// ARTIFACTS (FEAT-109): after the manifest reconciliation and before the
+// execution moves, FEAT-109's registrar moves every output file into
+// `artifacts/{taskId}/` and records it; the counts are stored by the same
+// `settle` call and announced by one `artifacts_registered` event.
+// Registration NEVER changes which terminal state the execution reaches: a
+// failure is logged and surfaced as unregistered files, and a run that lands
+// in `failed` still registers whatever it produced.
 // ---------------------------------------------------------------------------
 
 import { createHash } from 'node:crypto';
@@ -56,6 +64,8 @@ import type { CodeVersionRepository, CodeVersionWithFiles } from '../db/reposito
 import type { ExecutionRepository } from '../db/repositories/execution-repository';
 import type { ScriptRunRepository, ScriptRunRow, SettleRun } from '../db/repositories/script-run-repository';
 import type { UploadRepository } from '../db/repositories/upload-repository';
+import type { ArtifactRepository } from '../db/repositories/artifact-repository';
+import type { ArtifactRegistrar, RegistrationInput, RegistrationResult } from '../artifacts/artifact-registrar';
 import type { PhaseJob } from '../conversation/task-session-registry';
 import type { ExecutionStateWriter, Publish } from '../verification/execution-state-writer';
 import type { RuntimeProbe } from '../verification/runtime-probe';
@@ -64,11 +74,14 @@ import { stageInputs } from './input-stager';
 import { inspectOutput } from './output-watchdog';
 import { verifyLauncher } from './launcher-deploy';
 import type { RuntimeProvisioner } from './runtime-provisioner';
+import { executionAsOfEnvironment } from './as-of-storage';
+import { resolveGeneratedInputs, type ExecutionInputs } from './execution-inputs';
 
 export interface ScriptRunServiceDependencies {
   readonly executions: ExecutionRepository;
   readonly versions: CodeVersionRepository;
   readonly uploads: UploadRepository;
+  readonly inputs?: ExecutionInputs;
   readonly scriptRuns: ScriptRunRepository;
   readonly runner: PythonRunner;
   readonly probe: RuntimeProbe;
@@ -82,6 +95,10 @@ export interface ScriptRunServiceDependencies {
   readonly logger: Pick<Logger, 'info' | 'warn' | 'error'>;
   readonly timeoutMs?: number;
   readonly maxOutputBytes?: number;
+  /** FEAT-109: registers output files as artifacts at settle. Absent only in tests that predate it. */
+  readonly registrar?: Pick<ArtifactRegistrar, 'registerRunOutputs'>;
+  /** FEAT-109: lets `describe` report sizes of files that have moved into `artifacts/`. */
+  readonly artifacts?: Pick<ArtifactRepository, 'listByExecution'>;
 }
 
 /** The directories one run uses. */
@@ -135,7 +152,7 @@ export class ScriptRunService {
     }
     const versionDir = this.deps.project(version.id);
     const result = await this.spawn(executionId, version, versionDir, dirs, signal);
-    return this.settle(executionId, row, result, dirs, runtimeLockDigest);
+    return this.settle(executionId, execution.taskId, row, result, dirs, runtimeLockDigest, signal);
   }
 
   /** `GET /api/executions/:id/run`. Names outputs by filename only; never a location. */
@@ -144,7 +161,9 @@ export class ScriptRunService {
     if (!row) throw new RunNotFoundError(executionId);
     const manifest = row.manifestJson === null ? null : parseOutputManifest(row.manifestJson);
     const output = resolveWithin(this.deps.paths.root, ...row.dirPath.split('/'), 'output');
-    const size = (name: string) => { try { return statSync(resolveWithin(output, name)).size; } catch { return null; } };
+    // A registered file has moved into artifacts/ (FEAT-109); one that could not register is still in output/.
+    const registered = new Map((this.deps.artifacts?.listByExecution(executionId) ?? []).map((artifact) => [artifact.filename, artifact.byteSize]));
+    const size = (name: string) => { const known = registered.get(name); if (known !== undefined) return known; try { return statSync(resolveWithin(output, name)).size; } catch { return null; } };
     const inputs = (JSON.parse(row.inputManifest) as { uploadId: number; sha256: string; byteSize: number }[]).map(({ uploadId, sha256, byteSize }) => ({ uploadId, byteSize, shortSha256: shortDigest(sha256) }));
     return { id: row.id, executionId: row.executionId, codeVersionId: row.codeVersionId, approvalId: row.approvalId, contentDigest: row.contentDigest, runtimeFingerprint: row.runtimeFingerprint, status: row.status as ScriptRun['status'], exitCode: row.exitCode, stdout: row.stdout, stderr: row.stderr, outputTruncated: row.outputTruncated, manifestPresent: row.manifestPresent, declaredOutputs: (manifest?.artifacts ?? []).map((entry) => { const bytes = size(entry.filename); return { ...entry, byteSize: bytes, present: bytes !== null }; }), declaredOutputCount: row.declaredOutputCount, producedOutputCount: row.producedOutputCount, outputByteCount: row.outputByteCount, limitBreached: row.limitBreached as LimitBreach | null, runtimeLockDigest: row.runtimeLockDigest, inputs, durationMs: row.durationMs, startedAt: row.startedAt.toISOString(), settledAt: row.settledAt?.toISOString() ?? null };
   }
@@ -156,7 +175,8 @@ export class ScriptRunService {
 
   /** Stage verified copies, recompute the digest from the stored files, re-probe, and let the database decide. */
   private async openGated(executionId: number, taskId: number, version: CodeVersionWithFiles, dirs: RunDirs, signal: AbortSignal): Promise<ScriptRunRow> {
-    const inputs = await stageInputs(this.deps.paths, this.deps.uploads.listByTask(taskId), dirs.input);
+    const resolved = this.deps.inputs?.resolve(executionId) ?? resolveGeneratedInputs(this.deps.uploads.listByTask(taskId));
+    const inputs = await stageInputs(this.deps.paths, resolved, dirs.input);
     rmSync(dirs.output, { recursive: true, force: true });
     mkdirSync(dirs.output, { recursive: true });
     const contentDigest = computeVersionDigest(version.files.map((file) => ({ path: file.path, sha256: sha(file.content) })));
@@ -168,15 +188,15 @@ export class ScriptRunService {
 
   private async spawn(executionId: number, version: CodeVersionWithFiles, versionDir: string, dirs: RunDirs, signal: AbortSignal): Promise<PythonRunResult | null> {
     try {
-      return await this.deps.runner.run({ executionId, workingDir: versionDir, args: [version.entrypoint], env: { AUTOMATE_INPUT_DIR: dirs.input, AUTOMATE_OUTPUT_DIR: dirs.output }, timeoutMs: this.deps.timeoutMs ?? SCRIPT_RUN_TIMEOUT_MS, signal });
+      return await this.deps.runner.run({ executionId, workingDir: versionDir, args: [version.entrypoint], env: { AUTOMATE_INPUT_DIR: dirs.input, AUTOMATE_OUTPUT_DIR: dirs.output, ...executionAsOfEnvironment(this.deps.executions.getById(executionId)!) }, timeoutMs: this.deps.timeoutMs ?? SCRIPT_RUN_TIMEOUT_MS, signal });
     } catch (cause) {
       this.deps.logger.warn({ executionId, code: cause instanceof AutoMateError ? cause.code : 'SPAWN_FAILED' }, 'script run could not start');
       return null;
     }
   }
 
-  /** Capture, reconcile, record, announce, and move the execution. */
-  private settle(executionId: number, row: ScriptRunRow, result: PythonRunResult | null, dirs: RunDirs, runtimeLockDigest: string | null): ScriptRunRow {
+  /** Capture, reconcile, register, record, announce, and move the execution. */
+  private async settle(executionId: number, taskId: number, row: ScriptRunRow, result: PythonRunResult | null, dirs: RunDirs, runtimeLockDigest: string | null, signal: AbortSignal): Promise<ScriptRunRow> {
     const limit = this.deps.maxOutputBytes ?? MAX_RUN_OUTPUT_BYTES;
     const stdout = capHeadTail(result?.stdout ?? '', limit);
     const stderr = capHeadTail(result?.stderr ?? '', limit);
@@ -184,13 +204,31 @@ export class ScriptRunService {
     const usage = inspectOutput(dirs.output, { maxFileBytes: 0, maxTotalBytes: 0, maxFiles: 0 });
     const verdict = this.verdict(result, outputs);
     const breach = this.breach(result);
-    const settled = this.deps.scriptRuns.settle(row.id, { status: verdict.status, exitCode: result?.exitCode ?? null, stdout: result ? stdout.text : null, stderr: result ? stderr.text : null, outputTruncated: stdout.truncated || stderr.truncated || (result?.droppedBytes ?? 0) > 0, manifestPresent: result ? outputs.manifestPresent : null, manifestJson: outputs.manifestJson, declaredOutputCount: outputs.declared, producedOutputCount: result ? outputs.produced : null, outputByteCount: usage.bytes, limitBreached: breach, runtimeLockDigest, durationMs: result?.durationMs ?? Math.max(0, Date.now() - row.startedAt.getTime()) });
+    const registration = result ? await this.register({ scriptRunId: row.id, executionId, taskId, outputDir: dirs.output, manifestJson: outputs.manifestJson }, outputs, signal) : null;
+    const settled = this.deps.scriptRuns.settle(row.id, { status: verdict.status, exitCode: result?.exitCode ?? null, stdout: result ? stdout.text : null, stderr: result ? stderr.text : null, outputTruncated: stdout.truncated || stderr.truncated || (result?.droppedBytes ?? 0) > 0, manifestPresent: result ? outputs.manifestPresent : null, manifestJson: outputs.manifestJson, declaredOutputCount: outputs.declared, producedOutputCount: result ? outputs.produced : null, outputByteCount: usage.bytes, limitBreached: breach, runtimeLockDigest, durationMs: result?.durationMs ?? Math.max(0, Date.now() - row.startedAt.getTime()), artifactCount: registration?.artifacts.length ?? null, unregisteredOutputCount: registration?.unregisteredOutputCount ?? null });
     this.deps.publish(executionId, { type: 'run_finished', scriptRunId: settled.id, status: verdict.status, exitCode: settled.exitCode, durationMs: settled.durationMs ?? 0, declaredOutputCount: settled.declaredOutputCount, producedOutputCount: settled.producedOutputCount, outputTruncated: settled.outputTruncated, at: new Date().toISOString() });
+    if (registration) this.deps.publish(executionId, { type: 'artifacts_registered', scriptRunId: settled.id, artifactCount: registration.artifacts.length, undeclaredCount: registration.undeclaredCount, unregisteredOutputCount: registration.unregisteredOutputCount, totalBytes: registration.totalBytes, at: new Date().toISOString() });
     this.deps.logger.info({ executionId, status: verdict.status, exitCode: settled.exitCode, durationMs: settled.durationMs, declared: settled.declaredOutputCount, produced: settled.producedOutputCount }, 'script run settled');
     if (verdict.status === 'succeeded') this.deps.state.move(executionId, 'awaiting_review');
     else if (verdict.status === 'aborted') this.deps.state.settle(executionId, 'aborted');
     else this.deps.state.settle(executionId, 'failed', { code: breach ? ERROR_CODES.SCRIPT_LIMIT_EXCEEDED : ERROR_CODES.RUN_OUTPUT_MISSING, message: breach ? describeLimitBreach(breach) : verdict.message! });
     return settled;
+  }
+
+  /**
+   * Register the run's outputs. Never throws and never changes the verdict: a
+   * failure is logged and every produced file is counted as unregistered. A
+   * run the person already stopped still keeps what it wrote, so an aborted
+   * signal is not passed on.
+   */
+  private async register(input: RegistrationInput, outputs: OutputInspection, signal: AbortSignal): Promise<RegistrationResult | null> {
+    if (!this.deps.registrar) return null;
+    try {
+      return await this.deps.registrar.registerRunOutputs(input, signal.aborted ? new AbortController().signal : signal);
+    } catch (cause) {
+      this.deps.logger.error({ executionId: input.executionId, code: cause instanceof AutoMateError ? cause.code : 'REGISTRATION_FAILED', aborted: signal.aborted }, 'run outputs could not be registered');
+      return { artifacts: [], undeclaredCount: 0, unregisteredOutputCount: outputs.produced, totalBytes: 0 };
+    }
   }
 
   private verdict(result: PythonRunResult | null, outputs: OutputInspection): Verdict {

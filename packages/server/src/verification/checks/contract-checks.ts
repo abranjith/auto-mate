@@ -15,9 +15,9 @@ import { ARTIFACT_TYPES, isPlainFilename, type CodeFileRole, type DeclaredInput,
 import type { CodeVersionWithFiles } from '../../db/repositories/code-version-repository';
 import { plural, resolveFinding, type CheckOutcome, type RawFinding } from './check-result';
 
-/** One attached upload as the input check sees it: the stored name the script reads, and its profiled tables. */
+/** One resolved input name and the upload's profiled tables. */
 export interface ProfiledInput {
-  readonly storedFilename: string;
+  readonly inputName: string;
   readonly tables: readonly Pick<TableProfile, 'sheetName' | 'columns'>[];
 }
 
@@ -81,7 +81,7 @@ function compatible(declared: InferredType, actual: InferredType): boolean {
 
 /** One declared input compared with its file's profile. Names the column and the file; never a value. */
 function inputProblems(input: DeclaredInput, uploads: readonly ProfiledInput[]): RawFinding[] {
-  const upload = uploads.find(({ storedFilename }) => storedFilename === input.fileRole);
+  const upload = uploads.find(({ inputName }) => inputName === input.fileRole);
   const file = `\`${echo(input.fileRole)}\``;
   if (!upload) return [high('missing_input', null, `The script reads ${file}, but no attached file has that name.`)];
   const table = input.sheet === undefined ? upload.tables[0] : upload.tables.find(({ sheetName }) => sheetName === input.sheet);

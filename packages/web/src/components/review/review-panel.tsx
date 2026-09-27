@@ -1,22 +1,25 @@
 import { useState, type FormEvent } from 'react';
 import { MAX_REVIEW_FEEDBACK_CHARS, feedbackProblem, type ReviewResponse } from '@automate/core';
 import { ds } from '../../design-system/tokens';
+import { Link } from '@tanstack/react-router';
 
 /**
  * The review: finishing is not the same as being right. **Yes** completes
  * the run; **No — here's what's wrong** starts a new attempt that is told
  * what to fix. The rejected run stays readable.
  */
-export function ReviewPanel({ onReview, onRetried }: { onReview: (verdict: 'accepted' | 'rejected', feedback?: string) => Promise<ReviewResponse>; onRetried?: (retryExecutionId: number) => void }) {
+export function ReviewPanel({ onReview, onRetried, savedCode = false, taskId, executionId }: { onReview: (verdict: 'accepted' | 'rejected', feedback?: string) => Promise<ReviewResponse>; onRetried?: (retryExecutionId: number) => void; savedCode?: boolean; taskId?: number; executionId?: number }) {
   const [rejecting, setRejecting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  const [nextSteps, setNextSteps] = useState(false);
   const send = async (verdict: 'accepted' | 'rejected') => {
     setPending(true); setError(undefined);
     try {
       const response = await onReview(verdict, verdict === 'rejected' ? feedback : undefined);
       if (response.retryExecutionId !== null) onRetried?.(response.retryExecutionId);
+      if (verdict === 'rejected' && response.nextSteps?.includes('repair')) setNextSteps(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Your answer could not be saved.'); }
     finally { setPending(false); }
   };
@@ -32,12 +35,12 @@ export function ReviewPanel({ onReview, onRetried }: { onReview: (verdict: 'acce
       {rejecting ? (
         <form className={ds.stackTight} onSubmit={submit}>
           <label className={ds.field}>
-            <span className={ds.label}>What is wrong? The next attempt will be told exactly this.</span>
+            <span className={ds.label}>{savedCode ? 'What is wrong? You can use this note in an AI repair after a new disclosure review.' : 'What is wrong? The next attempt will be told exactly this.'}</span>
             <textarea className={ds.textarea} value={feedback} maxLength={MAX_REVIEW_FEEDBACK_CHARS} onChange={(event) => setFeedback(event.target.value)} />
           </label>
           <span className={ds.counter}>{feedback.length.toLocaleString('en-US')} / {MAX_REVIEW_FEEDBACK_CHARS.toLocaleString('en-US')}</span>
           <div className={ds.row}>
-            <button type="submit" className={ds.btnPrimary} disabled={pending}>Try again with this</button>
+            <button type="submit" className={ds.btnPrimary} disabled={pending}>{savedCode ? 'Save feedback' : 'Try again with this'}</button>
             <button type="button" className={ds.btnGhost} disabled={pending} onClick={() => { setRejecting(false); setError(undefined); }}>Back</button>
           </div>
         </form>
@@ -48,6 +51,7 @@ export function ReviewPanel({ onReview, onRetried }: { onReview: (verdict: 'acce
         </div>
       )}
       {error ? <p className={ds.statusDanger} role="alert">{error}</p> : null}
+      {nextSteps && taskId && executionId ? <div className={ds.row}><Link to="/tasks/$taskId/runs/$executionId/repair" params={{ taskId: String(taskId), executionId: String(executionId) }}>Repair with AI</Link><Link to="/tasks/$taskId/runs/$executionId" params={{ taskId: String(taskId), executionId: String(executionId) }}>Run again exactly</Link></div> : null}
     </section>
   );
 }

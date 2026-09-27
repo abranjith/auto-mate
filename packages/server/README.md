@@ -10,6 +10,16 @@ Disclosure and clarification add four provisional D14 limits: `AUTOMATE_MAX_WAIT
 
 Use `pnpm --filter @automate/server test` and `pnpm --filter @automate/server typecheck` during development. Tests use temporary databases.
 
+## Saved tasks and reruns
+
+`src/reuse/` saves accepted code as immutable revisions, checks new files, materializes a revision for a fresh execution, and handles historical replay and consented AI repair. `ExecutionInputs` resolves the file names that saved code expects. Every execution stores an as-of date; Python processes receive `AUTOMATE_AS_OF`, `AUTOMATE_AS_OF_DATE`, and `AUTOMATE_TIMEZONE`. Compatible saved-code runs make no provider call or transmission, then pass through fresh verification and approval. Repairs require a new disclosure review and do not send saved code to the AI. Generated code still runs with this application's access. The original task can be deleted without removing its saved revision; replay uses today's locked runtime. See [Save and rerun](../../docs/features/save-and-rerun.md) and the [API reference](../../docs/usage.md).
+
+## Execution history and retention
+
+`HistoryRepository` reads one latest run per task, pages task lists and run timelines by execution id, and builds small run-record summaries without selecting raw provider logs, transcript payloads, code, or script output. `GET /api/tasks`, `GET /api/tasks/:taskId/runs`, and `GET /api/executions/:id/record` expose these read models; `GET /api/tasks/:taskId` adds `counts` and retains its older unpaginated `executions` array. `DELETE /api/tasks/:taskId` is Origin/Host-guarded. All `/api` responses have `X-Content-Type-Options: nosniff`, and no CORS allow header is set.
+
+`TaskDeletionService` refuses an open run, removes task-owned rows in a transaction, then removes the upload, artifact, run, script, and raw agent-session trees. A directory blocked by an open file is counted in `filesPendingRemoval`; the startup retention sweep retries orphan directories and expires unattached disclosure consents alongside staged uploads. Nothing attached to a task is purged by age. Browser same-origin policy protects reads from other web pages, not from programs or accounts on the computer. See [Execution History](../../docs/features/execution-history.md).
+
 ## Agent provider
 
 `src/agent/index.ts` is the **only** agent module the rest of the server imports. It exposes `createAgentProvider(deps)`, the `AgentConfigStore`, `probeProviders`, `runAgentSmoke`, and the in-memory `FakeAgentProvider` that later features' tests build on.
@@ -89,7 +99,7 @@ Tests use `FakeAgentProvider` scripted with tool-call steps and `FakePythonRunne
 
 Limits, all provisional against open D14: `AUTOMATE_VERIFICATION_TIMEOUT_MS` (default `300000`), `AUTOMATE_LINT_TIMEOUT_MS` (`60000`), `AUTOMATE_SECURITY_TIMEOUT_MS` (`120000`), `AUTOMATE_SCRIPT_RUN_TIMEOUT_MS` (`900000`), `AUTOMATE_MAX_RUN_OUTPUT_BYTES` (`1048576`), and `AUTOMATE_MAX_REVIEW_FEEDBACK_CHARS` (`2000`). The test re-run reuses `AUTOMATE_TEST_RUN_TIMEOUT_MS`.
 
-Data root additions: `verify-env/` (the checker project) and `runs/{executionId}/` with `input/`, `output/`, and `verify/`. Nothing purges `runs/` yet (D12 is open).
+Data root additions: `verify-env/` (the checker project) and `runs/{executionId}/` with `input/`, `output/`, and `verify/`. Run directories live for the task's life and are removed by whole-task deletion or the startup orphan sweep.
 
 Endpoints: `GET /api/executions/:id/verification`, `POST /api/executions/:id/verify`, `GET /api/executions/:id/intent`, `POST /api/executions/:id/approval`, `GET /api/executions/:id/run`, and `POST /api/executions/:id/review`. The three POSTs are Origin-guarded, like `abort`. No response contains an absolute path. Errors: `VERIFICATION_NOT_FOUND`, `VERIFICATION_STALE`, `VERIFICATION_BLOCKED`, `EXECUTION_NOT_APPROVED`, `APPROVAL_INTENT_MISMATCH`, `APPROVAL_STALE`, `RUN_NOT_FOUND`, `RUN_OUTPUT_MISSING`, `CHECKER_UNAVAILABLE`, `REVIEW_NOT_PENDING`, and `INPUT_COPY_MISMATCH`.
 
@@ -118,3 +128,26 @@ These nine controls are **provisional against open D14**. Set them before starti
 | `AUTOMATE_PYTHON_INSTALL_TIMEOUT_MS` | `600000` | Stop an interpreter download after 10 minutes. |
 
 `--locked`, `--no-sync`, `PYTHONSAFEPATH`, and the pinned interpreter prevent dependency drift and accidental launcher substitution. They are not a network restriction or sandbox. On macOS and Linux, `RLIMIT_AS` is a real memory cap with equal soft and hard values that an unprivileged script cannot lift; Windows enforces no memory cap. Generated code remains unconfined and can read any file the application can. Restricted execution is required before a target-user pilot; the runner technology is still unselected. Run `AUTOMATE_LIVE_PYTHON=1 pnpm --filter @automate/server test live-runtime` on Windows, macOS, and Linux after changing the runtime.
+
+## Results, outputs, and downloads
+
+When a run settles, `ArtifactRegistrar` moves every file in `runs/{executionId}/output/` — declared in `manifest.json` or not — into `artifacts/{taskId}/{artifactId}{ext}`, streams it once for its SHA-256 and size, scans CSV and XLSX for formula-like cells (counts only), and inserts every `artifact` row in one transaction. The model's file name is a display label and never part of a path. A file with a disallowed extension, a symlink, a failed move, or one past the per-run cap is counted in `script_run.unregistered_output_count` and logged, never fatal. Registration never changes where the execution lands, and one `artifacts_registered` event carries the counts.
+
+`artifact-bytes.ts` is the only code that writes artifact bytes to a response. Both byte routes set `Content-Type` from the stored row, `ARTIFACT_CSP`, `X-Content-Type-Options: nosniff`, `Cross-Origin-Resource-Policy: same-origin`, `Cache-Control: private, max-age=0, must-revalidate`, and the SHA-256 as `ETag`, on every branch including `304`, `416`, and error envelopes. There is no `express.static` or `sendFile`. Tables are paged on the server with FEAT-104's streaming readers; the archive is a store-only ZIP written in one pass with `node:zlib`'s `crc32`, refusing past 4 GiB (no Zip64).
+
+Endpoints, all read-only `GET`s: `GET /api/executions/:id/artifacts` (deliberately unpaginated: at most 200 entries), `GET /api/artifacts/:id`, `GET /api/artifacts/:id/content`, `GET /api/artifacts/:id/download`, `GET /api/artifacts/:id/rows?offset=&limit=`, `GET /api/artifacts/:id/preview`, and `GET /api/executions/:id/artifacts/archive`. No response contains a location on disk. Errors: `ARTIFACT_NOT_FOUND`, `ARTIFACT_FILE_MISSING`, `ARTIFACT_NOT_PREVIEWABLE`, `ARTIFACT_TOO_LARGE_TO_PREVIEW`, `ARTIFACT_NOT_TABULAR`, `ARTIFACT_REGISTRATION_FAILED`, and `ARCHIVE_TOO_LARGE`.
+
+Retention is the life of the task: FEAT-110's `TaskDeletionService` (`DELETE /api/tasks/:taskId`) removes the task's rows by cascade, then its `artifacts/` folder with the other task-owned trees, and `ArtifactSweeper` removes artifact folders with no task row at startup. There is no age-based purge and no per-artifact delete.
+
+These six limits are **provisional against open D14**:
+
+| Variable | Default | Effect |
+| --- | ---: | --- |
+| `AUTOMATE_MAX_ARTIFACTS_PER_RUN` | `200` | Files registered per run; the rest are counted as not kept. |
+| `AUTOMATE_MAX_ARTIFACT_PREVIEW_BYTES` | `5242880` | Largest head the text preview returns. |
+| `AUTOMATE_MAX_TABLE_PAGE_ROWS` | `500` | Largest table page a client may ask for; may be lowered, not raised. |
+| `AUTOMATE_MAX_TABLE_SCAN_ROWS` | `50000` | Rows one table request reads before reporting the cap. |
+| `AUTOMATE_FORMULA_SCAN_ROWS` | `5000` | Rows the registrar scans for formula-like cells. |
+| `AUTOMATE_MAX_ARCHIVE_BYTES` | `1073741824` | Largest "Download all" archive; never above 4 GiB. |
+
+The preview's containment is about the browser. The Python that wrote a report ran unisolated with this application's access, and nothing here changes that. `AUTOMATE_LIVE_ZIP=1 pnpm --filter @automate/server test zip-writer` additionally checks archives with the system `unzip -t`.

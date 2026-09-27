@@ -29,6 +29,9 @@ import {
   summarizeVerification,
   type ExecutionStatus,
   type VerificationStatus,
+  isSavedCodeRun,
+  SAVED_CODE_CHECKS_FAILED,
+  SAVED_CODE_TESTS_FAILED,
 } from '@automate/core';
 import type { Logger } from 'pino';
 import { resolveWithin, type AppPaths } from '../config/app-paths';
@@ -43,6 +46,9 @@ import type { ExecutionStateWriter } from './execution-state-writer';
 import { presentVerification } from './presenters';
 import type { ProbedRuntime, RuntimeProbe } from './runtime-probe';
 import { runVerificationPass, type PassDependencies } from './verification-pass';
+import { executionAsOfEnvironment } from '../execution/as-of-storage';
+import { resolveGeneratedInputs, type ExecutionInputs } from '../execution/execution-inputs';
+import type { ExecutionReuseRepository } from '../db/repositories/execution-reuse-repository';
 
 export interface VerificationServiceDependencies {
   readonly executions: ExecutionRepository;
@@ -50,6 +56,9 @@ export interface VerificationServiceDependencies {
   readonly verifications: VerificationRepository;
   readonly fixtures: SyntheticFixtureRepository;
   readonly uploads: UploadRepository;
+  readonly inputs?: ExecutionInputs;
+  /** FEAT-111: a saved-code run enters from `pending` and is worded as a saved task when blocked. */
+  readonly reuse: Pick<ExecutionReuseRepository, 'getByExecution'>;
   readonly profiles: UploadProfileRepository;
   readonly probe: RuntimeProbe;
   readonly pass: PassDependencies;
@@ -97,6 +106,7 @@ export class VerificationService {
   async verify(executionId: number, options: VerifyOptions = {}): Promise<VerificationRunRow | undefined> {
     const signal = options.signal ?? new AbortController().signal;
     const version = this.finalVersion(executionId);
+    if (this.deps.state.current(executionId) === 'pending') this.deps.state.move(executionId, 'verifying');
     const runtime = await this.probe(executionId, signal, options);
     if (!runtime) return undefined;
     const existing = this.deps.verifications.findByScope(version.id, runtime.fingerprint);
@@ -106,7 +116,7 @@ export class VerificationService {
       return existing;
     }
     const run = this.deps.verifications.open({ executionId, codeVersionId: version.id, contentDigest: version.contentDigest!, runtimeFingerprint: runtime.fingerprint, runtimeDetail: runtime.detail });
-    this.deps.state.move(executionId, 'verifying');
+    if (this.deps.state.current(executionId) !== 'verifying') this.deps.state.move(executionId, 'verifying');
     this.deps.logger.info({ executionId, codeVersionId: version.id, digest: shortDigest(version.contentDigest!), fingerprint: shortDigest(runtime.fingerprint) }, 'verification opened');
     return this.execute(executionId, version, run, signal);
   }
@@ -121,7 +131,8 @@ export class VerificationService {
   private finalVersion(executionId: number): CodeVersionWithFiles {
     const execution = this.deps.executions.getById(executionId);
     if (!execution) throw new ExecutionNotFoundError(executionId);
-    if (!RE_VERIFIABLE.includes(execution.status as ExecutionStatus)) throw new ValidationError(`Run ${executionId} is ${execution.status.replace('_', ' ')}; only a run being checked or waiting for approval can be checked again.`, undefined, ERROR_CODES.INVALID_STATE_TRANSITION);
+    const savedPending = execution.status === 'pending' && isSavedCodeRun(this.deps.reuse.getByExecution(executionId)?.kind as 'run' | 'replay' | 'repair' | null);
+    if (!RE_VERIFIABLE.includes(execution.status as ExecutionStatus) && !savedPending) throw new ValidationError(`Run ${executionId} is ${execution.status.replace('_', ' ')}; only a run being checked or waiting for approval can be checked again.`, undefined, ERROR_CODES.INVALID_STATE_TRANSITION);
     const final = this.deps.versions.findFinal(executionId);
     if (!final || final.contentDigest === null) throw new CodeVersionNotFinalError();
     return this.deps.versions.getByIdWithFiles(final.id)!;
@@ -162,9 +173,10 @@ export class VerificationService {
   }
 
   private inputs(executionId: number, version: CodeVersionWithFiles) {
-    const uploads = this.deps.uploads.listByTask(this.deps.executions.getById(executionId)!.taskId).map((upload) => ({ storedFilename: upload.storedFilename, tables: this.deps.profiles.listByUpload(upload.id) }));
+    const source = this.deps.inputs?.resolve(executionId) ?? resolveGeneratedInputs(this.deps.uploads.listByTask(this.deps.executions.getById(executionId)!.taskId));
+    const uploads = source.map(({ inputName, uploadId }) => ({ inputName, tables: this.deps.profiles.listByUpload(uploadId) }));
     const verifyDir = resolveWithin(this.deps.paths.runsDir, String(executionId), 'verify');
-    return { executionId, version, fixtures: this.deps.fixtures.listByExecution(executionId), uploads, verifyDir: path.normalize(verifyDir) };
+    return { executionId, version, fixtures: this.deps.fixtures.listByExecution(executionId), uploads, verifyDir: path.normalize(verifyDir), asOfEnv: executionAsOfEnvironment(this.deps.executions.getById(executionId)!) };
   }
 
   /** Resolve blocking per check from the one gate policy, write everything at once, and announce it. */
@@ -197,7 +209,10 @@ export class VerificationService {
     if (run.status === 'passed') { if (current === 'verifying') this.deps.state.move(executionId, 'awaiting_approval'); return; }
     if (current !== 'verifying' && current !== 'awaiting_approval') return;
     if (run.status === 'aborted') { this.deps.state.settle(executionId, 'aborted'); return; }
-    this.deps.state.settle(executionId, 'failed', { code: ERROR_CODES.VERIFICATION_BLOCKED, message: run.summary ?? 'The code could not be checked, so it cannot run yet.' });
+    const saved = isSavedCodeRun(this.deps.reuse.getByExecution(executionId)?.kind as 'run' | 'replay' | 'repair' | null);
+    const testFailed = run.checks.some((check) => check.checkKey === 'tests' && check.status === 'failed');
+    const message = saved ? [SAVED_CODE_CHECKS_FAILED, ...(testFailed ? [SAVED_CODE_TESTS_FAILED] : [])].join(' ') : run.summary ?? 'The code could not be checked, so it cannot run yet.';
+    this.deps.state.settle(executionId, 'failed', { code: ERROR_CODES.VERIFICATION_BLOCKED, message });
   }
 
   /** Last resort for a pass that threw outside `execute`: never leave the execution in `verifying`. */

@@ -41,6 +41,7 @@ export interface TestCheckRequest {
   /** `runs/{executionId}/verify/`; scratch output goes in a fresh `output/` inside it and is discarded. */
   readonly verifyDir: string;
   readonly timeoutMs?: number;
+  readonly asOfEnv?: Readonly<Record<string, string>>;
   readonly signal: AbortSignal;
 }
 
@@ -69,7 +70,7 @@ export async function runTestCheck(request: TestCheckRequest): Promise<CheckOutc
   const base = { fixtureSha256: first?.sha256 ?? null, fixtureRowCount: first?.rowCount ?? null, fixtures: request.fixtures.files.map(({ uploadId, sha256 }) => ({ uploadId, sha256 })) };
   let result: PythonRunResult;
   try {
-    result = await request.runner.run({ executionId: request.executionId, workingDir: request.versionDir, args: PYTEST_ARGS, env: { AUTOMATE_INPUT_DIR: request.fixtures.directory, AUTOMATE_OUTPUT_DIR: outputDir }, timeoutMs, signal: request.signal });
+    result = await request.runner.run({ executionId: request.executionId, workingDir: request.versionDir, args: PYTEST_ARGS, env: { AUTOMATE_INPUT_DIR: request.fixtures.directory, AUTOMATE_OUTPUT_DIR: outputDir, ...request.asOfEnv }, timeoutMs, signal: request.signal });
   } catch {
     return erroredOutcome('The test re-run could not start: uv or Python is not available, or the Python environment is not prepared.', null, base);
   } finally {

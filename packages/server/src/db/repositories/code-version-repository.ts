@@ -4,6 +4,7 @@ import {
   AutoMateError,
   CodeVersionImmutableError,
   CodeVersionNotFoundError,
+  RevisionIntegrityError,
   RepositoryError,
   ValidationError,
   computeVersionDigest,
@@ -42,6 +43,17 @@ export class CodeVersionRepository {
   /** Open the execution's one draft at an application-allocated attempt number. */
   openDraft(executionId: number, attempt: number): CodeVersionRow {
     return this.write('opened', () => this.connection.db.insert(codeVersion).values({ executionId, attempt, dirPath: attemptDirPath(executionId, attempt), createdAt: this.now() }).returning().get());
+  }
+
+  /** Materialize immutable saved files as this execution's own final version. */
+  materialize(tx: Tx, input: { executionId: number; files: readonly NewCodeFile[]; entrypoint: string; summary: string; declaredInputs: readonly DeclaredInput[]; declaredOutputs: readonly DeclaredOutput[]; expectedDigest: string }): CodeVersionRow {
+    const files = input.files.map((file) => ({ path: validateCodePath(file.path, file.role), role: file.role, content: file.content, byteSize: utf8ByteLength(file.content), sha256: createHash('sha256').update(file.content, 'utf8').digest('hex') }));
+    if (!files.length || computeVersionDigest(files) !== input.expectedDigest) throw new RevisionIntegrityError();
+    const version = tx.insert(codeVersion).values({ executionId: input.executionId, attempt: 1, status: 'sealed', contentDigest: input.expectedDigest, dirPath: attemptDirPath(input.executionId, 1), entrypoint: validateCodePath(input.entrypoint, 'script'), isFinal: true, testsPassed: null, declaredInputs: JSON.stringify(input.declaredInputs), declaredOutputs: JSON.stringify(input.declaredOutputs), summary: input.summary, sealedAt: this.now(), createdAt: this.now() }).returning().get();
+    for (const file of files) tx.insert(codeFile).values({ codeVersionId: version.id, ...file, createdAt: this.now() }).run();
+    const inserted = tx.select().from(codeFile).where(eq(codeFile.codeVersionId, version.id)).all();
+    if (computeVersionDigest(inserted) !== input.expectedDigest) throw new RevisionIntegrityError();
+    return version;
   }
 
   /** Insert or replace one file of a draft; the path is validated again here, independently of the tool. */

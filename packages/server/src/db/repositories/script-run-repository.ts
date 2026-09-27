@@ -25,6 +25,8 @@ export type ScriptRunRow = typeof scriptRun.$inferSelect;
 export interface StagedInput {
   readonly uploadId: number;
   readonly storedFilename: string;
+  /** Name inside the run's input directory; absent only on legacy manifests. */
+  readonly inputName?: string;
   readonly sha256: string;
   readonly byteSize: number;
 }
@@ -53,6 +55,10 @@ export interface SettleRun {
   readonly outputByteCount?: number | null;
   readonly limitBreached?: LimitBreach | null;
   readonly runtimeLockDigest?: string | null;
+  /** FEAT-109: artifact rows registered from this run. */
+  readonly artifactCount?: number | null;
+  /** FEAT-109: files the run wrote that produced no artifact row. */
+  readonly unregisteredOutputCount?: number | null;
 }
 
 /** Exclusive persistence boundary for `script_run`. */

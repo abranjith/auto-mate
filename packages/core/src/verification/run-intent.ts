@@ -16,6 +16,8 @@ import { canonicalStringify } from '../disclosure/canonical-json';
 import { sha256Hex } from '../generation/sha256';
 import type { ArtifactType } from '../contracts/generation-api';
 import type { CheckKey, CheckStatus } from './verification';
+import type { AsOf } from '../reuse/as-of';
+import type { CompatibilityReport } from '../reuse/compatibility';
 
 /** The sentences the gate must display, in this order, verbatim. */
 export const RUN_INTENT_CAVEATS = [
@@ -64,6 +66,8 @@ export interface RunIntent {
   readonly advisoryCount: number;
   readonly tests: { readonly total: number | null; readonly passed: number | null; readonly fixtureRowCount: number | null };
   readonly runtime: { readonly fingerprint: string; readonly description: string; readonly packages: readonly { readonly name: string; readonly version: string }[] };
+  readonly asOf?: AsOf | null;
+  readonly reuse?: { readonly templateName: string; readonly revisionNumber: number; readonly revisionDigestShort: string; readonly compatibility: { readonly status: CompatibilityReport['status']; readonly advisories: readonly string[] }; readonly runtimeChanges: readonly string[] } | null;
   readonly caveats: readonly string[];
 }
 

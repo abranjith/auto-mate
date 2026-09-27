@@ -1,34 +1,25 @@
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import {
   RepositoryError,
   applyTransition,
   type AgentUsage,
   type ExecutionStatus,
+  INTERRUPTED_ON_RESTART,
+  PARKED_STATUSES,
+  TERMINAL_STATUSES,
+  INTERRUPTION_MESSAGES,
+  TaskHasOpenRunError,
+  AutoMateError,
 } from '@automate/core';
 import type { DatabaseConnection } from '../client';
 import { execution } from '../schema';
+import { statusLiterals } from '../status-sql';
+import { asOfColumns, copiedAsOf, newAsOf } from '../../execution/as-of-storage';
 
 export type ExecutionRow = typeof execution.$inferSelect;
-/**
- * What a restart interrupts: everything holding in-memory state. `waiting`
- * belongs here — its question lives in a live provider session (FEAT-105).
- * The two FEAT-107 gates do not: they are rows, and survive (`PARKED`).
- */
-const ACTIVE: ExecutionStatus[] = [
-  'pending',
-  'generating',
-  'verifying',
-  'executing',
-  'waiting',
-];
-/** Parked on a person with no in-memory state; served by the `execution_parked` index. */
-const PARKED: ExecutionStatus[] = ['awaiting_approval', 'awaiting_review'];
+type Tx = Parameters<Parameters<DatabaseConnection['db']['transaction']>[0]>[0];
+/** A waiting question is parked without a slot, yet its provider promise dies on restart. */
 type TerminalStatus = Extract<ExecutionStatus, 'completed' | 'failed' | 'aborted' | 'rejected'>;
-const INTERRUPTED_MESSAGES: Partial<Record<ExecutionStatus, string>> = {
-  waiting: 'This run was interrupted while waiting for your answer. Your answers were saved — start it again and you will not be asked twice.',
-  verifying: 'This run was interrupted while its code was being checked. Start it again to retry.',
-  executing: 'This run was interrupted while the script was running on your file. Start it again to retry.',
-};
 
 /** Exclusive data-access path for execution state and provenance. */
 export class ExecutionRepository {
@@ -38,7 +29,7 @@ export class ExecutionRepository {
   ) {}
   create(taskId: number): ExecutionRow {
     return this.write('created', () =>
-      this.connection.db.insert(execution).values({ taskId }).returning().get(),
+      this.connection.db.insert(execution).values({ taskId, ...asOfColumns(newAsOf(this.now())) }).returning().get(),
     );
   }
   /**
@@ -52,7 +43,8 @@ export class ExecutionRepository {
     return this.write('created', () => this.connection.db.transaction((tx) => {
       const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
       if (!source) throw new RepositoryError('The execution could not be found.');
-      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, guidance }).returning().get();
+      this.assertNoOpenRun(tx, source.taskId);
+      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, guidance, ...asOfColumns(copiedAsOf(source, this.now())) }).returning().get();
     }));
   }
   /**
@@ -67,8 +59,25 @@ export class ExecutionRepository {
     return this.write('created', () => this.connection.db.transaction((tx) => {
       const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
       if (!source) throw new RepositoryError('The execution could not be found.');
-      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'feedback', retryOfExecutionId: source.id, guidance: feedback }).returning().get();
+      this.assertNoOpenRun(tx, source.taskId);
+      return tx.insert(execution).values({ taskId: source.taskId, trigger: 'feedback', retryOfExecutionId: source.id, guidance: feedback, ...asOfColumns(copiedAsOf(source, this.now())) }).returning().get();
     }));
+  }
+
+  /** Replay saved code inside the caller's transaction, preserving date and task. */
+  createReplay(tx: Tx, fromExecutionId: number): ExecutionRow {
+    const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
+    if (!source) throw new RepositoryError('The source execution could not be found.');
+    this.assertNoOpenRun(tx, source.taskId);
+    return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, ...asOfColumns(copiedAsOf(source, this.now())) }).returning().get();
+  }
+
+  /** Start an AI repair inside the caller's transaction, after the new consent is checked. */
+  createRepairRun(tx: Tx, fromExecutionId: number, guidance: string): ExecutionRow {
+    const source = tx.select().from(execution).where(eq(execution.id, fromExecutionId)).get();
+    if (!source) throw new RepositoryError('The source execution could not be found.');
+    this.assertNoOpenRun(tx, source.taskId);
+    return tx.insert(execution).values({ taskId: source.taskId, trigger: 'rerun', retryOfExecutionId: source.id, guidance, ...asOfColumns(copiedAsOf(source, this.now())) }).returning().get();
   }
   /**
    * Follow retry links back to the first run.
@@ -104,22 +113,23 @@ export class ExecutionRepository {
         .all(),
     );
   }
+  /** Executions a restart interrupts; served by `execution_active`. */
   listActive(): ExecutionRow[] {
     return this.read(() =>
       this.connection.db
         .select()
         .from(execution)
-        .where(inArray(execution.status, ACTIVE))
+        .where(sql`${execution.status} in (${sql.raw(statusLiterals(INTERRUPTED_ON_RESTART))})`)
         .all(),
     );
   }
-  /** Executions waiting at the approval or review gate, most recent first. `waiting` is not parked here: it does not survive a restart. */
+  /** Executions waiting on the person (a question, an approval, or a review), most recent first; served by `execution_parked`. */
   listParked(): ExecutionRow[] {
     return this.read(() =>
       this.connection.db
         .select()
         .from(execution)
-        .where(inArray(execution.status, PARKED))
+        .where(sql`${execution.status} in (${sql.raw(statusLiterals(PARKED_STATUSES))})`)
         .orderBy(desc(execution.id))
         .all(),
     );
@@ -209,8 +219,18 @@ export class ExecutionRepository {
     return this.markSettled(id, {
       status: 'failed',
       errorCode: 'EXECUTION_INTERRUPTED',
-      errorMessage: INTERRUPTED_MESSAGES[current.status as ExecutionStatus] ?? 'This run was interrupted when the server restarted. Start it again to retry.',
+      errorMessage: INTERRUPTION_MESSAGES[current.status as keyof typeof INTERRUPTION_MESSAGES],
     });
+  }
+
+  /** Record the reason when a graceful shutdown stopped an already-aborted phase job. */
+  markStoppedOnShutdown(id: number): ExecutionRow {
+    return this.update(id, { errorCode: 'EXECUTION_STOPPED_ON_SHUTDOWN', errorMessage: 'This run was stopped because the app was closed. Run it again to retry.' });
+  }
+
+  private assertNoOpenRun(tx: Parameters<Parameters<DatabaseConnection['db']['transaction']>[0]>[0], taskId: number): void {
+    const open = tx.select({ id: execution.id, status: execution.status }).from(execution).where(eq(execution.taskId, taskId)).all().find((row) => !(TERMINAL_STATUSES as readonly string[]).includes(row.status));
+    if (open) throw new TaskHasOpenRunError(open.id, open.status as ExecutionStatus);
   }
 
   private transition(
@@ -244,7 +264,7 @@ export class ExecutionRepository {
     try {
       return action();
     } catch (cause) {
-      if (cause instanceof RepositoryError) throw cause;
+      if (cause instanceof AutoMateError) throw cause;
       throw new RepositoryError('Execution data could not be read.', cause);
     }
   }
@@ -252,7 +272,7 @@ export class ExecutionRepository {
     try {
       return action();
     } catch (cause) {
-      if (cause instanceof RepositoryError) throw cause;
+      if (cause instanceof AutoMateError) throw cause;
       throw new RepositoryError(`The execution could not be ${verb}.`, cause);
     }
   }

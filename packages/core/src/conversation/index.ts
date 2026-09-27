@@ -1,10 +1,13 @@
-export { ConversationEventSchema } from './conversation-event';
-export type { ConversationEvent, UnnumberedConversationEvent } from './conversation-event';
+export { ConversationEventSchema, AGENT_EVENT_TYPES, CONVERSATION_EVENT_KINDS } from './conversation-event';
+export type { ConversationEvent, UnnumberedConversationEvent, ConversationEventKindRow } from './conversation-event';
 export {
   EXECUTION_STATUSES,
   TERMINAL_STATUSES,
   PARKED_STATUSES,
   RESTART_SURVIVING_STATUSES,
+  INTERRUPTED_ON_RESTART,
+  SURVIVES_RESTART,
+  INTERRUPTION_MESSAGES,
   consumesConcurrencySlot,
   survivesRestart,
   TRANSITIONS,
