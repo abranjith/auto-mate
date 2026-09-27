@@ -8,7 +8,7 @@ This guide covers the implemented developer preview: provider configuration, tas
 
 ## Open the application
 
-Run `pnpm dev` from the repository root and open <http://127.0.0.1:5173/>.
+Run `pnpm dev` from the repository root and open <http://127.0.0.1:5173/>. The terminal should report that the API server is listening, and the page header should show **Server connected**. The browser server proxies both `/api` requests and execution WebSocket connections to the API on port 4317. Port 5173 must be free; Vite reports an error instead of switching ports.
 
 | Page                         | Current behavior                                                                                                                                                                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -61,7 +61,7 @@ External Markdown links open in a new tab with protective link attributes. File 
 
 ### Cancel a run
 
-Select **Cancel run** while the execution is non-terminal. This also works while the execution is waiting for clarification: Auto-Mate cancels the pending question before aborting the provider session. For a code-generation run, it also stops Python environment preparation or a running test, together with every process that test started, before aborting the provider session. While the code is being checked, it stops any running `ruff`, `bandit`, or pytest process. At the approval gate or the review, the run ends immediately with no approval recorded and no retry created. While the script runs on your file, **Stop the run** (or **Cancel run**) stops the script and every process it started. The terminal state is `aborted`, displayed as **Cancelled**.
+Select **Cancel run** while the execution is non-terminal, including immediately after starting it. If cancellation arrives while the run is being built or the provider session is opening, the provider does not run. During synthetic test-data preparation, Auto-Mate removes partial stand-in files and stops before contacting the provider. This also works while the execution is waiting for clarification: Auto-Mate cancels the pending question before aborting the provider session. For a code-generation run, it also stops Python environment preparation or a running test, together with every process that test started, before aborting the provider session. While the code is being checked, it stops any running `ruff`, `bandit`, or pytest process. At the approval gate or the review, the run ends immediately with no approval recorded and no retry created. While the script runs on your file, **Stop the run** (or **Cancel run**) stops the script and every process it started. The terminal state is `aborted`, displayed as **Cancelled**.
 
 ## Find a task or past run
 
@@ -69,7 +69,7 @@ Open **History** at `/history`. Search matches task names. Select **All**, **Nee
 
 Open a task to see **What you asked**, attached **Files**, and its newest-first **Runs** timeline. `/tasks/<taskId>` follows the latest run; select a timeline entry for a stable `/tasks/<taskId>/runs/<executionId>` URL, including a run before a retry. Each run retains its transcript and a **Run record** with whichever steps occurred: input files, what was sent, questions, code, checks, approval, script run, and outputs. The record links runs that came from a retry or review. Open an output's preview or download from its run page as described in [View and download results](#view-and-download-results). Older text-only runs have fewer sections.
 
-For the latest finished run, enter optional guidance in **Your guidance** and select **Run again**. This starts a linked run of the same task, subject to the original disclosure approval and provider settings; guidance is sent to the provider as your own words. A task cannot start a second run while one of its runs is open. If approval no longer matches, start a new task and review what will be sent again. Guidance is limited to 2,000 characters.
+For the latest finished run, enter optional guidance in **Your guidance** and select **Run again**. This starts a linked run of the same task, subject to the original disclosure approval and provider settings; guidance is sent to the provider as your own words. The new prompt includes your answered agent questions from earlier runs of this task, up to the application's size limit. A task cannot start a second run while one of its runs is open. If approval no longer matches, start a new task and review what will be sent again. Guidance is limited to 2,000 characters.
 
 To remove a task, select **Delete task** in its header. The dialog counts the runs, inputs, and outputs that will be removed. If a run is open, select **Cancel that run** or finish it first, then reopen the dialog and delete. Deletion removes the task's local database history, attached inputs, run copies, generated code, provider session logs, and registered outputs. It cannot retract anything already sent to a provider or remove copies you downloaded elsewhere. If another program holds a file open, the confirmation on History reports that removal is pending; the application retries orphan file cleanup after restart.
 
@@ -120,7 +120,7 @@ Choose an offered option or enter bounded free text for every question, then sel
 
 An execution may ask at most three agent-initiated questions by default. If that cap is exhausted, or five executions are already waiting by default, the application records a declined clarification and returns each proposed default to the agent instead of parking another run. The transcript shows that outcome. These limits are server-enforced rather than prompt-only guidance.
 
-A guidance retry of a failed generation run, described below, reuses the task's earlier pre-flight answers.
+A guidance retry of a failed generation run, described below, reuses the task's earlier pre-flight answers and includes your answered agent questions from earlier runs in its new prompt. This helps the agent carry your decisions forward after an interrupted run.
 
 ## Follow code generation and repair
 
@@ -221,7 +221,7 @@ The fit check compares shape and recorded choices, not meaning: a column still c
 
 After a code-generation run fails, including a run whose checks blocked or whose script run failed, the task page shows **Tell me what I got wrong and I'll try again.** with a summary of each attempt and a **Your guidance (optional)** box of up to 2,000 characters.
 
-- Select **Try again** to start a new run of the same task, linked to the failed one. The new run reuses your approval and earlier pre-flight answers, gets its own full set of attempts, and adds your guidance after the original request as your own words. The page switches to the new run; the failed run stays stored unchanged.
+- Select **Try again** to start a new run of the same task, linked to the failed one. The new run reuses your approval and earlier pre-flight answers, includes answered agent questions from earlier runs, gets its own full set of attempts, and adds your guidance after the original request as your own words. The page switches to the new run; the failed run stays stored unchanged.
 - Select **Not now** to leave the run as it is.
 
 A retry is refused when the provider, model, or file description changed since approval. The page then asks you to review what is sent and approve it again by starting the task from **New task**. A retry also reuses the diagnostics choice: if failure details were not approved, the new run stops at its first test run the same way, so start a new task with the scope left on. A retry needs a free active-run slot.
@@ -236,7 +236,7 @@ Receipts and clarification batches are durable SQLite history for that execution
 
 ## Reconnect and restart behavior
 
-The browser first loads durable event history over REST and then follows the live WebSocket tail. Duplicate sequence numbers are ignored; a detected gap triggers a history reload. Unexpected disconnects retry with exponential backoff.
+The browser first loads durable event history over REST and then follows the live WebSocket tail through the same port 5173 development proxy as other `/api` requests. The task connection indicator shows **Live** when connected. Duplicate sequence numbers are ignored; a detected gap triggers a history reload. Unexpected disconnects retry with exponential backoff.
 
 | Situation                                                        | User-visible outcome                                                                                                                                                                                                                                                                                        |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -416,7 +416,7 @@ A script stopped by a time, memory, or output limit also records `limitBreached`
 
 ## Follow an execution over WebSocket
 
-Connect to `/api/ws/executions/<executionId>?afterSeq=<lastSeq>`. The server sends `snapshot`, `event`, and `execution_updated` JSON messages and ignores client messages. It closes normally with code `1000` after a terminal state, uses `4004` for an unknown execution, and uses `1013` when buffered output exceeds 1 MiB. REST is the authoritative paginated history source.
+Connect to `/api/ws/executions/<executionId>?afterSeq=<lastSeq>` through the browser server on port 5173 or directly to the API on port 4317. The server sends `snapshot`, `event`, and `execution_updated` JSON messages and ignores client messages. It closes normally with code `1000` after a terminal state, uses `4004` for an unknown execution, and uses `1013` when buffered output exceeds 1 MiB. REST is the authoritative paginated history source.
 
 ## Configure limits and local access
 
@@ -461,7 +461,7 @@ The server parses and consumes all four disclosure-related limits above when it 
 
 The seven generation limits are provisional against open decision D14, and their defaults may change. An out-of-range generation value stops the server at startup with `CONFIGURATION_ERROR`, and the message names the variable. See [Configuration and Permissions](features/code-generation-repair.md#configuration-and-permissions) for the full ranges. The check, run, and nine runtime controls are likewise provisional against D14; invalid values stop the server with `CONFIGURATION_ERROR`.
 
-In development, `http://127.0.0.1:5173` and `http://localhost:5173` are accepted browser origins. State-changing REST requests and WebSocket upgrades must also use an accepted host. Missing `Origin` is allowed for non-browser clients such as curl. These checks reduce cross-site requests; they are not a sandbox.
+In development, `http://127.0.0.1:5173` and `http://localhost:5173` are accepted browser origins. Vite requires port 5173 and fails startup if it is occupied. State-changing REST requests and WebSocket upgrades must also use an accepted host. Missing `Origin` is allowed for non-browser clients such as curl. These checks reduce cross-site requests; they are not a sandbox.
 
 ## Check health and run project commands
 
@@ -469,6 +469,12 @@ Check the API directly:
 
 ```sh
 curl -sS http://127.0.0.1:4317/api/health
+```
+
+With `pnpm dev` running, check the browser proxy too:
+
+```sh
+curl -sS http://127.0.0.1:5173/api/health
 ```
 
 Run repository commands from the root:
@@ -514,7 +520,8 @@ Question and answer text is persisted for replay but must not be written to appl
 - **Conversation shows `EXECUTION_INTERRUPTED`:** The server restarted while the run depended on an in-memory provider session or local process. Its transcript is preserved; open the latest finished run and select **Run again**.
 - **Deleting a task reports `TASK_HAS_OPEN_RUN`:** Finish or cancel the open run, then try deletion again. A waiting question, approval, or review is still an open run.
 - **Task creation returns `EXECUTION_LIMIT_REACHED`:** Wait for an active run to finish or cancel it. Waiting runs do not consume the active-run slot.
-- **Conversation stays reconnecting:** Check server health, then select **Retry**. The page reloads REST history if it detects a sequence gap.
+- **Conversation stays reconnecting:** Check `http://127.0.0.1:5173/api/health` and confirm the terminal says the API server is listening. The port 5173 proxy carries the execution WebSocket too. Select **Retry**; the page reloads REST history if it detects a sequence gap.
+- **The browser server will not start:** Free port 5173 and rerun `pnpm dev`; it will not move to 5174 because writes and sockets require the accepted 5173 origin.
 - **`UPLOAD_TOO_LARGE`, `UNSUPPORTED_FILE_FORMAT`, or `PARSE_FAILED`:** Follow the limit or format detail in the error; save legacy `.xls` files as `.xlsx`.
 - **`ORIGIN_REJECTED`:** Use an accepted local host/origin or add the exact browser origin to `AUTOMATE_ALLOWED_ORIGINS` before restart.
 - **`PYTHON_RUNTIME_UNAVAILABLE`:** Install `uv` with the command in the message and check `pnpm doctor`. Auto-Mate downloads CPython 3.14.6 itself when needed. Check network access, then retry preparation in Settings.
@@ -525,7 +532,7 @@ Question and answer text is persisted for replay but must not be written to appl
 - **The run fails with `VERIFICATION_BLOCKED`:** Open the blocking checks under **Code check results**, then use **Try again** with guidance.
 - **`CHECKER_UNAVAILABLE`, or `lint`/`security` shown as not run:** Install `uv` (Auto-Mate never installs it) and make sure the first check pass has network access to download `ruff` and `bandit` into `~/.automate/verify-env/`.
 - **Run it stays disabled:** Tick the advisory-findings confirmation box.
-- **The run stops at a limit:** Read the sentence in **What it produced** and the [runtime limits](#understand-and-change-runtime-limits), adjust the applicable setting before restarting if appropriate, then retry. A long-running script can be given more time with `AUTOMATE_SCRIPT_RUN_TIMEOUT_MS`.
+- **The run stops at a limit:** Read the sentence in **What it produced** and the [runtime limits](#understand-and-change-runtime-limits), adjust the applicable setting before restarting if appropriate, then retry. A long-running script can be given more time with `AUTOMATE_SCRIPT_RUN_TIMEOUT_MS`. Exit codes 93 and 94 alone are ordinary script failures; Auto-Mate reports a memory or output breach only when the launcher also leaves its matching limit marker.
 - **The run fails with `RUN_OUTPUT_MISSING`:** Read the sentence and **Show the script's output**, then retry with guidance.
 - **A retry reports that the approval no longer matches:** The provider, model, or file description changed. Start the task again from **New task** and approve the new review.
 

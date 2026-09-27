@@ -33,7 +33,9 @@ These values are provisional while the broader operating limits are under review
 | Number of output files |                                200 | Output directory watchdog on every platform.                                |
 | Script address space   |                              4 GiB | `RLIMIT_AS` on macOS/Linux. **No memory limit is enforced on Windows.**     |
 
-On macOS and Linux, the launcher sets equal soft and hard `RLIMIT_AS` and `RLIMIT_FSIZE` values, so an unprivileged script cannot raise them. The output watchdog checks the output directory at intervals, so a script may pass a file or total-size threshold briefly before it is stopped. A stopped run reports `time`, `memory`, `output_bytes`, or `output_files` in `limitBreached` as applicable.
+On macOS and Linux, the launcher sets equal soft and hard `RLIMIT_AS` and `RLIMIT_FSIZE` values, so an unprivileged script cannot raise them. The output watchdog checks the output directory at intervals, so a script may pass a file or total-size threshold briefly before it is stopped.
+
+The run reports `time`, `memory`, `output_bytes`, or `output_files` in `limitBreached` only when the process watchdog confirms a breach or stderr contains the launcher's limit marker paired with the corresponding exit code. Exit codes `93` and `94` without that marker are ordinary script failures: the run keeps the exit code and script stderr, and `limitBreached` remains empty.
 
 ## How to Use It
 
@@ -64,7 +66,7 @@ For maintainers, change exact pins in `packages/server/src/execution/dependency-
 | `RUNTIME_PREPARE_FAILED` | Installing or preparing Python failed; retry preparation.                                        |
 | `RUNTIME_LOCK_MISMATCH`  | The committed lock no longer matches the declared dependencies; a maintainer must regenerate it. |
 | `LAUNCHER_INTEGRITY`     | The deployed script launcher changed; prepare the environment again.                             |
-| `SCRIPT_LIMIT_EXCEEDED`  | A script hit a time, memory, or output limit; the run record names the breached limit.           |
+| `SCRIPT_LIMIT_EXCEEDED`  | A confirmed limit stopped the script; the run record names the breached limit.                    |
 | `NON_PYTHON_ENTRYPOINT`  | The chosen entrypoint is not a Python `.py` file.                                                |
 
 ## Configuration and Permissions

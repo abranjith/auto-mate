@@ -1,6 +1,6 @@
 # MVP Plan: Auto-Mate
 
-**Status:** Working draft — awaiting user decisions; not ready for implementation.
+**Status:** MVP feature implementation complete; review findings R-01–R-12 addressed on 2026-09-26.
 **Started:** 2026-09-10
 **Purpose:** Reconcile the existing plan and three reviews into a coherent implementation plan for tech-savvy people who may not be programmers.
 
@@ -20,7 +20,7 @@ The original plan and reviews remain separate reference documents. This draft do
 
 ## 2. High-Level Features
 
-**Status:** Proposed breakdown — derived strictly from the decisions confirmed on 2026-09-10 (D01–D09b). Every row is scoped to the **developer preview** milestone. Nothing here is a new decision: where a choice is still open, the row names it rather than resolving it.
+**Status:** Implemented breakdown for the **developer preview** milestone. Each row links to the feature specification that records its final decisions.
 
 The `Blocked by` column lists the open decisions in §5 that must resolve before that row's feature specification can be written without assumptions. It does not mean the feature boundary is uncertain — the boundaries follow from confirmed scope; the internals do not. `Spec File` is populated by the Feature skill. `Status` is owned exclusively by the Implement skill.
 
@@ -119,27 +119,27 @@ The reference's package manifest currently pins `@earendil-works/pi-coding-agent
 | D04 | Data disclosure and inference | Disclosed schema, local statistics, and small sample rows for generation/repair; full files outside model context. Pi manages provider/model configuration through a thin interface. | Confirmed by user, 2026-09-10 |
 | D05 | Languages and dependencies | Python only with a fixed, preinstalled package set; defer shell scripts and additional package installation. | Confirmed by user, 2026-09-10 |
 | D06 | Clarification behavior | Ask when ambiguity changes meaning or risks data loss; default cosmetic details. | Confirmed by user, 2026-09-10 |
-| D07 | Verification ownership | Agent iterates; app independently checks final code and enforces execution gates and attempt/time limits. | Principle confirmed by user, 2026-09-10; limits and review UX still open |
+| D07 | Verification ownership | Agent iterates; app independently checks final code and enforces execution gates and attempt/time limits. | Principle confirmed 2026-09-10; limits and review UX resolved in FEAT-106 and FEAT-107. |
 | D08 | Later feature scope | Defer scheduling, URL ingestion, standalone artifact library, gamification, generated tools, and connectors until after the pilot; treat them as candidates. | Confirmed by user, 2026-09-10 |
 | D09a | AI provider abstraction | Pi coding agent behind a thin provider interface following the inspected Yantra pattern. | Confirmed by user, 2026-09-10 |
 | D09b | Pi configuration ownership | App-owned configuration with optional personal Pi credentials; follow Yantra. | Confirmed by user, 2026-09-10 |
 
-## 5. Remaining decisions to resolve after scope
+## 5. Decisions resolved during feature implementation
 
-These are the remaining portions of the decision inventory, not approved defaults. Questions will be presented in related groups; confirmed answers above take precedence over older proposals.
+The feature specifications linked in section 2 record how D04–D14 were resolved. D15 remains deferred with scheduling.
 
-| ID | Decision | Why clarification is necessary |
+| ID | Decision | Resolution |
 | --- | --- | --- |
-| D04 | Privacy details | Define disclosure interaction and bounded sample/diagnostic rules consistent with the approved data-flow policy. |
-| D05 | Dependency details | Select the fixed Python dependency set and its version/update policy; Python-only and no per-task installation are confirmed. |
-| D06 | Clarification limits | Behavior is confirmed. The original five-question cap and unresolved-critical-question handling will be covered with operational limits. |
-| D07 | Approval UX and limits | Verification ownership is confirmed. Define pre-run intent review, post-run acceptance, exact repair limits, and whether execution outcome and user review are separate. |
-| D09 | Runtime and integration choices | Pi/thin interface and configuration ownership are confirmed. Asked about pi-web-ui with a rendering adapter and compatibility proof, plus TanStack Router/better-sqlite3 and verified exact versions. Vendoring is not approved. |
-| D10 | Authoritative state and local access | Asked about server-owned task/conversation state and Pi credentials, REST commands, WS progress/recovery, loopback-only access, and local session protection without accounts. |
-| D11 | Reuse and data model | Asked about separate templates with immutable revisions, recorded inputs/parameters/runtime, and explicit mapping/repair that creates a revision for approval. Historical replay details still need specification. |
-| D12 | Outputs and retention | Decide required output formats, generated HTML versus trusted renderers, standalone offline exports, independent saved artifacts, retention of inputs/provenance, storage layout, and application data root. |
-| D13 | Installation and platform support | Define which Windows/Unix hosts must work at the first milestone, setup expectations, and whether the first audience is developers or target users. |
-| D14 | Operational limits and acceptance | Resolve three versus five attempts, time/resource/spend limits, file limits, concurrency, and concrete acceptance gates. The reviews' timing and pilot targets are unapproved proposals. |
+| D04 | Privacy details | Resolved in [FEAT-104](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md) and [FEAT-105](features/FEAT-105-disclosure_clarification/spec.md). |
+| D05 | Dependency details | Resolved in [FEAT-108](features/FEAT-108-python_runtime_execution/spec.md). |
+| D06 | Clarification limits | Resolved in [FEAT-105](features/FEAT-105-disclosure_clarification/spec.md). |
+| D07 | Approval UX and limits | Resolved in [FEAT-106](features/FEAT-106-code_generation_repair/spec.md) and [FEAT-107](features/FEAT-107-verification_execution_gate/spec.md). |
+| D09 | Runtime and integration choices | Resolved in [FEAT-101](features/FEAT-101-project_bootstrap/spec.md), [FEAT-102](features/FEAT-102-pi_provider_interface/spec.md), and [FEAT-103](features/FEAT-103-task_conversation_surface/spec.md). |
+| D10 | Authoritative state and local access | Resolved in [FEAT-103](features/FEAT-103-task_conversation_surface/spec.md) and [FEAT-110](features/FEAT-110-execution_history/spec.md). |
+| D11 | Reuse and data model | Resolved in [FEAT-111](features/FEAT-111-save_and_rerun/spec.md). |
+| D12 | Outputs and retention | Resolved in [FEAT-109](features/FEAT-109-results_outputs_downloads/spec.md) and [FEAT-110](features/FEAT-110-execution_history/spec.md). |
+| D13 | Installation and platform support | Resolved in [FEAT-101](features/FEAT-101-project_bootstrap/spec.md) and [FEAT-108](features/FEAT-108-python_runtime_execution/spec.md). |
+| D14 | Operational limits and acceptance | Resolved in [FEAT-104](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md), [FEAT-106](features/FEAT-106-code_generation_repair/spec.md), [FEAT-107](features/FEAT-107-verification_execution_gate/spec.md), and [FEAT-108](features/FEAT-108-python_runtime_execution/spec.md). |
 | D15 | Scheduling semantics | Deferred with scheduling until after the pilot. No scheduling implementation is part of this MVP; a later proposal must define fresh inputs, timezone, overlap, missed runs, sleep, and unattended review. |
 
 ## 6. Review findings to carry into the design
@@ -164,7 +164,9 @@ Technical assertions disputed by the reviews will be checked against primary doc
 - The original `@mariozechner/pi-web-ui` package is marked deprecated by its publisher, pointing to `@earendil-works/pi-web-ui`. If the user retains pi-web-ui, the compatibility proof must target the maintained package identity rather than copying the original plan's imports. This does not select a package version or prove UI integration. [Publisher's package notice](https://www.npmjs.com/package/%40mariozechner/pi-web-ui).
 - `uv run` can update its lockfile/environment automatically; `--locked` prevents lockfile changes and errors on an outdated lockfile. The fixed dependency policy therefore needs explicit locked setup/run behavior rather than relying on a bare `uv run` invocation. Exact commands remain part of the runtime proof. [uv locking and syncing documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
 
-## 7. Final plan structure to complete after decisions
+## 7. Original plan structure
+
+This was the structure proposed during planning. The linked feature specifications and implemented code now record the final design.
 
 1. Product promise, target jobs, and success criteria.
 2. Initial scope, exclusions, and later milestones.

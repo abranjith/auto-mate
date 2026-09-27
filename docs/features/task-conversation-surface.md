@@ -9,9 +9,9 @@ Auto-Mate lets you describe a task in plain language, starts one agent run, and 
 - The **New task** page provides a text-only composer. It accepts a description of up to 8,000 characters, supports Ctrl/Cmd+Enter, and keeps the text in place if creation fails. Surrounding whitespace is removed when the task is submitted; line breaks and other content inside the description are preserved.
 - Creating a task also creates its first execution and returns immediately. The browser opens `/tasks/<taskId>` while the server runs the request through the configured agent provider.
 - The task page renders the user prompt, assistant markdown, tool starts and finishes, provider-reported turn usage, state changes, and failures in sequence order. Tool details are collapsed by default. Raw HTML in assistant markdown is not enabled, tool input and output are rendered as text, and external links open with protective link attributes.
-- The server persists every displayed event before broadcasting it. Each event has a 1-based sequence number that is unique and gap-free within its execution. Consecutive assistant text fragments are combined for up to 100 ms or 1 KiB before they receive a sequence number.
+- The server persists every displayed event before broadcasting it. Each event has a 1-based sequence number that is unique and gap-free within its execution. A failed append does not consume a sequence number or broadcast that event; the next successful append uses that number. Consecutive assistant text fragments are combined for up to 100 ms or 1 KiB before they receive a sequence number.
 - The browser loads durable history over REST, then follows the live tail over WebSocket. It ignores duplicate sequence numbers and reloads history if it detects a gap. Unexpected disconnects use exponential reconnect delays starting around 500 ms and capped around 10 seconds; offline and reconnecting states include a manual retry control.
-- A **Cancel run** button is available while an execution is non-terminal. Cancellation asks the provider to stop and records the final state as `aborted`, displayed as **Cancelled**. Completed runs show duration, turn count, and cost only when those values were actually reported.
+- A **Cancel run** button is available while an execution is non-terminal, including while the run is being prepared or its provider session is opening. Cancellation stops preparation where supported, asks an open provider session to stop, and records the final state as `aborted`, displayed as **Cancelled**. If cancellation arrives before the provider run starts, no prompt is sent. The cancellation response waits for in-flight preparation or opening to settle. Completed runs show duration, turn count, and cost only when those values were actually reported.
 
 ### Execution states
 
@@ -41,6 +41,8 @@ pnpm dev
 ```
 
 Open `http://127.0.0.1:5173/`, enter the result you want, and select **Start task**. The application opens the task conversation automatically. Use **Cancel run** while the status is non-terminal. If the live indicator changes to **Reconnecting** or **Offline**, the browser retries automatically, and you can select **Retry** to try immediately.
+
+In development, Vite forwards both REST requests and execution WebSocket upgrades under `/api` to the local server on port 4317. The browser connects to the socket through its current host on port 5173. The development server requires port 5173 to be free; it does not switch to another port.
 
 Before starting a real task, configure and test a provider on `/settings`; see [AI Provider Configuration](provider-configuration.md).
 
@@ -81,6 +83,8 @@ The conversation can display these seven persisted event types:
 | `GET /api/executions/:id`                             | Positive integer execution id.                                                                              | Browser-safe execution summary: status, provider/model provenance, optional usage and timings, and a public error. Raw agent log paths are excluded. |
 | `GET /api/executions/:id/events?afterSeq=0&limit=200` | Non-negative integer cursor and limit strings. The default page size is 200; the server clamps it to 1-500. | `{ events, lastSeq, hasMore }`, ordered by ascending sequence and containing only events after the cursor.                                           |
 | `POST /api/executions/:id/abort`                      | Positive integer execution id.                                                                              | The updated execution summary, or a conflict error if the run has already ended or no live session exists.                                           |
+
+If the execution limit is reached after task creation commits but before its run starts, `POST /api/tasks` returns `409` and marks that committed execution `failed`. It does not leave the run pending indefinitely.
 
 API failures use the shared envelope and include the same correlation id placed in the response header:
 

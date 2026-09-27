@@ -29,7 +29,7 @@ Every event is JSON-serializable and every `at` is an ISO-8601 timestamp.
 
 Deliberately **not** emitted, each for a reason: thinking deltas (no consumer, and they would widen what must be sanitized), partial tool results (the seam models a tool call as a start/finish pair), and the provider's own compaction, queue, retry, and branch mechanics (visible in the raw session log when you need them). An unknown event from a newer SDK is ignored rather than thrown on.
 
-`run()` returns an outcome of `completed`, `failed`, or `aborted`. A provider failure mid-run is **not** thrown — it arrives as a `failed` event plus `outcome: 'failed'`, so `await run()` does not explode on a provider hiccup. A rejection from `run()` means caller misuse, such as running a closed session.
+`run()` returns an outcome of `completed`, `failed`, or `aborted`. If `abort()` is called after a session opens but before `run()`, the next `run()` returns `aborted` without sending its prompt to the provider. A provider failure mid-run is **not** thrown — it arrives as a `failed` event plus `outcome: 'failed'`, so `await run()` does not explode on a provider hiccup. A rejection from `run()` means caller misuse, such as running a closed session.
 
 ## The Architectural Boundary
 
@@ -110,12 +110,12 @@ It does **not** import your personal Pi settings, extensions, skills, prompt tem
 
 Every payload crossing outward from the SDK — tool inputs and outputs, assistant text, error messages — passes a four-pass sanitizer:
 
-1. **Exact-match scrub.** Every secret value the server currently holds is replaced with `[redacted]`.
+1. **Exact-match scrub.** The caller's known secrets and, when present, the selected provider's key from its supported environment variable are replaced with `[redacted]`. The variable names come from the adapter's `PROVIDER_ENV_VARS` mapping. Auto-Mate does not read key values from the managed or personal Pi credential file, so those values are not available to this pass.
 2. **Shape-based redaction.** `sk-`/`sk-ant-` tokens, `ghp_`/`gho_`/`ghs_`, `AKIA` + 16, `Bearer <token>`, `Authorization:` values, and unbroken base64 or hex runs of 32+ characters.
 3. **Path scrubbing.** The home directory becomes `~`; absolute paths outside the workspace become `<path>`.
 4. **Bounded truncation.** Text over 32 KiB is cut with an explicit `… [truncated N characters]` marker.
 
-**Only pass 1 is a guarantee.** Passes 2 and 3 are heuristics. A credential with no recognizable shape, or one split across two streamed text deltas, can get past them. Treat the sanitizer as a last line of defense, not as the reason it is safe to put a secret somewhere.
+**Only pass 1 guarantees redaction of values supplied to it.** Passes 2 and 3 are heuristics. A credential with no recognizable shape that is not in the exact-match list, or one split across two streamed text deltas, can get past them. Treat the sanitizer as a last line of defense, not as the reason it is safe to put a secret somewhere.
 
 This sanitizer governs what crosses **outward** (SDK → application). Deciding what user data may be sent **inward** (application → model) is the disclosure policy in FEAT-105. Neither substitutes for the other.
 

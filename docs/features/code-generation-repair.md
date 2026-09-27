@@ -115,7 +115,7 @@ A failed code-generation run shows a panel headed **Tell me what I got wrong and
 Selecting **Try again**:
 
 - Starts a **new run** of the same task, linked to the failed one. The failed run is not changed and stays stored. The page switches to follow the new run.
-- Reuses your approval and the answers you gave to pre-flight questions. You do not see the review screen again.
+- Reuses your approval and the answers you gave to pre-flight questions. You do not see the review screen again. Answers you gave to the agent's questions in earlier runs of this task are also included in the new prompt, so the agent can use them without asking again.
 - Gives the new run its own full set of attempts, and freshly invented test rows (the sample rows stay the same).
 - Adds your hint after your original request. The hint is sent to the AI provider as your own words, and it appears in the conversation as a second message from you.
 
@@ -138,7 +138,7 @@ The retry is refused in these cases:
 
 ### Cancel a run
 
-Select **Cancel run** while the run is active. Auto-Mate stops things in this order: a pending question, then Python environment preparation or a running test together with everything that test started, and then the AI session. A test cut short is shown as **stopped before the tests finished**, and the run ends as cancelled.
+Select **Cancel run** while the run is active. Auto-Mate stops things in this order: a pending question, preparation of the made-up test data, Python environment preparation or a running test together with everything that test started, and then the AI session. If you cancel while the test data is being prepared, Auto-Mate removes the partial stand-in files and ends the run as cancelled without contacting the AI provider. A test cut short is shown as **stopped before the tests finished**, and the run ends as cancelled.
 
 ### Use the local API
 

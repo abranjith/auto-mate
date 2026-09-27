@@ -14,6 +14,7 @@ This is a transparency and consent feature. It controls and records what Auto-Ma
 - Separates permission to send file context from permission to send filtered diagnostics. File context is required for an attached-file task; diagnostics are optional and enabled by default in the review screen.
 - Classifies ambiguity before the run. Choices that could change meaning or risk data loss require an answer. Cosmetic choices are shown as applied defaults and may expose an alternate selector.
 - Lets the agent request a clarification while it is working. Every request includes a rationale and a proposed default, and all questions in a batch must be answered together.
+- On a retry of the same task, carries forward earlier answered agent questions as bounded question-and-answer text in the prompt. Required pre-flight choices are handled separately: their prior answers are saved as seeded choices on the new execution before its prompt is built.
 - Parks an unanswered run in `waiting`. A waiting run does not consume an active execution slot and remains waiting until it is answered or cancelled.
 - Stores consent, transmission receipts, clarification questions, answers, answer sources, and transcript events. Expanding a disclosure receipt in the conversation loads the exact transmitted bytes from the local server.
 
@@ -44,6 +45,8 @@ When the agent encounters ambiguity that changes meaning or risks data loss, the
 The form is disabled while the answer is being saved. A validation or server error displays its message and re-enables the form. After a successful answer, the run returns to `generating`, and the transcript keeps a read-only record of the answer and whether it came from you, an application default, or a prior run.
 
 There is no answer timeout. Leaving a question unanswered leaves the run in `waiting`; the proposed default is not applied merely because time passes. If the application refuses an interruption because the per-execution question limit or waiting-run capacity has been reached, it records the refusal and returns the proposed default to the agent. Use the existing run cancel control to stop a waiting run.
+
+If you retry a task after a failed or rejected run, the new run reuses its resolved pre-flight choices. It also includes answered agent questions from earlier runs of that same task in the next prompt, so you need not repeat those answers. Only answered agent questions are carried over; pending, declined, and cancelled questions are not. The carried question-and-answer text is limited to 4,000 characters in total.
 
 ### Inspect what was sent
 
@@ -126,7 +129,7 @@ Consent records and receipts otherwise persist with the task and are removed thr
 - This milestone runs generated code without an enforced isolation boundary. The disclosure gate limits and records data sent through the provider prompt; it does not prevent generated code from reaching other files or resources available to the host process. A restricted runner is required before the target-user pilot.
 - Consent protects against accidental drift such as a stale browser tab, changed payload, or changed model. It is not protection against a person who can edit the local database.
 - The current product has no consent-revocation screen. The server and persistence layer understand revoked consent, but revocation is not exposed in this UI.
-- The current product has no completed save-and-rerun UI. Clarification answers are stored with stable finding keys, and the service can seed an answer when a future rerun supplies the prior task, but ordinary new-task creation does not carry answers between separate tasks yet.
+- Clarification answers carry forward within the same task's retries. A separate new task does not inherit answered agent questions or pre-flight choices from an earlier task.
 - Server restart does not resume an open provider session. A pending clarification is marked `interrupted`, the execution is reconciled as failed, and its already saved answers remain available for a retry path.
 - Waiting is indefinite; there is no clarification timeout. Provider-side session expiry surfaces as a failed run.
 - The review exposes controls for overriding cosmetic defaults, but the current task-create request carries required pre-flight decisions only. Cosmetic override submission is not yet part of the persisted task contract.

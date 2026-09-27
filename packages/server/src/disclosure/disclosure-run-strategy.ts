@@ -50,10 +50,11 @@ export class DisclosureRunStrategy implements RunStrategy {
   constructor(private readonly deps: DisclosureRunStrategyDependencies) {}
 
   buildRun(task: TaskRow, execution: ExecutionRow, extras: PromptExtras = {}) {
-    if (this.deps.uploads.listByTask(task.id).length === 0) return { prompt: userWords(task, extras), customTools: [this.deps.clarificationTool] };
+    const priorAgentAnswers = this.deps.clarifications.priorAgentAnswersForTask?.(task.id, execution.id) ?? [];
+    if (this.deps.uploads.listByTask(task.id).length === 0) return { prompt: [userWords(task, extras), ...priorAgentAnswers].join('\n\n'), customTools: [this.deps.clarificationTool] };
     const consent = this.deps.disclosure.verifyForTransmission(task.id, 'context');
     const answers = this.deps.clarifications.listByExecution(execution.id).filter(({ source, status }) => source === 'preflight' && status === 'answered').flatMap(({ questions }) => questions.map((question) => `${question.promptText}: ${question.answer ?? question.proposedDefault}`));
-    const context = assemblePromptContext({ userPrompt: userWords(task, extras), disclosure: { text: consent.payloadSnapshot, consentId: consent.id }, appText: [...answers, ...(extras.appText ?? [])] });
+    const context = assemblePromptContext({ userPrompt: userWords(task, extras), disclosure: { text: consent.payloadSnapshot, consentId: consent.id }, appText: [...answers, ...priorAgentAnswers, ...(extras.appText ?? [])] });
     const summary = { files: (JSON.parse(consent.uploadIds) as number[]).length, tables: null, columns: null, sampleRows: null, truncations: null };
     const receipt = this.deps.transmissions.record({ executionId: execution.id, consentId: consent.id, kind: 'context', payloadDigest: consent.payloadDigest, payloadSnapshot: null, byteSize: consent.byteSize, summary, provider: consent.provider, model: consent.model });
     return { prompt: context.text, systemPrompt: 'Ask through request_clarification only when ambiguity changes meaning or risks data loss. State a rationale and a proposed default. Cosmetic choices must use a disclosed default.', customTools: [this.deps.clarificationTool], events: [{ type: 'disclosure_sent' as const, transmissionId: receipt.id, kind: 'context' as const, provider: receipt.provider, model: receipt.model, byteSize: receipt.byteSize, summary, at: receipt.at.toISOString() }] };

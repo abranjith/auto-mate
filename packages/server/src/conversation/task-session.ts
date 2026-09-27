@@ -100,6 +100,7 @@ export class TaskSession {
     if (this.aborting) return;
     this.aborting = true;
     this.abortReason = reason;
+    if (!this.lifecycle) this.deps.strategy.cancelBuild?.(this.executionId);
     this.lifecycle?.cancel();
     await this.agentSession?.abort();
   }
@@ -118,7 +119,9 @@ export class TaskSession {
     const failure: { value: AgentError | null } = { value: null };
     try {
       const built = await this.begin();
+      if (this.aborting) return this.finish({ outcome: 'aborted', stopReason: 'aborted', usage: { turns: 0 } }, null);
       const session = await this.open(built);
+      if (this.aborting) return this.finish({ outcome: 'aborted', stopReason: 'aborted', usage: { turns: 0 } }, null);
       unsubscribe = session.subscribe((event) => {
         if (event.type === 'failed') failure.value = event.error;
         this.consume(event);
@@ -212,8 +215,10 @@ export class TaskSession {
     this.coalescer.flush();
     this.lifecycle?.cancel();
     const current = this.currentStatus();
-    if (this.abortReason === 'shutdown') {
-      const row = this.deps.executions.markSettled(this.executionId, { status: 'aborted', errorCode: 'EXECUTION_STOPPED_ON_SHUTDOWN', errorMessage: 'This run was stopped because the app was closed. Run it again to retry.' });
+    if (this.aborting) {
+      const settlement = this.lifecycle?.settle({ outcome: 'aborted', stopError: null, failure: null });
+      for (const event of settlement?.events ?? []) this.record(event);
+      const row = this.deps.executions.markSettled(this.executionId, { status: 'aborted', ...(this.abortReason === 'shutdown' ? { errorCode: 'EXECUTION_STOPPED_ON_SHUTDOWN', errorMessage: 'This run was stopped because the app was closed. Run it again to retry.' } : {}) });
       this.state(current, 'aborted');
       return row;
     }
@@ -259,8 +264,8 @@ export class TaskSession {
 
   private record(event: AgentEvent | ApplicationEvent | UnnumberedConversationEvent): void {
     const numbered = { ...event, seq: this.nextSeq } as ConversationEvent;
-    this.nextSeq += 1;
     this.deps.events.append(this.executionId, numbered);
+    this.nextSeq += 1;
     if (numbered.type === 'state_changed') this.onStatus(numbered.to);
     for (const listener of [...this.subscribers]) {
       try {

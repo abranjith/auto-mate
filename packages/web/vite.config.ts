@@ -7,5 +7,5 @@ export default defineConfig({
   // Co-located route tests are not routes; the same pattern is in tsr.config.json
   // so `tsr generate` and the dev server agree.
   plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true, routeFileIgnorePattern: '\\.test\\.tsx?$' }), react(), tailwindcss()],
-  server: { host: '127.0.0.1', port: 5173, proxy: { '/api': 'http://127.0.0.1:4317' } },
+  server: { host: '127.0.0.1', port: 5173, strictPort: true, proxy: { '/api': { target: 'http://127.0.0.1:4317', changeOrigin: true, ws: true } } },
 });

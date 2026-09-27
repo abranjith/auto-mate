@@ -141,7 +141,11 @@ describe.each([
   });
   it('resolves abort() before any run', async () => {
     const session = await open();
+    const events: AgentEvent[] = [];
+    session.subscribe((event) => events.push(event));
     await expect(session.abort()).resolves.toBeUndefined();
+    expect(await session.run('must not reach the provider')).toMatchObject({ outcome: 'aborted', usage: { turns: 0 } });
+    expect(events).toEqual([]);
     await session.close();
   });
   it('is idempotent on a second close', async () => {

@@ -80,9 +80,15 @@ export class FixtureService {
     mkdirSync(directory, { recursive: true });
     const recorded: NewSyntheticFixture[] = [];
     const resolved = typeof inputs[0] === 'number' ? resolveGeneratedInputs((inputs as readonly number[]).map((id) => this.deps.uploads.getById(id)!).filter(Boolean)) : inputs as readonly ResolvedInput[];
-    for (const input of resolved) {
-      signal.throwIfAborted();
-      recorded.push(await this.materializeOne(executionId, input, directory));
+    try {
+      for (const input of resolved) {
+        signal.throwIfAborted();
+        recorded.push(await this.materializeOne(executionId, input, directory));
+        signal.throwIfAborted();
+      }
+    } catch (cause) {
+      if (signal.aborted) rmSync(directory, { recursive: true, force: true });
+      throw cause;
     }
     const rows = this.deps.fixtures.replaceForExecution(executionId, recorded);
     for (const row of rows) this.deps.logger.info({ executionId, uploadId: row.uploadId, rowCount: row.rowCount, byteSize: row.byteSize }, 'synthetic fixture materialized');

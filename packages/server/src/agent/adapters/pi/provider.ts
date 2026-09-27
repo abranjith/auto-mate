@@ -22,6 +22,7 @@ import type { Logger } from 'pino';
 import { createPiEnvironment, type ModelRuntimeFactory, type PiEnvironment } from './environment';
 import { createDefaultEventMapContext, extractTerminalState, mapPiEvent, type PiEventMapContext, type PiTerminalState } from './event-map';
 import { createAgentSessionFile, type AgentSessionFile } from './session-file';
+import { PROVIDER_ENV_VARS } from './credential-probe';
 
 /** Reasoning levels the SDK accepts. An unknown value is a typed failure, never a silent drop. */
 export const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
@@ -54,7 +55,7 @@ export interface PiAgentProviderOptions {
   readonly logger: Logger;
   /** Custom tools for every session this provider opens. Pi's built-ins are always disabled. */
   readonly customTools?: readonly ToolDefinition[];
-  /** Resolved secret values the server holds, so they cannot escape through a tool payload. Normally empty: Auto-Mate never reads a credential value out of the store. */
+  /** Additional resolved secrets to scrub. The selected provider's environment key is included automatically; stored credentials are not read here. */
   readonly knownSecrets?: readonly string[];
   /** Home directory collapsed to `~` in sanitized payloads. */
   readonly homeDir?: string;
@@ -107,10 +108,13 @@ export class PiAgentProvider implements AgentProvider {
   }
 
   /** Build the per-session mapping context, scoped to that session's working directory. */
-  private contextFor(cwd: string): PiEventMapContext {
+  private contextFor(cwd: string, provider: string): PiEventMapContext {
     if (this.options.mapContext !== undefined) return this.options.mapContext;
+    const keyName = PROVIDER_ENV_VARS[provider];
+    const key = keyName ? process.env[keyName] : undefined;
+    const environmentSecrets = key ? [key] : [];
     return createDefaultEventMapContext(createSanitizer({
-      ...(this.options.knownSecrets !== undefined ? { knownSecrets: this.options.knownSecrets } : {}),
+      knownSecrets: [...(this.options.knownSecrets ?? []), ...environmentSecrets],
       ...(this.options.homeDir !== undefined ? { homeDir: this.options.homeDir } : {}),
       workspaceDir: cwd,
     }));
@@ -118,7 +122,7 @@ export class PiAgentProvider implements AgentProvider {
 
   /** Open a fresh Pi-backed session for one execution. @param options Seam session options. @returns The live normalized session. @throws AgentAuthUnavailableError, AgentModelNotFoundError, or AgentSessionStartFailedError. @example await provider.open({ executionId, sessionDir, cwd, model, auth, systemPrompt }) */
   async open(options: AgentSessionOptions): Promise<AgentSession> {
-    const mapContext = this.contextFor(options.cwd);
+    const mapContext = this.contextFor(options.cwd, options.model.provider);
     const authPath = this.options.resolveAuthPath(options.auth);
     const environment = await createPiEnvironment({
       piDir: this.options.piDir,
@@ -225,6 +229,7 @@ class PiSession implements AgentSession {
   private readonly listeners = new Set<(event: AgentEvent) => void>();
   private readonly unsubscribeInternal: () => void;
   private currentRun: RunTracker | undefined;
+  private abortedBeforeRun = false;
   private closed = false;
 
   constructor(
@@ -244,6 +249,11 @@ class PiSession implements AgentSession {
   async run(prompt: string): Promise<AgentRunResult> {
     if (this.closed) throw new AgentSessionStartFailedError('run() was called on a closed session');
     const tracker = newTracker();
+    if (this.abortedBeforeRun) {
+      this.abortedBeforeRun = false;
+      tracker.aborted = true;
+      return this.resultOf(tracker);
+    }
     this.currentRun = tracker;
     try {
       await this.piSession.prompt(prompt, { expandPromptTemplates: false });
@@ -270,6 +280,7 @@ class PiSession implements AgentSession {
   async abort(): Promise<void> {
     if (this.closed) return;
     if (this.currentRun !== undefined) this.currentRun.aborted = true;
+    else this.abortedBeforeRun = true;
     await this.piSession.abort();
   }
 

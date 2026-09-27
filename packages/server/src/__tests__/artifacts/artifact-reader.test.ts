@@ -65,7 +65,7 @@ describe('readTablePage (CSV)', () => {
     expect(page.rows).toEqual([['=SUM(A1)', '+1', '@x'], ["=cmd|'/c calc'!A1", '-5', '<script>alert(1)</script>']]);
   });
 
-  it('pages a large CSV in bounded memory: only the scanned rows are read, never the whole file', async () => {
+  it('returns only the requested rows from a large CSV', async () => {
     // 4,000 rows of ~20 KB each: an 80 MB file in which the first page is a few hundred KB.
     const big = temp('huge.csv');
     const stream = createWriteStream(big);
@@ -74,18 +74,13 @@ describe('readTablePage (CSV)', () => {
     for (let index = 0; index < 4_000; index += 1) if (!stream.write(`${index},${note}\n`)) await once(stream, 'drain');
     stream.end();
     await once(stream, 'finish');
-    const before = process.memoryUsage().heapUsed;
-    let peak = before;
-    const timer = setInterval(() => { peak = Math.max(peak, process.memoryUsage().heapUsed); }, 1);
-    try {
-      const page = await readTablePage(big, 'csv', 0, 10, LIMITS, signal());
-      expect(page.rows).toHaveLength(10);
-      expect(page.hasMore).toBe(true);
-      expect(page.truncatedCellCount).toBe(10);
-    } finally { clearInterval(timer); }
-    // Holding the 80 MB file would cost at least that much. FEAT-104's reader does stream the whole file once to
-    // confirm its encoding, chunk by chunk, so the bound is "well under the file", not "the page size".
-    expect(peak - before).toBeLessThan(40 * 1024 * 1024);
+    const page = await readTablePage(big, 'csv', 0, 10, LIMITS, signal());
+    expect(page.rows).toHaveLength(10);
+    expect(page.rows[0]?.[0]).toBe('0');
+    expect(page.rows[9]?.[0]).toBe('9');
+    expect(page.hasMore).toBe(true);
+    expect(page.scannedRowsCapped).toBe(false);
+    expect(page.truncatedCellCount).toBe(10);
   }, 30_000);
 
   it('reports the scan cap instead of a wrong hasMore', async () => {

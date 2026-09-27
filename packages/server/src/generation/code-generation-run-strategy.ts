@@ -67,6 +67,8 @@ export const GENERATION_SYSTEM_PROMPT = [
 export class CodeGenerationRunStrategy implements RunStrategy {
   constructor(private readonly deps: CodeGenerationRunStrategyDependencies) {}
 
+  cancelBuild(executionId: number): void { this.deps.runs.cancel(executionId); }
+
   async buildRun(task: TaskRow, execution: ExecutionRow): Promise<BuiltRun> {
     const uploads = this.deps.uploads.listByTask(task.id);
     const resolved = this.deps.inputs?.resolve(execution.id) ?? resolveGeneratedInputs(uploads);
@@ -75,13 +77,18 @@ export class CodeGenerationRunStrategy implements RunStrategy {
     this.deps.disclosure.verifyForTransmission(task.id, 'context');
     const budget = new GenerationBudget({ executionId: execution.id, attempts: this.deps.attempts, executions: this.deps.executions, limits: this.deps.limits ?? DEFAULT_BUDGET_LIMITS });
     const run = new GenerationRun(execution.id, task.id, budget);
-    await this.deps.fixtures.materializeFixtures(execution.id, resolved, run.signal);
-    const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: resolved.map((input) => this.inputFile(input.upload, input.inputName)), attemptLimit: budget.limits.maxAttempts });
-    const appText = execution.guidance ? [contract, 'The person reviewed an earlier attempt that did not succeed and added guidance; it follows their original request above. Use it.'] : [contract];
-    const built = this.deps.inner.buildRun(task, execution, { appText, guidance: execution.guidance });
     this.deps.runs.open(run);
-    const lifecycle = new GenerationLifecycle({ run, runs: this.deps.runs, versions: this.deps.versions, attempts: this.deps.attempts, logger: this.deps.logger, ...(this.deps.platform ? { platform: this.deps.platform } : {}), ...(this.deps.handOffToVerification ? { handOffToVerification: true } : {}) });
-    return { ...built, systemPrompt: GENERATION_SYSTEM_PROMPT, customTools: [...built.customTools, ...this.deps.tools.all()], lifecycle };
+    try {
+      await this.deps.fixtures.materializeFixtures(execution.id, resolved, run.signal);
+      const contract = renderCodeContract({ platform: this.deps.platform ?? process.platform, pythonVersion: this.deps.pythonVersion?.() ?? null, dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: resolved.map((input) => this.inputFile(input.upload, input.inputName)), attemptLimit: budget.limits.maxAttempts });
+      const appText = execution.guidance ? [contract, 'The person reviewed an earlier attempt that did not succeed and added guidance; it follows their original request above. Use it.'] : [contract];
+      const built = this.deps.inner.buildRun(task, execution, { appText, guidance: execution.guidance });
+      const lifecycle = new GenerationLifecycle({ run, runs: this.deps.runs, versions: this.deps.versions, attempts: this.deps.attempts, logger: this.deps.logger, ...(this.deps.platform ? { platform: this.deps.platform } : {}), ...(this.deps.handOffToVerification ? { handOffToVerification: true } : {}) });
+      return { ...built, systemPrompt: GENERATION_SYSTEM_PROMPT, customTools: [...built.customTools, ...this.deps.tools.all()], lifecycle };
+    } catch (cause) {
+      this.deps.runs.close(execution.id);
+      throw cause;
+    }
   }
 
   /** How the contract names one input: its stored filename and, for a workbook, its disclosed sheets in order. */

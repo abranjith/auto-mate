@@ -131,7 +131,7 @@ describe('artifacts end to end', () => {
   });
 
   it('limit breach: the output-bytes kill settles failed, and what was written before it still registers and downloads', async () => {
-    const { h, base, list } = await runThrough(writes({ 'part-1.csv': 'x,y\n1,2\n' }, null, { stdout: '', stderr: describeLimitBreach('output_bytes'), exitCode: 94, outcome: 'errored' }));
+    const { h, base, list } = await runThrough(writes({ 'part-1.csv': 'x,y\n1,2\n' }, null, { stdout: '', stderr: describeLimitBreach('output_bytes'), exitCode: 94, outcome: 'errored', limitBreached: 'output_bytes' }));
     expect(h.repos.scriptRuns.getByExecution(h.execution.id)).toMatchObject({ status: 'failed', limitBreached: 'output_bytes', artifactCount: 1 });
     expect(h.repos.executions.getById(h.execution.id)).toMatchObject({ status: 'failed', errorCode: 'SCRIPT_LIMIT_EXCEEDED' });
     const download = await fetch(`${base}/api/artifacts/${list.artifacts[0]!.id}/download`);

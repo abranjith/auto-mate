@@ -54,6 +54,8 @@ export interface BuiltRun {
 /** Prompt/tool projection replaced by FEAT-106 without changing session orchestration. */
 export interface RunStrategy {
   buildRun(task: TaskRow, execution: ExecutionRow): BuiltRun | Promise<BuiltRun>;
+  /** Cancel work while buildRun is still preparing the provider session. */
+  cancelBuild?(executionId: number): void;
 }
 
 /** Send only the words the person typed and register no custom tools. */

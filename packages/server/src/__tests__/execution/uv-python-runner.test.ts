@@ -63,11 +63,22 @@ describe('UvPythonRunner', () => {
       const { runner } = setup(() => ({ exitCode: code }));
       const result = await runner.run(request());
       expect(result.outcome).toBe(outcome);
-      if (code === 93) expect(result.stderr).toContain('memory limit');
-      if (code === 94) expect(result.stderr).toContain('output');
+      if (code === 93 || code === 94) {
+        expect(result.limitBreached).toBeNull();
+        expect(result.stderr).toBe('');
+      }
     }
     expect(outcomeOf({ aborted: true, timedOut: false, exitCode: null } as never)).toBe('aborted');
     expect(outcomeOf({ aborted: false, timedOut: true, exitCode: null } as never)).toBe('timed_out');
+  });
+
+  it('recognizes a launcher-marked limit but leaves an unmarked reserved exit alone', async () => {
+    const marked = setup(() => ({ exitCode: 93, stderr: 'AUTOMATE_LAUNCH_LIMIT:memory\n' }));
+    const result = await marked.runner.run(request());
+    expect(result.limitBreached).toBe('memory');
+    expect(result.stderr).toContain('memory limit');
+    const plain = setup(() => ({ exitCode: 94, stderr: 'script chose 94' }));
+    expect(await plain.runner.run(request())).toMatchObject({ limitBreached: null, stderr: 'script chose 94' });
   });
 
   it('uses a POSIX process group outside Windows', async () => {

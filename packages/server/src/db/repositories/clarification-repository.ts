@@ -77,6 +77,29 @@ export class ClarificationRepository {
     } catch (cause) { throw new RepositoryError('Prior clarification answers could not be read.', cause); }
   }
 
+  /** Bounded application text from answered agent questions on earlier executions. */
+  priorAgentAnswersForTask(taskId: number, beforeExecutionId: number, maxChars = 4_000): readonly string[] {
+    try {
+      const executions = this.connection.db.select({ id: execution.id }).from(execution)
+        .where(eq(execution.taskId, taskId)).all().filter(({ id }) => id < beforeExecutionId);
+      if (executions.length === 0) return [];
+      const batches = this.connection.db.select().from(clarification)
+        .where(and(inArray(clarification.executionId, executions.map(({ id }) => id)), eq(clarification.source, 'agent'), eq(clarification.status, 'answered')))
+        .orderBy(desc(clarification.id)).all();
+      const answers: string[] = [];
+      const seen = new Set<string>();
+      let remaining = maxChars;
+      for (const question of this.questionsFor(batches.map(({ id }) => id)).sort((a, b) => b.id - a.id)) {
+        if (!question.answer || seen.has(question.promptText) || remaining <= 0) continue;
+        seen.add(question.promptText);
+        const text = `${question.promptText}: ${question.answer}`.slice(0, remaining);
+        answers.push(text);
+        remaining -= text.length;
+      }
+      return answers.reverse();
+    } catch (cause) { throw new RepositoryError('Prior agent clarification answers could not be read.', cause); }
+  }
+
   private questionsFor(ids: readonly number[]): ClarificationQuestionRow[] { return ids.length === 0 ? [] : this.connection.db.select().from(clarificationQuestion).where(inArray(clarificationQuestion.clarificationId, [...ids])).orderBy(asc(clarificationQuestion.clarificationId), asc(clarificationQuestion.position)).all(); }
   private settle(id: number, status: 'declined' | 'cancelled', declineReason: 'question_limit' | 'waiting_capacity' | null): void { try { this.connection.db.update(clarification).set({ status, declineReason, settledAt: this.now() }).where(eq(clarification.id, id)).run(); } catch (cause) { throw new RepositoryError('The clarification could not be settled.', cause); } }
 }

@@ -5,7 +5,7 @@ Auto-Mate currently opens as a local developer preview. Its browser shell lets y
 
 ## What It Does
 
-- The header links to **New task**, **History**, and **Settings**. **New task** and **History** each explain which later feature will fill them. **Settings** is a working page for choosing an AI provider and model; see [AI provider configuration](provider-configuration.md). Unknown browser paths show a “Page not found” message.
+- The header links to **New task**, **History**, **Saved tasks**, and **Settings**. These pages are active; see the [usage guide](../usage.md) for their workflows. Unknown browser paths show a “Page not found” message.
 - The theme button switches between light and dark modes. The choice is saved in browser storage when available; otherwise, the shell starts with the operating system preference.
 - The header checks server health while the shell is open. It shows a connected state with the database schema version, a degraded state when the database check fails, or guidance to start the server when it cannot connect.
 - Server startup checks prerequisites, creates the application data directories, opens its SQLite database, and applies the committed migration. A missing `uv` or Python installation produces a warning; failed Node, pnpm, or `node:sqlite` checks stop startup.
@@ -20,7 +20,7 @@ pnpm doctor
 pnpm dev
 ```
 
-Open `http://127.0.0.1:5173/` in a browser. The development server forwards `/api` requests to the local API server at `http://127.0.0.1:4317/`. Select a navigation link to move between pages, or use the header button to switch themes. You can check the API directly with `GET http://127.0.0.1:4317/api/health`.
+Open `http://127.0.0.1:5173/` in a browser. `pnpm dev` starts the API and browser servers together; the API server restarts when its source files change. The browser server forwards HTTP `/api` requests and `/api/ws` WebSocket connections to the local API server at `http://127.0.0.1:4317/`. Select a navigation link to move between pages, or use the header button to switch themes. You can check the API directly with `GET http://127.0.0.1:4317/api/health` or through the browser server at `GET http://127.0.0.1:5173/api/health`.
 
 The [core](../../packages/core/package.json), [server](../../packages/server/package.json), and [web](../../packages/web/package.json) packages each provide a `test` command. The web package also provides `build`.
 
@@ -32,10 +32,10 @@ API errors return `{ "error": { "code": "...", "message": "...", "correlationId"
 
 ## Configuration and Permissions
 
-The server listens on `127.0.0.1:4317` by default. `AUTOMATE_HOST`, `AUTOMATE_PORT`, and `LOG_LEVEL` configure the server; the Vite development proxy is set to port 4317. `AUTOMATE_HOME` changes the application data root from `~/.automate/`. Startup creates `data/`, `artifacts/`, `uploads/`, `scripts/`, `env/`, `config/`, `pi/`, and `agent-sessions/` there, and stores the SQLite database at `data/automate.db`. The last three hold agent configuration and session files, described in [AI provider configuration](provider-configuration.md).
+The server listens on `127.0.0.1:4317` by default. `AUTOMATE_HOST`, `AUTOMATE_PORT`, and `LOG_LEVEL` configure the server; the Vite development proxy targets port 4317. Vite requires port 5173 and reports an error if it is occupied, because the development origin check permits that port. `AUTOMATE_HOME` changes the application data root from `~/.automate/`. Startup creates `data/`, `artifacts/`, `uploads/`, `scripts/`, `env/`, `config/`, `pi/`, and `agent-sessions/` there, and stores the SQLite database at `data/automate.db`. The last three hold agent configuration and session files, described in [AI provider configuration](provider-configuration.md).
 
 This single-user preview has no login or user roles. The browser stores the optional theme preference under `automate-theme`.
 
 ## Limitations
 
-The **New task** and **History** pages are placeholders: this bootstrap does not yet provide task entry, uploads, or execution history. Provider settings live on the **Settings** page and are described in [AI provider configuration](provider-configuration.md). The preview does not run generated code or provide an execution isolation boundary. The server's loopback default is a local access setting, not an isolation boundary.
+This bootstrap feature provides the workspace, health checks, and app shell. Task entry, uploads, execution, history, and saved tasks are implemented by later features; see the [usage guide](../usage.md). Provider settings are described in [AI provider configuration](provider-configuration.md). The preview has no execution isolation boundary. The server's loopback default is a local access setting, not an isolation boundary.

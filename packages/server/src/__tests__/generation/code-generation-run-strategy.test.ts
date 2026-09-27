@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { assemblePromptContext, renderCodeContract } from '@automate/core';
@@ -18,6 +18,27 @@ const fixturesDir = (h: GenerationHarness) => path.join(h.store.paths.scriptsDir
 const contractFor = (h: GenerationHarness) => renderCodeContract({ platform: 'linux', pythonVersion: '3.12.4', dependencies: SCRIPT_DEPENDENCY_SET.map(({ name }) => name), inputFiles: [{ filename: h.upload!.storedFilename, format: 'csv', sheets: [] }], attemptLimit: 3 });
 
 describe('CodeGenerationRunStrategy', () => {
+  it('cancels fixture preparation before a provider session is opened', async () => {
+    const h = await harness();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    let preparing!: () => void;
+    const started = new Promise<void>((resolve) => { preparing = resolve; });
+    vi.spyOn(h.fixtureService, 'materializeFixtures').mockImplementation(async (_id, _inputs, signal) => {
+      preparing();
+      await pending;
+      signal.throwIfAborted();
+      return [];
+    });
+    const settled = h.run();
+    await started;
+    const abort = h.registry.abort(h.execution.id);
+    release();
+    expect(await abort).toMatchObject({ status: 'aborted' });
+    expect(await settled).toMatchObject({ status: 'aborted' });
+    expect(h.provider.opened).toHaveLength(0);
+    expect(h.runs.get(h.execution.id)).toBeUndefined();
+  });
   it('sends exactly the consent snapshot, the person\'s words, and the contract — reconstructed byte for byte', async () => {
     const h = await harness();
     await h.run();

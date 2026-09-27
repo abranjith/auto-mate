@@ -122,6 +122,7 @@ export class FakeAgentSession implements AgentSession {
   /** Emit the next scripted batch and return its result. @param prompt The prompt text, recorded for assertions. @returns The scripted terminal result, or an aborted one after `abort()`. @throws Error when the session is closed, matching the real session's misuse behavior. @example await fake.run('go') */
   async run(prompt: string): Promise<AgentRunResult> {
     if (this.closed) throw new Error('run() was called on a closed session');
+    if (this.aborted) return { outcome: 'aborted', stopReason: 'aborted', usage: { turns: 0 } };
     this.prompts.push(prompt);
     const scripted = this.script[this.runIndex];
     this.runIndex += 1;

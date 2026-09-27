@@ -12,6 +12,7 @@ export const PYTHON_INSTALL_HINT = `uv python install ${PINNED_PYTHON_VERSION}`;
 
 /** Server variables and credential-shaped values withheld from generated code. Hygiene, not isolation. */
 export const WITHHELD_ENV = /^(?:AUTOMATE_.*|VIRTUAL_ENV|.*(?:API_KEY|_TOKEN|_SECRET|PASSWORD|CREDENTIALS?))$/i;
+const LAUNCH_LIMIT_MARKER = /(?:^|\n)AUTOMATE_LAUNCH_LIMIT:(memory|output_bytes)\r?\n?/;
 
 export interface UvPythonRunnerOptions {
   readonly envDir: string;
@@ -62,8 +63,11 @@ export class UvPythonRunner implements PythonRunner {
       cwd: request.workingDir, env: this.childEnv(request.env), timeoutMs: request.timeoutMs, signal: request.signal,
       ...(request.args[0]?.endsWith('.py') && request.env.AUTOMATE_OUTPUT_DIR ? { outputWatch: { dir: request.env.AUTOMATE_OUTPUT_DIR, limits: { maxFileBytes: this.options.maxOutputFileBytes ?? SCRIPT_MAX_OUTPUT_FILE_BYTES, maxTotalBytes: this.options.maxOutputTotalBytes ?? SCRIPT_MAX_OUTPUT_TOTAL_BYTES, maxFiles: this.options.maxOutputFiles ?? SCRIPT_MAX_OUTPUT_FILES, ...(this.options.outputWatchIntervalMs ? { intervalMs: this.options.outputWatchIntervalMs } : {}) } } } : {}),
     });
-    const stderr = result.limitBreached && result.limitBreached !== 'time' ? describeLimitBreach(result.limitBreached) : result.exitCode === 93 ? describeLimitBreach('memory') : result.exitCode === 94 ? describeLimitBreach('output_bytes') : result.stderr;
-    return { outcome: outcomeOf(result), exitCode: result.exitCode, stdout: result.stdout, stderr, droppedBytes: result.droppedBytes, durationMs: result.durationMs };
+    const marker = result.stderr.match(LAUNCH_LIMIT_MARKER);
+    const launcherBreach = (result.exitCode === 93 && marker?.[1] === 'memory') || (result.exitCode === 94 && marker?.[1] === 'output_bytes') ? marker[1] as 'memory' | 'output_bytes' : null;
+    const limitBreached = result.limitBreached ?? launcherBreach;
+    const stderr = limitBreached && limitBreached !== 'time' ? describeLimitBreach(limitBreached) : result.stderr;
+    return { outcome: outcomeOf(result), exitCode: result.exitCode, stdout: result.stdout, stderr, droppedBytes: result.droppedBytes, durationMs: result.durationMs, limitBreached };
   }
 
   private arguments(args: readonly string[]): readonly string[] {

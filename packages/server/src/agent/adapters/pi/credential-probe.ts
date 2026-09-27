@@ -46,7 +46,7 @@ export interface ProbeProvidersOptions {
 }
 
 /** The provider environment variable Pi reads for each known provider key. */
-const PROVIDER_ENV_VARS: Readonly<Record<string, string>> = {
+export const PROVIDER_ENV_VARS: Readonly<Record<string, string>> = {
   anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',
   google: 'GEMINI_API_KEY',

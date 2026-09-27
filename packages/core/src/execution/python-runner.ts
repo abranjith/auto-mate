@@ -55,6 +55,8 @@ export interface PythonRunResult {
   /** Output bytes dropped once the capture bound was reached. */
   readonly droppedBytes: number;
   readonly durationMs: number;
+  /** Limit confirmed by the process watchdog or the trusted launcher. */
+  readonly limitBreached?: 'time' | 'memory' | 'output_bytes' | 'output_files' | null;
 }
 
 /** Runs Python for the application. FEAT-108 owns the production implementation. */

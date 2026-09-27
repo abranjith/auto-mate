@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Server } from 'node:http';
 import pino from 'pino';
+import { ExecutionLimitReachedError } from '@automate/core';
 import { FakeAgentProvider } from '../agent/testing/fake-agent-provider';
 import { createApp } from '../app';
 import {
@@ -79,6 +80,25 @@ afterEach(async () => {
 const headers = { 'content-type': 'application/json' };
 
 describe('task REST surface', () => {
+  it('settles a committed execution when capacity is lost before start', async () => {
+    const tasks = new TaskRepository(connection);
+    const executions = new ExecutionRepository(connection);
+    const secondConfig = { ...config, port: 0 };
+    const app = createApp({ logger: pino({ level: 'silent' }), dataRoot: root, version: 'test', paths, getSchemaVersion: () => '2', serverConfig: secondConfig,
+      conversation: { tasks, executions, events: new ConversationEventRepository(connection), registry: { assertCapacity: () => undefined, start: () => { throw new ExecutionLimitReachedError(); } } as never } });
+    const other = app.listen(0, '127.0.0.1');
+    await new Promise<void>((resolve) => other.once('listening', resolve));
+    try {
+      const address = other.address();
+      if (!address || typeof address === 'string') throw new Error('no address');
+      secondConfig.port = address.port;
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/tasks`, { method: 'POST', headers, body: JSON.stringify({ prompt: 'race' }) });
+      expect(response.status).toBe(409);
+      expect((connection.client.prepare('SELECT status FROM execution ORDER BY id DESC LIMIT 1').get() as { status: string }).status).toBe('failed');
+    } finally {
+      await new Promise<void>((resolve) => other.close(() => resolve()));
+    }
+  });
   it('creates a task immediately and replays its transcript', async () => {
     const created = await fetch(`${base}/api/tasks`, {
       method: 'POST',

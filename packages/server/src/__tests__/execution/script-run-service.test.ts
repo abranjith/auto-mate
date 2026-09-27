@@ -58,6 +58,7 @@ describe('ScriptRunService', () => {
     ['a zero exit with no manifest', { result: { exitCode: 0, outcome: 'passed' } } as FakePythonRun, 'failed', 'The script finished but did not say what it produced.'],
     ['a manifest declaring a file that is not on disk', producing(['a.csv', 'b.csv'], ['a.csv']), 'failed', 'The script said it would produce 2 files, but 1 of them was not written.'],
     ['a non-zero exit', { result: { exitCode: 3, outcome: 'errored', stderr: 'Traceback…' } } as FakePythonRun, 'failed', 'The script stopped with an error (exit code 3) before it finished. Its output is shown below.'],
+    ['an unmarked reserved exit', { result: { exitCode: 93, outcome: 'failed', stderr: 'script chose 93' } } as FakePythonRun, 'failed', 'The script stopped with an error (exit code 93) before it finished. Its output is shown below.'],
     ['a timeout', { result: { exitCode: null, outcome: 'timed_out' } } as FakePythonRun, 'timed_out', 'The script ran longer than 15 minutes and was stopped. Nothing it produced has been kept as a result.'],
   ])('settles %s with a message a non-programmer can act on', async (_name, run, status, message) => {
     const h = await atGate(run);
@@ -82,7 +83,7 @@ describe('ScriptRunService', () => {
   });
 
   it('persists an output limit separately from a user abort', async () => {
-    const h = await atGate({ result: { exitCode: null, outcome: 'errored', stderr: describeLimitBreach('output_bytes') } });
+    const h = await atGate({ result: { exitCode: null, outcome: 'errored', stderr: describeLimitBreach('output_bytes'), limitBreached: 'output_bytes' } });
     const row = await approveAndRun(h);
     expect(row).toMatchObject({ status: 'failed', limitBreached: 'output_bytes' });
     expect(h.repos.executions.getById(h.execution.id)).toMatchObject({ status: 'failed', errorCode: 'SCRIPT_LIMIT_EXCEEDED' });

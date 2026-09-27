@@ -265,7 +265,7 @@ describe('cancellation matrix: shared preparation, limits, and drain', () => {
 
   it('a limit-driven kill and a user abort are distinguishable in storage', async () => {
     const timed = await gated({ pythonRuns: [{}, {}, { result: { outcome: 'timed_out', exitCode: null } }] });
-    const memory = await gated({ pythonRuns: [{}, {}, { result: { outcome: 'failed', exitCode: 93, stderr: 'memory limit' } }] });
+    const memory = await gated({ pythonRuns: [{}, {}, { result: { outcome: 'failed', exitCode: 93, stderr: 'memory limit', limitBreached: 'memory' } }] });
     const cancelled = await gated({ pythonRuns: [{}, {}, { waitUntil: hang() }] });
     for (const h of [timed, memory]) { await h.runToGate(); await h.approve(); await h.scriptRun.run(h.execution.id, new AbortController().signal); }
     await cancelled.runToGate();

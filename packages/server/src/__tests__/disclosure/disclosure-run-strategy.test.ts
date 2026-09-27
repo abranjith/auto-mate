@@ -26,6 +26,14 @@ describe('DisclosureRunStrategy', () => {
     expect(verify).not.toHaveBeenCalled(); expect(record).not.toHaveBeenCalled();
   });
 
+  it('carries answered agent questions into an attachment retry as application text', () => {
+    const record = vi.fn(() => ({ id: 9, executionId: 8, consentId: 2, kind: 'context', payloadDigest: consent.payloadDigest, payloadSnapshot: null, byteSize: 14, summary: '{}', provider: 'test', model: 'fake', at: new Date() }));
+    const strategy = new DisclosureRunStrategy({ disclosure: { verifyForTransmission: () => consent } as never, transmissions: { record } as never, uploads: { listByTask: () => [{}] } as never, clarifications: { listByExecution: () => [], priorAgentAnswersForTask: () => ['Which region?: South'] } as never, executions: { getById: () => execution } as never, clarificationTool: tool });
+    const built = strategy.buildRun(task, execution);
+    expect(built.prompt).toContain('Which region?: South');
+    expect(built.prompt).toBe(assemblePromptContext({ userPrompt: 'Summarize', disclosure: { text: 'APPROVED BYTES', consentId: 2 }, appText: ['Which region?: South'] }).text);
+  });
+
   it('filters diagnostics before storing or returning them', () => {
     const record = vi.fn((input) => ({ id: 10, ...input, summary: JSON.stringify(input.summary), at: new Date() }));
     const strategy = new DisclosureRunStrategy({ disclosure: { verifyForTransmission: () => consent } as never, transmissions: { record } as never, uploads: { listByTask: () => [{}] } as never, clarifications: { listByExecution: () => [] } as never, executions: { getById: () => execution } as never, clarificationTool: tool });

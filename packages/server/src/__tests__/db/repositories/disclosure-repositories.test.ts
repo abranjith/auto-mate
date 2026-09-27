@@ -6,6 +6,7 @@ import { ensureAppDirectories, getAppPaths } from '../../../config/app-paths';
 import { openDatabase, type DatabaseConnection } from '../../../db/client';
 import { migrateDatabase } from '../../../db/migrate';
 import { TaskRepository } from '../../../db/repositories/task-repository';
+import { ExecutionRepository } from '../../../db/repositories/execution-repository';
 import { DisclosureConsentRepository } from '../../../db/repositories/disclosure-consent-repository';
 import { DisclosureTransmissionRepository } from '../../../db/repositories/disclosure-transmission-repository';
 import { ClarificationRepository } from '../../../db/repositories/clarification-repository';
@@ -43,5 +44,23 @@ describe('disclosure persistence', () => {
     expect(() => repository.open({ executionId: created.execution.id, source: 'agent', questions: [{ impact: 'cosmetic' as 'meaning', promptText: 'Style?', rationale: 'None', proposedDefault: 'a' }] })).toThrow();
     connection.client.prepare('DELETE FROM task WHERE id = ?').run(created.task.id);
     expect((connection.client.prepare('SELECT count(*) count FROM clarification').get() as { count: number }).count).toBe(0);
+  });
+
+  it('returns bounded answered agent questions from earlier task runs only', () => {
+    const connection = database();
+    const tasks = new TaskRepository(connection);
+    const executions = new ExecutionRepository(connection);
+    const created = tasks.createWithExecution('ask');
+    const repository = new ClarificationRepository(connection);
+    const old = repository.open({ executionId: created.execution.id, source: 'agent', questions: [{ impact: 'meaning', promptText: 'Which region?', rationale: 'Meaning', proposedDefault: 'North' }] });
+    repository.answer(old.id, [{ questionId: old.questions[0]!.id, value: 'South' }]);
+    executions.markSettled(created.execution.id, { status: 'failed' });
+    const retry = executions.createRetry(created.execution.id, 'again');
+    expect(repository.priorAgentAnswersForTask(created.task.id, retry.id)).toEqual(['Which region?: South']);
+    expect(repository.priorAgentAnswersForTask(created.task.id, retry.id, 8)).toEqual(['Which re']);
+    const newer = repository.open({ executionId: created.execution.id, source: 'agent', questions: [{ impact: 'meaning', promptText: 'Which region?', rationale: 'Meaning', proposedDefault: 'North' }] });
+    repository.answer(newer.id, [{ questionId: newer.questions[0]!.id, value: 'West' }]);
+    expect(repository.priorAgentAnswersForTask(created.task.id, retry.id)).toEqual(['Which region?: West']);
+    expect(repository.priorAgentAnswersForTask(created.task.id, created.execution.id)).toEqual([]);
   });
 });

@@ -27,7 +27,7 @@ pnpm doctor
 pnpm dev
 ```
 
-Keep the terminal open, then visit <http://127.0.0.1:5173/>. Stop the development servers with `Ctrl+C`.
+Keep the terminal open, then visit <http://127.0.0.1:5173/>. The terminal should report that the API server is listening, and the page header should show **Server connected**. You can check the browser's API proxy at <http://127.0.0.1:5173/api/health>. Port 5173 must be free: the browser server reports an error instead of choosing another port. Stop the development servers with `Ctrl+C`.
 
 On first startup, Auto-Mate creates its SQLite database and local storage beneath `~/.automate/`. To use another writable location, set `AUTOMATE_HOME` before starting the app:
 
@@ -79,16 +79,16 @@ For a task with files:
 3. On **Review what will leave this machine**, verify the provider and model, the exact text, byte count, truncation notices, and any required choices.
 4. Decide whether filtered repair diagnostics may be sent. This choice is on by default; uncheck it to withhold that separate scope. Without it, the run stops at its first test run instead of repairing the script.
 5. Answer every required pre-flight choice, then select **Approve and start**.
-6. Follow the task page. A progress line such as **Attempt 2 of 3 — repairing the script** shows where the run is. Each tested version appears as an attempt card, followed by its test result and a note that the tests ran on synthetic rows and your real file has not been read. A final summary line appears when generation ends.
+6. Follow the task page. Its connection indicator should reach **Live** as the browser receives progress over the development server's WebSocket proxy. A progress line such as **Attempt 2 of 3 — repairing the script** shows where the run is. Each tested version appears as an attempt card, followed by its test result and a note that the tests ran on synthetic rows and your real file has not been read. A final summary line appears when generation ends.
 7. Wait while the transcript shows **Checking the code…**, then read the report under **Code check results**. If a check blocks, the run fails with a readable verdict. If the runtime is still being prepared, the transcript says so.
 8. At **Before you run**, read what it will read and write, the checks, the runtime line, and the three caveats. If there are advisory findings, tick the confirmation box. Select **Run it** to run the script on a verified copy of your file, or **Cancel**. Nothing runs on your file before **Run it**; **Stop the run** stops it while it runs.
 9. Read **What it produced** and the total bytes written. If a run exceeds a limit, the result names the limit; see [Usage](usage.md#understand-and-change-runtime-limits). Then answer **Did this do what you wanted?** with **Yes, this is what I wanted**, or **No — here's what's wrong** to describe the problem (up to 2,000 characters) and start a new linked run with **Try again with this**.
 
 The browser first records consent, then creates the task with that consent and your required choices. If the file description, file set, provider, or model changes, the approval is stale and the preview must be refreshed and approved again. Auto-Mate sends the approved bounded description, not the original file bytes, as provider context.
 
-A run with files is completed only when you select **Yes, this is what I wanted**. If generation, the checks, or the run on your file fails, the page shows **Tell me what I got wrong and I'll try again.** Enter optional guidance and select **Try again** to start a new linked run that reuses your approval.
+A run with files is completed only when you select **Yes, this is what I wanted**. If generation, the checks, or the run on your file fails, the page shows **Tell me what I got wrong and I'll try again.** Enter optional guidance and select **Try again** to start a new linked run that reuses your approval and includes answers you gave to the agent's questions on earlier runs of the task.
 
-If the agent needs a meaning-changing or data-loss decision, the run changes to **Waiting** and shows all questions together with rationales and proposed defaults. Answer every question and select **Send answers** to resume. You can still cancel a waiting run. A disclosure line in the transcript can be expanded to load the exact stored bytes for that transmission.
+If the agent needs a meaning-changing or data-loss decision, the run changes to **Waiting** and shows all questions together with rationales and proposed defaults. Answer every question and select **Send answers** to resume. You can select **Cancel run** even immediately after starting a task or while synthetic test data is being prepared; the run settles as **Cancelled**. If cancellation arrives before the provider session opens, no provider run starts. You can also cancel a waiting run. A disclosure line in the transcript can be expanded to load the exact stored bytes for that transmission.
 
 If the browser disconnects, the server-side run continues and the page reconnects from persisted history. If the server restarts during a live or waiting run, that in-memory run cannot resume and is recorded as interrupted. A run waiting at **Before you run** or for your review survives a restart unchanged.
 

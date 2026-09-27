@@ -11,7 +11,7 @@ import { StubPiSession, assistantMessage as assistant, rawEvent as raw } from '.
 
 const logger = pino({ level: 'silent' });
 const temporary: string[] = [];
-afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+afterEach(() => { temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })); vi.unstubAllEnvs(); });
 
 /** A runtime stub that knows one provider's models and reports one credential status. */
 function stubRuntimeFactory(options: { models?: string[]; status?: { configured: boolean; source?: string } } = {}): ModelRuntimeFactory {
@@ -135,6 +135,16 @@ describe('PiAgentProvider.open', () => {
 });
 
 describe('PiSession.run', () => {
+  it('scrubs the selected provider key supplied by its environment variable', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'ordinary-value-from-env');
+    const session = new StubPiSession([[raw({ type: 'message_update', message: assistant(), assistantMessageEvent: { type: 'text_delta', delta: 'saw ordinary-value-from-env' } })]]);
+    const live = await harness({ session }).open();
+    const seen: AgentEvent[] = [];
+    live.subscribe((event) => seen.push(event));
+    await live.run('go');
+    expect(seen).toContainEqual(expect.objectContaining({ type: 'assistant_text', text: 'saw [redacted]' }));
+    await live.close();
+  });
   it('returns completed with usage aggregated across two turns', async () => {
     const session = new StubPiSession([[
       raw({ type: 'turn_end', message: assistant({ usage: { input: 100, output: 20, cost: { total: 0.001 } } }), toolResults: [] }),

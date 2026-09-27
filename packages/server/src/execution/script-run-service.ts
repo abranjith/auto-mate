@@ -245,11 +245,7 @@ export class ScriptRunService {
 
   private breach(result: PythonRunResult | null): LimitBreach | null {
     if (!result) return null;
-    if (result.outcome === 'timed_out') return 'time';
-    if (result.exitCode === 93) return 'memory';
-    if (result.exitCode === 94) return 'output_bytes';
-    for (const kind of ['memory', 'output_bytes', 'output_files'] as const) if (result.stderr === describeLimitBreach(kind)) return kind;
-    return null;
+    return result.limitBreached ?? (result.outcome === 'timed_out' ? 'time' : null);
   }
 
   /** The gate refused before a row existed: settle the execution with the reason and spawn nothing. */

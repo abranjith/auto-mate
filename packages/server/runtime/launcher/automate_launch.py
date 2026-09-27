@@ -13,6 +13,13 @@ import sys
 
 MEMORY_EXIT = 93
 FILE_SIZE_EXIT = 94
+LIMIT_MARKER = "AUTOMATE_LAUNCH_LIMIT:"
+
+
+def limit_exit(kind, code):
+    """Mark a launcher-enforced limit before returning its reserved code."""
+    os.write(2, (LIMIT_MARKER + kind + "\n").encode())
+    return code
 
 
 def apply_limits(platform=None, resource_module=None):
@@ -35,16 +42,18 @@ def main():
     entrypoint = os.path.abspath(sys.argv[1])
     apply_limits()
     if sys.platform != "win32":
-        signal.signal(signal.SIGXFSZ, lambda _signum, _frame: os._exit(FILE_SIZE_EXIT))
+        signal.signal(signal.SIGXFSZ, lambda _signum, _frame: os._exit(limit_exit("output_bytes", FILE_SIZE_EXIT)))
     sys.path.insert(0, os.path.dirname(entrypoint))
     sys.argv = [entrypoint, *sys.argv[2:]]
     try:
         runpy.run_path(entrypoint, run_name="__main__")
     except MemoryError:
-        return MEMORY_EXIT
+        if sys.platform == "win32" or int(os.environ.get("AUTOMATE_MEMORY_LIMIT_BYTES", "0")) <= 0:
+            raise
+        return limit_exit("memory", MEMORY_EXIT)
     except OSError as error:
-        if error.errno == errno.EFBIG:
-            return FILE_SIZE_EXIT
+        if sys.platform != "win32" and error.errno == errno.EFBIG:
+            return limit_exit("output_bytes", FILE_SIZE_EXIT)
         raise
     return 0
 

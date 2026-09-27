@@ -15,6 +15,7 @@ import { ExecutionRepository } from '../../db/repositories/execution-repository'
 import { TaskRepository } from '../../db/repositories/task-repository';
 import { createLogger } from '../../logging/logger';
 import { PassthroughRunStrategy } from '../../conversation/run-strategy';
+import type { RunStrategy } from '../../conversation/run-strategy';
 import { TaskSession } from '../../conversation/task-session';
 import { TextCoalescer } from '../../conversation/text-coalescer';
 
@@ -37,6 +38,7 @@ afterEach(() => {
 function fixture(
   provider: FakeAgentProvider,
   seed?: (events: ConversationEventRepository, executionId: number) => void,
+  strategy: RunStrategy = new PassthroughRunStrategy(),
 ) {
   const tasks = new TaskRepository(connection);
   const executions = new ExecutionRepository(connection);
@@ -50,7 +52,7 @@ function fixture(
     provider,
     executions,
     events,
-    strategy: new PassthroughRunStrategy(),
+    strategy,
     paths,
     model: { provider: 'fake', id: 'fake-model' },
     auth: { mode: 'managed' },
@@ -60,6 +62,31 @@ function fixture(
 }
 
 describe('TaskSession', () => {
+  it('settles an abort during buildRun before opening or running the provider', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const provider = new FakeAgentProvider();
+    const f = fixture(provider, undefined, { buildRun: async () => { await pending; return { prompt: 'do work', customTools: [] }; } });
+    const settled = f.session.start();
+    await f.session.abort();
+    release();
+    expect(await settled).toMatchObject({ status: 'aborted', usageTurns: 0 });
+    expect(provider.opened).toHaveLength(0);
+    expect(f.events.listAfter(f.execution.id, 0, 100).events.at(-1)).toMatchObject({ type: 'state_changed', to: 'aborted' });
+  });
+
+  it('reuses a sequence number after an append failure', () => {
+    const f = fixture(new FakeAgentProvider());
+    const append = f.events.append.bind(f.events);
+    let fail = true;
+    vi.spyOn(f.events, 'append').mockImplementation((...args) => {
+      if (fail) { fail = false; throw new Error('database unavailable'); }
+      return append(...args);
+    });
+    expect(() => f.session.appendApplicationEvent({ type: 'user_prompt', text: 'first', at: '2026-09-26T00:00:00.000Z' })).toThrow('database unavailable');
+    f.session.appendApplicationEvent({ type: 'user_prompt', text: 'retry', at: '2026-09-26T00:00:00.000Z' });
+    expect(f.events.listAfter(f.execution.id, 0, 100).events.map(({ seq }) => seq)).toEqual([1]);
+  });
   it('persists before broadcasting a gap-free complete transcript', async () => {
     const provider = new FakeAgentProvider([
       {

@@ -6,6 +6,7 @@ import {
   ValidationError,
   type CreateTaskRequest,
   DisclosureConsentRequiredError,
+  AutoMateError,
 } from '@automate/core';
 import { Router } from 'express';
 import type { ServerConfig } from '../config/env';
@@ -93,7 +94,16 @@ export function taskRoute(deps: TaskRouteDependencies): Router {
         // Files move only after commit; a failed move marks that upload, never the task.
         if (uploads && claimed.length > 0)
           await uploads.moveAttached(created.task.id, claimed);
-        deps.registry.start(created.execution, created.task);
+        try {
+          deps.registry.start(created.execution, created.task);
+        } catch (cause) {
+          deps.executions.markSettled(created.execution.id, {
+            status: 'failed',
+            errorCode: cause instanceof AutoMateError ? cause.code : 'TASK_START_FAILED',
+            errorMessage: 'The task could not start. Create it again to retry.',
+          });
+          throw cause;
+        }
         response.status(201).json({
           task: presentTask(created.task),
           execution: presentExecution(
