@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ConversationEvent } from '@automate/core';
-import { ConversationView } from '../../../components/conversation/conversation-view';
+import { ConversationView, describeStateChange, joinAssistantText } from '../../../components/conversation/conversation-view';
 // Warm the lazily loaded markdown renderer once, so `findBy*` below measures
 // rendering, not the first transform of its module graph — which can exceed
 // the 1 s query timeout when the full workspace suite loads the CPU.
@@ -53,7 +53,36 @@ describe('ConversationView', () => {
       /token|\$/,
     );
     expect(screen.getByText('Readable failure')).toBeTruthy();
-    expect(screen.getByText(/Status changed/)).toBeTruthy();
+    expect(screen.getByText('Run ended: Done')).toBeTruthy();
+    expect(screen.queryByText(/Status changed/)).toBeNull();
+  });
+  it('shows one message for a reply that streamed in as several chunks', async () => {
+    // The chunk boundaries recorded from a real run, which used to render as six separate bubbles.
+    const chunks = ['Done. I created `main.py`, which:\n\n- Reads `1-sample-data.csv`\n- Sorts the rows', ' by Age\n- Creates an interactive scatter chart of Salary vs.', ' Age\n'];
+    const streamed: ConversationEvent[] = chunks.map((text, index) => ({ seq: index + 2, type: 'assistant_text', text, at }));
+    render(<ConversationView events={[{ seq: 1, type: 'user_prompt', text: 'Chart it', at }, ...streamed]} />);
+    await screen.findByLabelText('Assistant message');
+    expect(screen.getAllByLabelText('Assistant message')).toHaveLength(1);
+    expect(screen.getByText('Sorts the rows by Age')).toBeTruthy();
+  });
+  it('keeps replies separated by another event as separate messages', () => {
+    const split: ConversationEvent[] = [
+      { seq: 1, type: 'assistant_text', text: 'First', at },
+      { seq: 2, type: 'turn_finished', usage: { turns: 1 }, at },
+      { seq: 3, type: 'assistant_text', text: 'Second', at },
+    ];
+    expect(joinAssistantText(split).map((event) => event.type)).toEqual(['assistant_text', 'turn_finished', 'assistant_text']);
+    expect(joinAssistantText([])).toEqual([]);
+    expect(joinAssistantText([split[0]!, { ...split[2]!, seq: 2 }])).toEqual([{ ...split[0]!, text: 'FirstSecond' }]);
+  });
+  it.each([
+    ['generating', 'Writing code'],
+    ['verifying', 'Checking the code'],
+    ['awaiting_approval', 'Waiting for your go-ahead'],
+    ['failed', "Run ended: Didn't finish"],
+    ['completed', 'Run ended: Done'],
+  ] as const)('describes a move to %s as "%s"', (to, text) => {
+    expect(describeStateChange({ to })).toBe(text);
   });
   it('renders hostile markdown without executable DOM', async () => {
     const hostile: ConversationEvent = {

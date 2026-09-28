@@ -140,9 +140,24 @@ describe('HistoryRepository', () => {
     const retry = f.executions.createRetry(created.execution.id, 'Use the net amount');
     setStatus(f, retry.id, 'rejected');
     const feedback = f.executions.createFeedbackRetry(retry.id, 'Totals are wrong');
-    expect(f.history.getRunRecord(created.execution.id)?.chain).toEqual({ previous: null, next: [retry.id] });
-    expect(f.history.getRunRecord(retry.id)).toMatchObject({ chain: { previous: created.execution.id, next: [feedback.id] }, personWords: { guidance: 'Use the net amount' } });
-    expect(f.history.getRunRecord(feedback.id)?.chain).toEqual({ previous: retry.id, next: [] });
+    expect(f.history.getRunRecord(created.execution.id)?.chain).toEqual({ previous: null, next: [{ id: retry.id, runNumber: 2 }] });
+    expect(f.history.getRunRecord(retry.id)).toMatchObject({ chain: { previous: { id: created.execution.id, runNumber: 1 }, next: [{ id: feedback.id, runNumber: 3 }] }, personWords: { guidance: 'Use the net amount' } });
+    expect(f.history.getRunRecord(feedback.id)?.chain).toEqual({ previous: { id: retry.id, runNumber: 2 }, next: [] });
+  });
+
+  it('numbers runs within their own task, oldest first, however ids interleave across tasks', () => {
+    const f = fixture();
+    const first = f.tasks.createWithExecution('A');
+    f.executions.markSettled(first.execution.id, { status: 'failed' });
+    const other = f.tasks.createWithExecution('B'); // takes the next execution id
+    f.executions.markSettled(other.execution.id, { status: 'failed' });
+    const retry = f.executions.createRetry(first.execution.id, '');
+    expect(retry.id - first.execution.id).toBe(2);
+    const runs = f.history.listRuns(first.task.id, { limit: 20 }).items;
+    expect(runs.map((run) => [run.id, run.runNumber])).toEqual([[retry.id, 2], [first.execution.id, 1]]);
+    expect(f.history.listRuns(other.task.id, { limit: 20 }).items.map((run) => run.runNumber)).toEqual([1]);
+    expect(f.history.getRunRecord(retry.id)?.execution.runNumber).toBe(2);
+    expect(f.history.getRunRecord(other.execution.id)?.execution.runNumber).toBe(1);
   });
 
   it('selects none of the columns history must never read', () => {

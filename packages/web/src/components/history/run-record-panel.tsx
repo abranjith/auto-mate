@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { describeAsOf, describeCompatibilityStatus, describeRunState, ERROR_CODES, INTERRUPTION_MESSAGES, isSavedCodeRun, isTerminal, type CompatibilityReport, type RunRecord } from '@automate/core';
+import { describeAsOf, describeCompatibilityStatus, describeRunState, ERROR_CODES, formatDurationMs, INTERRUPTION_MESSAGES, isSavedCodeRun, isTerminal, type CompatibilityReport, type RunRecord } from '@automate/core';
 import { getTask } from '../../api/task-queries';
 import { getRunTimeline, useRunRecord } from '../../api/history-queries';
 import { ds } from '../../design-system/tokens';
@@ -51,10 +51,10 @@ export function RunRecordPanel({ executionId }: { executionId: number }) {
     {record.code ? <RecordSection title="Code" summary={`${savedRevision === undefined ? `Attempt ${record.code.attempt}` : `From saved task revision ${savedRevision}`} · ${record.code.shortDigest}${record.code.testsPassed === null ? '' : record.code.testsPassed ? ' · its own tests passed' : ' · its own tests failed'}`} executionId={executionId} detail="code" resourceId={record.code.id} {...(savedRevision === undefined ? {} : { savedRevisionNumber: savedRevision })} /> : null}
     {record.checks ? <RecordSection title="Checks" summary={[record.checks.summary, record.checks.runtime].filter(Boolean).join(' · ')} executionId={executionId} detail="checks" /> : null}
     {record.approval ? <RecordSection title="Approval" summary={`Approved ${new Date(record.approval.decidedAt).toLocaleString()}${record.approval.acknowledgedWarnings ? ' · you acknowledged the warnings' : ''}`} executionId={executionId} /> : null}
-    {record.scriptRun ? <RecordSection title="Run" summary={[record.scriptRun.status, record.scriptRun.durationMs === null ? '' : `${record.scriptRun.durationMs} ms`, record.scriptRun.limitBreach ?? ''].filter(Boolean).join(' · ')} executionId={executionId} detail="run" /> : <RecordSection title="Run" summary={state.label} executionId={executionId} />}
+    {record.scriptRun ? <RecordSection title="Run" summary={[record.scriptRun.status, record.scriptRun.durationMs === null ? '' : formatDurationMs(record.scriptRun.durationMs), record.scriptRun.limitBreach ?? ''].filter(Boolean).join(' · ')} executionId={executionId} detail="run" /> : <RecordSection title="Run" summary={state.label} executionId={executionId} />}
     {record.outputs ? <RecordSection title="Outputs" summary={plural(record.outputs.count, 'output')} executionId={executionId} detail="outputs" /> : null}
-    {record.chain.previous ? <Link className={ds.historyLink} to="/tasks/$taskId/runs/$executionId" params={{ taskId: String(taskId), executionId: String(record.chain.previous) }}>Came from run {record.chain.previous}</Link> : null}
-    {record.chain.next.map((id) => <Link key={id} className={ds.historyLink} to="/tasks/$taskId/runs/$executionId" params={{ taskId: String(taskId), executionId: String(id) }}>Led to run {id}</Link>)}
+    {record.chain.previous ? <Link className={ds.historyLink} to="/tasks/$taskId/runs/$executionId" params={{ taskId: String(taskId), executionId: String(record.chain.previous.id) }}>Came from run {record.chain.previous.runNumber}</Link> : null}
+    {record.chain.next.map((next) => <Link key={next.id} className={ds.historyLink} to="/tasks/$taskId/runs/$executionId" params={{ taskId: String(taskId), executionId: String(next.id) }}>Led to run {next.runNumber}</Link>)}
     {stoppedByApp ? null : runAgain}
     {run.status === 'completed' ? <SaveTaskDialog executionId={executionId} /> : null}
   </section>;

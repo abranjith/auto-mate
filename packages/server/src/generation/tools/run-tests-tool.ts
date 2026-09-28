@@ -38,8 +38,12 @@ import { parsePytestReport, type PytestReport } from '../pytest-report';
 import { assertNotFinal, executionIdOf, sealedEvent, type GenerationToolDependencies } from './tool-context';
 import { executionAsOfEnvironment } from '../../execution/as-of-storage';
 
-/** pytest, quietly, with native tracebacks (the frame shape the diagnostic allowlist recognizes) and no cache directory. */
-export const PYTEST_ARGS = ['-m', 'pytest', '-q', '--tb=native', '-rfE', '-p', 'no:cacheprovider'] as const;
+/**
+ * pytest, quietly, with native tracebacks (the frame shape the diagnostic allowlist recognizes), no cache
+ * directory, and no color: an inherited `FORCE_COLOR` (set by `concurrently` under `pnpm dev`) would
+ * otherwise wrap the summary line in ANSI escapes the parsers do not recognize.
+ */
+export const PYTEST_ARGS = ['-m', 'pytest', '-q', '--tb=native', '-rfE', '-p', 'no:cacheprovider', '--color=no'] as const;
 
 export interface RunTestsToolDependencies extends GenerationToolDependencies {
   readonly attempts: GenerationAttemptRepository;

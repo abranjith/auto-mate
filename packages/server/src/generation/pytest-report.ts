@@ -14,6 +14,15 @@ export interface PytestReport {
 
 const SUMMARY = /(?:^|[=\s])((?:\d+ (?:passed|failed|errors?|skipped|xfailed|xpassed|deselected|warnings?)(?:, )?)+) in [\d.]+s/;
 const COLLECTION = /error during collection|ERROR collecting|Interrupted: \d+ errors? during collection/;
+// CSI escape sequences (colors, bold, cursor moves). `--color=no` normally prevents them, but a
+// summary wrapped in color must still be recognized rather than read as "no summary".
+// eslint-disable-next-line no-control-regex
+const ANSI_ESCAPE = /\u001b\[[0-?]*[ -/]*[@-~]/g;
+
+/** Remove terminal escape sequences so a colored pytest summary reads like a plain one. */
+export function stripAnsi(text: string): string {
+  return text.replace(ANSI_ESCAPE, '');
+}
 
 /**
  * Read the counts from pytest `-q` output.
@@ -22,7 +31,8 @@ const COLLECTION = /error during collection|ERROR collecting|Interrupted: \d+ er
  * @returns Counts where failures include errors, or null counts when no summary line was recognized.
  * @example parsePytestReport('1 failed, 2 passed in 0.12s') // { total: 3, passed: 2, failed: 1, collectionError: false }
  */
-export function parsePytestReport(output: string): PytestReport {
+export function parsePytestReport(rawOutput: string): PytestReport {
+  const output = stripAnsi(rawOutput);
   const collectionError = COLLECTION.test(output);
   const lines = output.split(/\r?\n/).reverse();
   if (lines.some((line) => /\bno tests ran in [\d.]+s/.test(line))) return { total: 0, passed: 0, failed: 0, collectionError };

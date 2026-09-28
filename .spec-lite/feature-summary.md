@@ -19,10 +19,10 @@ Every execution records an as-of instant, date, zone, and source, passed to Pyth
 
 ## Execution History
 
-**FEAT-110 — Execution History** _(updated: 2026-09-26 by implement)_
+**FEAT-110 — Execution History** _(updated: 2026-09-27 by fix)_
 Source spec: [spec.md](features/FEAT-110-execution_history/spec.md)
 
-History lists one row per task with its latest run, text search, status filters, a **Needs you** strip, and keyset paging. A task has a paged timeline; each run has a stable URL, its transcript and outputs, and a provenance summary that expands through the owning feature's views. **Run again** creates a linked run with optional guidance, reopens disclosure review if consent is stale, and refuses when another run of the task remains open.
+History lists one row per task with its latest run, text search, status filters, a **Needs you** strip, and keyset paging. A task has a paged timeline; each run has a stable URL, its transcript and outputs, and a provenance summary that expands through the owning feature's views. **Run again** creates a linked run with optional guidance, reopens disclosure review if consent is stale, and refuses when another run of the task remains open. Runs are numbered per task from the oldest (`runNumber`, **Run 1**, **Run 2**) in the timeline, the run heading, and the **Came from run** / **Led to run** links — never by execution id; durations read in minutes and seconds, streamed agent text renders as one message, and state changes read as the phase entered. The live run page opens its WebSocket under React StrictMode.
 
 Whole-task deletion removes database rows first and then the task's upload and artifact trees plus each execution's run, script, and raw agent-session trees. Startup cleanup removes residue after interrupted deletion; attached records are never purged by age. `pending`, `generating`, `verifying`, `executing`, and `waiting` interrupt on restart with phase-specific messages, while approval and review gates survive. Graceful shutdown records a separate reason. The API adds list, timeline, record, and delete routes plus task counts, with `nosniff` on all `/api` responses. Restart reconciliation, the parked-run lookup, and **Needs you** are served by the `execution_active` and `execution_parked` partial indexes, whose status lists are written as literals. The end-to-end suite covers prior outputs, the restart partition including gates that still work after a restart, one open run per task, deletion of every row and file with an outside link left intact, startup cleanup, and a provider that must never be opened. This preview relies on browser same-origin policy for history reads; it has no local account access control.
 
@@ -46,14 +46,14 @@ Auto-Mate ships two committed uv environments and pins CPython 3.14.6. It prepar
 
 The launcher emits an explicit limit marker when it enforces a memory or file-size cap. A script choosing exit code 93 or 94 without that marker is reported as an ordinary script failure.
 
-**FEAT-107 — Independent Verification & Execution Gate** _(updated: 2026-09-25 by implement)_
+**FEAT-107 — Independent Verification & Execution Gate** _(updated: 2026-09-27 by fix)_
 Source spec: [spec.md](features/FEAT-107-verification_execution_gate/spec.md)
 
 A finalized script hands off from generation to `verifying`. The app then runs seven checks itself, with no model call:
 - integrity of the sealed files and reproducible test data;
 - the entrypoint, the declared outputs, and the required input columns against the file's profile;
 - `ruff --isolated` and `bandit` with an app-owned config and ini, run from `~/.automate/verify-env/`;
-- the tests, re-run against rebuilt synthetic data.
+- the tests, re-run against rebuilt synthetic data. pytest runs with `--color=no` and its summary is read after stripping ANSI escapes, so an inherited `FORCE_COLOR` (as under `pnpm dev`) cannot turn a passing run into "could not run".
 
 Failing tests, bandit HIGH/HIGH, ruff `E9`/`F6`/`F7`/`F82`/`invalid-syntax`, missing columns, failed contract or integrity checks, and any check that could not run all block, and the run settles `failed` with a readable verdict. Everything else is advisory. Results bind to the code digest and a runtime fingerprint, so a runtime change forces re-checking.
 

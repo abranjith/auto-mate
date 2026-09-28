@@ -28,11 +28,11 @@ describe('history API contracts', () => {
   it('round-trips every history schema through JSON unchanged', () => {
     const at = '2026-09-26T10:00:00.000Z';
     const item = { task: { id: 1, name: 'Monthly', createdAt: at }, latestRun: { id: 3, status: 'awaiting_approval', trigger: 'rerun', createdAt: at, completedAt: null, durationMs: null, errorCode: null, statusSince: at, reuse: null }, runCount: 2, inputCount: 1, latestOutputCount: 0 };
-    const run = { id: 3, taskId: 1, status: 'failed', trigger: 'feedback', retryOfExecutionId: 2, hasGuidance: true, hasReviewFeedback: false, createdAt: at, completedAt: at, durationMs: 5, errorCode: 'EXECUTION_INTERRUPTED', outputCount: 1, reuse: null };
+    const run = { id: 3, taskId: 1, runNumber: 2, status: 'failed', trigger: 'feedback', retryOfExecutionId: 2, hasGuidance: true, hasReviewFeedback: false, createdAt: at, completedAt: at, durationMs: 5, errorCode: 'EXECUTION_INTERRUPTED', outputCount: 1, reuse: null };
     const counts = { runs: 2, inputs: 1, outputs: 3, openRunId: null };
     const record = {
-      execution: { id: 3, taskId: 1, status: 'completed', trigger: 'manual', retryOfExecutionId: null, provider: 'fake', model: 'm', createdAt: at, startedAt: at, completedAt: at, durationMs: 5, errorCode: null, errorMessage: null },
-      personWords: { guidance: null, reviewFeedback: 'Off by one' }, chain: { previous: null, next: [4] },
+      execution: { id: 3, taskId: 1, runNumber: 2, status: 'completed', trigger: 'manual', retryOfExecutionId: null, provider: 'fake', model: 'm', createdAt: at, startedAt: at, completedAt: at, durationMs: 5, errorCode: null, errorMessage: null },
+      personWords: { guidance: null, reviewFeedback: 'Off by one' }, chain: { previous: null, next: [{ id: 4, runNumber: 3 }] },
       inputs: [{ id: 1, originalFilename: 'a.csv', format: 'csv', byteSize: 10, sha256: 'a'.repeat(64) }], inputsReadByRun: true,
       disclosure: { provider: 'fake', model: 'm', sendCount: 1, grantedAt: at }, questions: { total: 1, answered: 1, byPerson: 1, seeded: 0, defaulted: 0, declined: 0 },
       code: { id: 7, attempt: 1, digest: 'd'.repeat(64), shortDigest: 'd'.repeat(12), testsPassed: true, attemptCount: 1 },

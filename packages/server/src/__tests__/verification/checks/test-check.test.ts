@@ -34,6 +34,11 @@ describe('independent test re-run', () => {
     expect(outcome.findings).toEqual([expect.objectContaining({ ruleCode: 'tests_failed', isBlocking: true, message: '1 of 3 tests failed when this app re-ran them.' })]);
     expect(outcome.summary).toBe('1 failing test: 2 of 3 passed against 200 synthetic rows');
   });
+  it('passes a zero exit whose summary pytest colored (the run that was wrongly blocked)', async () => {
+    const stdout = '\u001b[32m.\u001b[0m\u001b[32m    [100%]\u001b[0m\r\n\u001b[32m\u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 3.69s\u001b[0m\u001b[0m';
+    const outcome = await request([result({ outcome: 'passed', exitCode: 0, stdout })]).run();
+    expect(outcome).toMatchObject({ status: 'passed', summary: '1 of 1 tests passed against 200 synthetic rows' });
+  });
   it('refuses to trust a zero exit with an unparseable summary: errored, not passed', async () => {
     const outcome = await request([result({ outcome: 'passed', exitCode: 0, stdout: 'everything is fine, trust me\n' })]).run();
     expect(outcome.status).toBe('errored');
@@ -79,7 +84,7 @@ describe('independent test re-run', () => {
     expect(env.AUTOMATE_INPUT_DIR).toBe(path.join(verifyDir, 'input'));
     expect(env.AUTOMATE_OUTPUT_DIR).toBe(path.join(verifyDir, 'output'));
     expect(JSON.stringify(env)).not.toMatch(/uploads/);
-    expect(runner.requests[0]!.args).toEqual(['-m', 'pytest', '-q', '--tb=native', '-rfE', '-p', 'no:cacheprovider']);
+    expect(runner.requests[0]!.args).toEqual(['-m', 'pytest', '-q', '--tb=native', '-rfE', '-p', 'no:cacheprovider', '--color=no']);
     expect(existsSync(path.join(verifyDir, 'output'))).toBe(false);
   });
   it('keeps only a bounded excerpt of raw output', async () => {

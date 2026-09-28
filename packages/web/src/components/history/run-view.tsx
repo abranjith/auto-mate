@@ -8,6 +8,7 @@ import { WaitingBanner } from '../conversation/waiting-banner';
 import { GenerationSection } from '../generation/generation-section';
 import { GateSection } from '../verification/gate-section';
 import { useExecutionStream } from '../../api/use-execution-stream';
+import { useRunRecord } from '../../api/history-queries';
 import { ds } from '../../design-system/tokens';
 import { RunRecordPanel } from './run-record-panel';
 
@@ -15,10 +16,12 @@ const CANCELLABLE = ['pending', 'generating', 'verifying'];
 /** The existing conversation, generation, gate, review, and artifact views for one run. */
 export function RunView({ taskId, executionId }: { taskId: string; executionId: number }) {
   const stream = useExecutionStream(executionId); const client = useQueryClient();
+  // The same per-task number the Runs list shows, never the database id: "Run 2" must mean the second run.
+  const runNumber = useRunRecord(executionId).data?.execution.runNumber;
   return <section className={ds.cardStack}>
     <RunRecordPanel executionId={executionId} />
     <section className={ds.card}>
-      <header className={ds.header}><h2 className={ds.sectionTitle}>Run {executionId}</h2><div className={ds.row}>{stream.execution ? <ExecutionStatusBadge status={stream.execution.status} /> : null}<ConnectionIndicator state={stream.connection} onRetry={stream.retry} /></div></header>
+      <header className={ds.header}><h2 className={ds.sectionTitle}>{runNumber === undefined ? 'Run' : `Run ${runNumber}`}</h2><div className={ds.row}>{stream.execution ? <ExecutionStatusBadge status={stream.execution.status} /> : null}<ConnectionIndicator state={stream.connection} onRetry={stream.retry} /></div></header>
       {stream.error ? <p className={ds.statusDanger}>{stream.error}</p> : null}
       <div id="transcript"><ConversationView events={stream.events} executionId={executionId} /></div>
       {stream.execution ? <>

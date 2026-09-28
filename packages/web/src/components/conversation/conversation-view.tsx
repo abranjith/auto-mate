@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import type { ConversationEvent } from '@automate/core';
+import { describeRunState, isTerminal, type ConversationEvent } from '@automate/core';
 import { ds } from '../../design-system/tokens';
 import { ToolCallCard } from './tool-call-card';
 import { TurnSummary } from './turn-summary';
@@ -26,6 +26,31 @@ function assertNever(value: never): never {
   throw new Error(`Unknown conversation event: ${JSON.stringify(value)}`);
 }
 
+type AssistantText = Extract<ConversationEvent, { type: 'assistant_text' }>;
+type StateChanged = Extract<ConversationEvent, { type: 'state_changed' }>;
+
+/**
+ * The agent's reply streams in as several `assistant_text` events. Consecutive
+ * ones are one message: rendering each chunk as its own bubble split sentences
+ * mid-word across six boxes.
+ */
+export function joinAssistantText(ordered: readonly ConversationEvent[]): ConversationEvent[] {
+  const joined: ConversationEvent[] = [];
+  for (const event of ordered) {
+    const previous = joined.at(-1);
+    if (event.type === 'assistant_text' && previous?.type === 'assistant_text') {
+      joined[joined.length - 1] = { ...previous, text: `${previous.text}${event.text}` } satisfies AssistantText;
+    } else joined.push(event);
+  }
+  return joined;
+}
+
+/** "Writing code", "Checking the code", "Run ended: Didn't finish" — the phase in words, not the state machine. */
+export function describeStateChange(event: Pick<StateChanged, 'to'>): string {
+  const label = describeRunState({ status: event.to }).label;
+  return isTerminal(event.to) ? `Run ended: ${label}` : label;
+}
+
 /** Ordered, exhaustive rendering of the durable transcript. */
 export function ConversationView({
   events,
@@ -37,7 +62,7 @@ export function ConversationView({
   const viewport = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
   const ordered = useMemo(
-    () => [...events].sort((a, b) => a.seq - b.seq),
+    () => joinAssistantText([...events].sort((a, b) => a.seq - b.seq)),
     [events],
   );
   const finishes = useMemo(
@@ -125,7 +150,7 @@ export function ConversationView({
             case 'state_changed':
               return (
                 <p key={event.seq} className={ds.eventLine}>
-                  Status changed from {event.from} to {event.to}.
+                  {describeStateChange(event)}
                 </p>
               );
             case 'clarification_requested':
@@ -148,7 +173,7 @@ export function ConversationView({
             case 'run_finished':
               return <p key={event.seq} className={event.status === 'succeeded' ? ds.verdictPassed : ds.verdictBlocked}>{describeRunStatus({ status: event.status, exitCode: event.exitCode })}{event.declaredOutputCount === null ? '' : ` It declared ${event.declaredOutputCount} output${event.declaredOutputCount === 1 ? '' : 's'} and wrote ${event.producedOutputCount ?? 0}.`}</p>;
             case 'review_decided':
-              return <p key={event.seq} className={ds.eventLine}>{event.verdict === 'accepted' ? 'You accepted the result.' : `You said the result was wrong${event.retryExecutionId === null ? '.' : `; run ${event.retryExecutionId} is trying again with your feedback.`}`}</p>;
+              return <p key={event.seq} className={ds.eventLine}>{event.verdict === 'accepted' ? 'You accepted the result.' : `You said the result was wrong${event.retryExecutionId === null ? '.' : '; a new run is trying again with your feedback.'}`}</p>;
             case 'runtime_prepared':
               return <p key={event.seq} className={ds.eventLine}>Python {event.pythonVersion} is ready with {event.packageCount} packages.</p>;
             // FEAT-109: counts only; the files themselves are listed and shown below the transcript.

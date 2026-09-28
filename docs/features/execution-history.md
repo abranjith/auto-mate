@@ -19,7 +19,7 @@ The **Needs you** strip above the list links directly to runs waiting on you, ea
 | **Done** | `completed` | Done |
 | **Didn't finish** | `failed`, `aborted`, `rejected` | Didn't finish; Cancelled; You said this wasn't right |
 
-An interrupted run is labelled **Interrupted**; a run stopped during orderly shutdown is labelled **Stopped when the app closed**. Both are in **Didn't finish**. The run timeline also says **First run**, **Tried again** (or **Tried again with your guidance**), or **Re-run after your review** to explain why each run exists.
+An interrupted run is labelled **Interrupted**; a run stopped during orderly shutdown is labelled **Stopped when the app closed**. Both are in **Didn't finish**. The run timeline numbers a task's runs from the oldest, **Run 1**, **Run 2**, and so on. The same number appears in the run's heading and in the **Came from run** and **Led to run** links; it is never the `executionId` in the address. Each number is followed by **First run**, **Tried again** (or **Tried again with your guidance**), or **Re-run after your review** to explain why the run exists, then its state, age, duration in minutes and seconds, and output count. In a run's transcript, a reply the agent streamed in pieces reads as one message, and state changes read as the phase entered (**Writing code**, **Checking the code**, **Run ended: Didn't finish**).
 
 ### Read a task and a run
 
@@ -78,8 +78,8 @@ The four new routes use positive integer IDs. List endpoints use a digit-string 
 | Method and route | Inputs | Response |
 | --- | --- | --- |
 | `GET /api/tasks` | Optional `cursor`, `limit`, `status=all\|needs_you\|running\|done\|stopped`, and `q` (up to 200 characters). Search treats `%` and `_` literally. | `{ items, nextCursor, hasMore }`. Each item has `task` (`id`, `name`, `createdAt`), `latestRun` (state, trigger, times and outcome code), `runCount`, `inputCount`, and `latestOutputCount`. |
-| `GET /api/tasks/{taskId}/runs` | Optional `cursor` and `limit`. | `{ items, nextCursor, hasMore }`. Each item has the run ID, state, trigger, retry source, whether it has guidance or review feedback, times, outcome code, and output count. Unknown task: `TASK_NOT_FOUND` (404). |
-| `GET /api/executions/{id}/record` | No query parameters. | Summary object with `execution`, `personWords`, `chain`, `inputs`, `inputsReadByRun`, optional `disclosure`, `questions`, `code`, `checks`, `approval`, `scriptRun`, `outputs`, and `transcript.lastSeq`. Missing optional sections are `null`. Unknown run: `EXECUTION_NOT_FOUND` (404). |
+| `GET /api/tasks/{taskId}/runs` | Optional `cursor` and `limit`. | `{ items, nextCursor, hasMore }`. Each item has the run ID, its `runNumber` within the task (1 for the oldest), state, trigger, retry source, whether it has guidance or review feedback, times, outcome code, and output count. Unknown task: `TASK_NOT_FOUND` (404). |
+| `GET /api/executions/{id}/record` | No query parameters. | Summary object with `execution` (including `runNumber`), `personWords`, `chain` (`previous` and each `next` entry are `{ id, runNumber }`), `inputs`, `inputsReadByRun`, optional `disclosure`, `questions`, `code`, `checks`, `approval`, `scriptRun`, `outputs`, and `transcript.lastSeq`. Missing optional sections are `null`. Unknown run: `EXECUTION_NOT_FOUND` (404). |
 | `DELETE /api/tasks/{taskId}` | Whole-task deletion; no request body. | `{ taskId, removed: { runs, inputs, outputs }, filesPendingRemoval }`. Open run: `TASK_HAS_OPEN_RUN` (409). Unknown task: `TASK_NOT_FOUND` (404). |
 
 The existing `GET /api/tasks/{taskId}` response adds `counts: { runs, inputs, outputs, openRunId }`. Its older `executions` array remains **unpaginated** for compatibility; the task page uses the paged run timeline above. `GET /api/executions/{id}` also includes the run trigger and retry source.

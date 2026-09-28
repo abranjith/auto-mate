@@ -70,6 +70,12 @@ describe('GenerationSection', () => {
     expect(screen.getByText('Used all 3 attempts without getting the tests to pass.')).toBeTruthy();
   });
 
+  it.each(['timed_out', 'cost_limit', 'incomplete', 'finalized'] as const)('offers the guidance retry for a failed run whose generation ended %s', async (outcome) => {
+    const failed = { ...base, status: 'failed' as const, error: { code: 'GENERATION_FAILED', message: 'x' } };
+    render(<GenerationSection execution={failed} events={[...events.slice(0, 7), { ...events[7]!, outcome } as ConversationEvent]} loadAttempts={loadAttempts} />);
+    await waitFor(() => expect(screen.getByText('Tell me what I got wrong and I\'ll try again.')).toBeTruthy());
+  });
+
   it('shows neither progress nor retry for a completed run', () => {
     const { container } = render(<GenerationSection execution={{ ...base, status: 'completed' }} events={events} loadAttempts={loadAttempts} />);
     expect(container.textContent).toBe('');

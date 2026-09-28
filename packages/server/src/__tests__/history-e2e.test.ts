@@ -196,9 +196,9 @@ describe('history end to end', () => {
     const timeline = (await json<{ items: { id: number; trigger: string }[] }>(`${base}/api/tasks/${h.task.id}/runs`)).body;
     expect(timeline.items.map((item) => [item.id, item.trigger])).toEqual([[retryId, 'feedback'], [h.execution.id, 'manual']]);
     for (const [id, label] of [[h.execution.id, 'first'], [retryId, 'second']] as const) {
-      const record = (await json<{ chain: { previous: number | null; next: number[] }; outputs: { count: number } }>(`${base}/api/executions/${id}/record`)).body;
+      const record = (await json<{ chain: { previous: { id: number; runNumber: number } | null; next: { id: number; runNumber: number }[] }; outputs: { count: number } }>(`${base}/api/executions/${id}/record`)).body;
       expect(record.outputs.count).toBe(1);
-      expect(record.chain).toEqual(id === h.execution.id ? { previous: null, next: [retryId] } : { previous: h.execution.id, next: [] });
+      expect(record.chain).toEqual(id === h.execution.id ? { previous: null, next: [{ id: retryId, runNumber: 2 }] } : { previous: { id: h.execution.id, runNumber: 1 }, next: [] });
       const listed = (await json<{ artifacts: { id: number; filename: string }[] }>(`${base}/api/executions/${id}/artifacts`)).body;
       expect(listed.artifacts.map((item) => item.filename)).toEqual(['totals.csv']);
       expect(await (await fetch(`${base}/api/artifacts/${listed.artifacts[0]!.id}/download`)).text()).toBe(`run=${label}\n`);

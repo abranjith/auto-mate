@@ -40,7 +40,7 @@ vi.mock('../../../api/artifact-queries', () => ({ getArtifacts: vi.fn(async () =
 const at = '2026-09-26T10:00:00.000Z';
 function sparse(): RunRecord {
   return {
-    execution: { id: 9, taskId: 3, status: 'failed', trigger: 'manual', retryOfExecutionId: null, provider: null, model: null, createdAt: at, startedAt: at, completedAt: at, durationMs: 1, errorCode: 'EXECUTION_INTERRUPTED', errorMessage: INTERRUPTION_MESSAGES.waiting },
+    execution: { id: 9, taskId: 3, runNumber: 2, status: 'failed', trigger: 'manual', retryOfExecutionId: null, provider: null, model: null, createdAt: at, startedAt: at, completedAt: at, durationMs: 1, errorCode: 'EXECUTION_INTERRUPTED', errorMessage: INTERRUPTION_MESSAGES.waiting },
     personWords: { guidance: '<script>alert(1)</script> =SUM(A1)', reviewFeedback: null }, chain: { previous: null, next: [] },
     inputs: [], inputsReadByRun: null, disclosure: null, questions: null, code: null, checks: null, approval: null, scriptRun: null, outputs: null,
     transcript: { lastSeq: 0 }, reuse: null, asOf: null,
@@ -50,7 +50,7 @@ function full(): RunRecord {
   return {
     ...sparse(),
     execution: { ...sparse().execution, status: 'completed', errorCode: null, errorMessage: null, provider: 'fake', model: 'm' },
-    personWords: { guidance: null, reviewFeedback: 'Totals were off by one region.' }, chain: { previous: 7, next: [11] },
+    personWords: { guidance: null, reviewFeedback: 'Totals were off by one region.' }, chain: { previous: { id: 7, runNumber: 1 }, next: [{ id: 11, runNumber: 3 }] },
     inputs: [{ id: 1, originalFilename: 'sales.csv', format: 'csv', byteSize: 10, sha256: 'a'.repeat(64) }], inputsReadByRun: true,
     disclosure: { provider: 'fake', model: 'm', sendCount: 2, grantedAt: at },
     questions: { total: 3, answered: 3, byPerson: 1, seeded: 2, defaulted: 0, declined: 0 },
@@ -87,7 +87,7 @@ describe('run record', () => {
     const view = mount();
     await waitFor(() => expect(view.container.textContent).toContain('Summarize my sales.'));
     const text = view.container.textContent ?? '';
-    for (const line of ['You said: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1200 ms', '1 output', 'Came from run 7', 'Led to run 11']) expect(text).toContain(line);
+    for (const line of ['You said: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1 second', '1 output', 'Came from run 1', 'Led to run 3']) expect(text).toContain(line);
   });
 
   it('mounts each owning view lazily on first open, with exactly one request, and none on reopening', async () => {

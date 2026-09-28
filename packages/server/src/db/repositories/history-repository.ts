@@ -56,9 +56,9 @@ export class HistoryRepository {
   /** Page one task's runs in newest-first id order. */
   listRuns(taskId: number, options: PageOptions): RunTimelinePage {
     return this.read(() => {
-      const rows = this.all(`select e.id, e.task_id taskId, e.status, e.trigger, e.retry_of_execution_id retryOfExecutionId, e.guidance, e.review_feedback reviewFeedback, e.created_at createdAt, e.completed_at completedAt, e.duration_ms durationMs, e.error_code errorCode, er.kind reuseKind, er.template_id templateId, er.template_name templateName, er.revision_number revisionNumber, (select count(*) from artifact a where a.execution_id = e.id) outputCount from execution e left join execution_reuse er on er.execution_id = e.id where e.task_id = ? ${options.cursor === undefined ? '' : 'and e.id < ?'} order by e.id desc limit ?`, [taskId, ...(options.cursor === undefined ? [] : [options.cursor]), options.limit + 1]);
+      const rows = this.all(`select e.id, e.task_id taskId, e.status, e.trigger, e.retry_of_execution_id retryOfExecutionId, e.guidance, e.review_feedback reviewFeedback, e.created_at createdAt, e.completed_at completedAt, e.duration_ms durationMs, e.error_code errorCode, er.kind reuseKind, er.template_id templateId, er.template_name templateName, er.revision_number revisionNumber, (select count(*) from artifact a where a.execution_id = e.id) outputCount, ${RUN_NUMBER_SQL} runNumber from execution e left join execution_reuse er on er.execution_id = e.id where e.task_id = ? ${options.cursor === undefined ? '' : 'and e.id < ?'} order by e.id desc limit ?`, [taskId, ...(options.cursor === undefined ? [] : [options.cursor]), options.limit + 1]);
       const items: RunTimelineItem[] = rows.slice(0, options.limit).map((row) => ({
-        id: number(row.id), taskId: number(row.taskId), status: text(row.status) as RunTimelineItem['status'], trigger: text(row.trigger) as RunTimelineItem['trigger'],
+        id: number(row.id), taskId: number(row.taskId), runNumber: number(row.runNumber), status: text(row.status) as RunTimelineItem['status'], trigger: text(row.trigger) as RunTimelineItem['trigger'],
         retryOfExecutionId: row.retryOfExecutionId === null ? null : number(row.retryOfExecutionId), hasGuidance: row.guidance !== null, hasReviewFeedback: row.reviewFeedback !== null,
         createdAt: iso(row.createdAt)!, completedAt: iso(row.completedAt), durationMs: row.durationMs === null ? null : number(row.durationMs), errorCode: row.errorCode === null ? null : text(row.errorCode), outputCount: number(row.outputCount), reuse: reuseSummary(row),
       }));
@@ -78,7 +78,7 @@ export class HistoryRepository {
   /** Build a summary record; owning feature routes retain the full detail. */
   getRunRecord(executionId: number): RunRecord | undefined {
     return this.read(() => {
-      const e = this.one('select id, task_id taskId, status, trigger, retry_of_execution_id retryOfExecutionId, guidance, review_feedback reviewFeedback, provider, model, error_code errorCode, error_message errorMessage, created_at createdAt, started_at startedAt, completed_at completedAt, duration_ms durationMs, as_of_at asOfAt, as_of_date asOfDate, as_of_timezone asOfTimezone, as_of_source asOfSource from execution where id = ?', [executionId]);
+      const e = this.one(`select id, task_id taskId, status, trigger, retry_of_execution_id retryOfExecutionId, guidance, review_feedback reviewFeedback, provider, model, error_code errorCode, error_message errorMessage, created_at createdAt, started_at startedAt, completed_at completedAt, duration_ms durationMs, as_of_at asOfAt, as_of_date asOfDate, as_of_timezone asOfTimezone, as_of_source asOfSource, ${RUN_NUMBER_SQL} runNumber from execution e where id = ?`, [executionId]);
       if (!e) return undefined;
       return this.recordSections(e);
     });
@@ -91,7 +91,10 @@ export class HistoryRepository {
 
   private recordSections(e: SqlRow): RunRecord {
     const id = number(e.id); const taskId = number(e.taskId);
-    const next = this.all('select id from execution where retry_of_execution_id = ? order by id', [id]).map((row) => number(row.id));
+    const runRef = (row: SqlRow) => ({ id: number(row.id), runNumber: number(row.runNumber) });
+    const next = this.all(`select id, ${RUN_NUMBER_SQL} runNumber from execution e where retry_of_execution_id = ? order by id`, [id]).map(runRef);
+    const previousRow = e.retryOfExecutionId === null ? undefined : this.one(`select id, ${RUN_NUMBER_SQL} runNumber from execution e where id = ?`, [number(e.retryOfExecutionId)]);
+    const previous = previousRow ? runRef(previousRow) : null;
     const inputs = this.all('select id, original_filename originalFilename, format, byte_size byteSize, sha256 from upload where task_id = ? order by id', [taskId]).map((row) => ({ id: number(row.id), originalFilename: text(row.originalFilename), format: text(row.format), byteSize: number(row.byteSize), sha256: text(row.sha256) }));
     const sends = this.one('select count(*) sends, max(t.provider) provider, max(t.model) model, max(c.granted_at) grantedAt from disclosure_transmission t join disclosure_consent c on c.id = t.consent_id where t.execution_id = ?', [id]);
     const questions = this.one("select count(q.id) total, sum(q.answer_source is not null) answered, sum(q.answer_source = 'user') byPerson, sum(q.answer_source = 'seeded') seeded, sum(q.answer_source = 'default') defaulted, sum(c.status = 'declined') declined from clarification c join clarification_question q on q.clarification_id = c.id where c.execution_id = ?", [id]);
@@ -103,7 +106,7 @@ export class HistoryRepository {
     const output = this.one('select count(*) n from artifact where execution_id = ?', [id]);
     const seq = this.one('select max(seq) n from conversation_event where execution_id = ?', [id]);
     const reuse = this.one('select kind reuseKind, template_id templateId, template_name templateName, revision_number revisionNumber, revision_digest revisionDigest, compatibility_report compatibilityReport, mapping from execution_reuse where execution_id = ?', [id]);
-    return presentRecord(e, { next, inputs, sends, questions, version, attempts, check, approval, run, output, seq, reuse });
+    return presentRecord(e, { previous, next, inputs, sends, questions, version, attempts, check, approval, run, output, seq, reuse });
   }
 
   private grouped(table: 'execution' | 'upload' | 'artifact', key: 'task_id' | 'execution_id', ids: number[]): Map<number, number> {
@@ -121,6 +124,9 @@ export class HistoryRepository {
   private read<T>(action: () => T): T { try { return action(); } catch (cause) { if (cause instanceof RepositoryError) throw cause; throw new RepositoryError('History could not be read.', cause); } }
 }
 
+/** A run's 1-based position among its task's runs, oldest first. Correlated on the outer alias `e`; runs are removed only with their task, so the number never shifts. */
+const RUN_NUMBER_SQL = '(select count(*) from execution earlier where earlier.task_id = e.task_id and earlier.id <= e.id)';
+
 function presentTaskItem(row: SqlRow, runs: Map<number, number>, inputs: Map<number, number>, outputs: Map<number, number>, times: Map<number, string>): TaskHistoryItem {
   const taskId = number(row.taskId); const runId = number(row.runId);
   return { task: { id: taskId, name: text(row.name), createdAt: iso(row.taskCreatedAt)! }, latestRun: { id: runId, status: text(row.status) as TaskHistoryItem['latestRun']['status'], trigger: text(row.trigger) as TaskHistoryItem['latestRun']['trigger'], createdAt: iso(row.runCreatedAt)!, completedAt: iso(row.completedAt), durationMs: row.durationMs === null ? null : number(row.durationMs), errorCode: row.errorCode === null ? null : text(row.errorCode), statusSince: times.get(runId) ?? null, reuse: reuseSummary(row) }, runCount: runs.get(taskId) ?? 0, inputCount: inputs.get(taskId) ?? 0, latestOutputCount: outputs.get(runId) ?? 0 };
@@ -131,7 +137,7 @@ function reuseSummary(row: SqlRow): TaskHistoryItem['latestRun']['reuse'] {
   return { kind: text(row.reuseKind) as 'run' | 'replay' | 'repair', templateId: row.templateId === null ? null : number(row.templateId), templateName: text(row.templateName), revisionNumber: number(row.revisionNumber) };
 }
 
-type Sections = { next: number[]; inputs: RunRecord['inputs']; sends?: SqlRow; questions?: SqlRow; version?: SqlRow; attempts?: SqlRow; check?: SqlRow; approval?: SqlRow; run?: SqlRow; output?: SqlRow; seq?: SqlRow; reuse?: SqlRow };
+type Sections = { previous: RunRecord['chain']['previous']; next: RunRecord['chain']['next']; inputs: RunRecord['inputs']; sends?: SqlRow; questions?: SqlRow; version?: SqlRow; attempts?: SqlRow; check?: SqlRow; approval?: SqlRow; run?: SqlRow; output?: SqlRow; seq?: SqlRow; reuse?: SqlRow };
 function runtimeLine(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   try { const value = JSON.parse(raw) as { pythonVersion?: string; platform?: string; packages?: unknown[] }; return `Python ${value.pythonVersion ?? '?'} on ${value.platform ?? '?'} · ${value.packages?.length ?? 0} packages`; } catch { return null; }
@@ -143,9 +149,9 @@ function inputsMatch(raw: unknown, inputs: RunRecord['inputs']): boolean {
 function presentRecord(e: SqlRow, s: Sections): RunRecord {
   const v = s.version; const c = s.check; const r = s.run; const a = s.approval;
   return {
-    execution: { id: number(e.id), taskId: number(e.taskId), status: text(e.status) as RunRecord['execution']['status'], trigger: text(e.trigger) as RunRecord['execution']['trigger'], retryOfExecutionId: e.retryOfExecutionId === null ? null : number(e.retryOfExecutionId), provider: e.provider === null ? null : text(e.provider), model: e.model === null ? null : text(e.model), createdAt: iso(e.createdAt)!, startedAt: iso(e.startedAt), completedAt: iso(e.completedAt), durationMs: e.durationMs === null ? null : number(e.durationMs), errorCode: e.errorCode === null ? null : text(e.errorCode), errorMessage: e.errorMessage === null ? null : text(e.errorMessage) },
+    execution: { id: number(e.id), taskId: number(e.taskId), runNumber: number(e.runNumber), status: text(e.status) as RunRecord['execution']['status'], trigger: text(e.trigger) as RunRecord['execution']['trigger'], retryOfExecutionId: e.retryOfExecutionId === null ? null : number(e.retryOfExecutionId), provider: e.provider === null ? null : text(e.provider), model: e.model === null ? null : text(e.model), createdAt: iso(e.createdAt)!, startedAt: iso(e.startedAt), completedAt: iso(e.completedAt), durationMs: e.durationMs === null ? null : number(e.durationMs), errorCode: e.errorCode === null ? null : text(e.errorCode), errorMessage: e.errorMessage === null ? null : text(e.errorMessage) },
     personWords: { guidance: e.guidance === null ? null : text(e.guidance), reviewFeedback: e.reviewFeedback === null ? null : text(e.reviewFeedback) },
-    chain: { previous: e.retryOfExecutionId === null ? null : number(e.retryOfExecutionId), next: s.next }, inputs: s.inputs,
+    chain: { previous: s.previous, next: s.next }, inputs: s.inputs,
     inputsReadByRun: r ? inputsMatch(r.inputManifest, s.inputs) : null,
     disclosure: number(s.sends?.sends) > 0 ? { provider: s.sends?.provider == null ? null : text(s.sends.provider), model: s.sends?.model == null ? null : text(s.sends.model), sendCount: number(s.sends?.sends), grantedAt: iso(s.sends?.grantedAt) } : null,
     questions: number(s.questions?.total) > 0 ? { total: number(s.questions?.total), answered: number(s.questions?.answered), byPerson: number(s.questions?.byPerson), seeded: number(s.questions?.seeded), defaulted: number(s.questions?.defaulted), declined: number(s.questions?.declined) } : null,

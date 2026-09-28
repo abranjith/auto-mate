@@ -114,6 +114,47 @@ describe('useExecutionStream', () => {
   });
 });
 
+// main.tsx renders under <StrictMode>, which mounts, unmounts, and remounts every effect in development.
+// A disposal flag set by that simulated unmount used to stay set, so no socket ever opened: the page
+// froze on its first REST snapshot ("Connecting…", a generation timer that climbed past its limit).
+describe('useExecutionStream under StrictMode', () => {
+  it('opens the socket after the simulated unmount and goes live', async () => {
+    const { result } = renderHook(() => useExecutionStream(9), { wrapper, reactStrictMode: true });
+    await waitFor(() => expect(MockSocket.instances.length).toBeGreaterThan(0));
+    const live = MockSocket.instances.at(-1)!;
+    live.onopen?.();
+    await waitFor(() => expect(result.current.connection).toBe('live'));
+  });
+  it('applies live status updates, so a settled run stops looking active', async () => {
+    const { result } = renderHook(() => useExecutionStream(9), { wrapper, reactStrictMode: true });
+    await waitFor(() => expect(MockSocket.instances.length).toBeGreaterThan(0));
+    MockSocket.instances.at(-1)!.onmessage?.({ data: JSON.stringify({ type: 'execution_updated', execution: { ...execution, status: 'failed', completedAt: at } }) });
+    await waitFor(() => expect(result.current.execution?.status).toBe('failed'));
+  });
+  it('shows a finished run as closed rather than connecting', async () => {
+    mocks.execution.mockResolvedValue({ ...execution, status: 'failed', completedAt: at });
+    const { result } = renderHook(() => useExecutionStream(9), { wrapper, reactStrictMode: true });
+    await waitFor(() => expect(result.current.connection).toBe('closed'));
+    expect(MockSocket.instances).toHaveLength(0);
+  });
+  it('does not let the socket closed by the simulated unmount trigger a reconnect', async () => {
+    renderHook(() => useExecutionStream(9), { wrapper, reactStrictMode: true });
+    await waitFor(() => expect(MockSocket.instances.length).toBeGreaterThan(0));
+    const opened = MockSocket.instances.length;
+    for (const socket of MockSocket.instances) socket.onclose?.({ code: 1000 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(MockSocket.instances.filter((socket) => socket.close.mock.calls.length === 0).length).toBeLessThanOrEqual(1);
+    expect(MockSocket.instances.length).toBeLessThanOrEqual(opened + 1);
+  });
+  it('still closes the socket on a real unmount', async () => {
+    const { unmount } = renderHook(() => useExecutionStream(9), { wrapper, reactStrictMode: true });
+    await waitFor(() => expect(MockSocket.instances.length).toBeGreaterThan(0));
+    const live = MockSocket.instances.at(-1)!;
+    unmount();
+    expect(live.close).toHaveBeenCalled();
+  });
+});
+
 describe('useExecutionStream on a finished run (FEAT-110)', () => {
   it('opens no WebSocket for a terminal run, and one for a parked run', async () => {
     mocks.execution.mockResolvedValue({ ...execution, status: 'completed', completedAt: at });

@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PythonRuntimeUnavailableError } from '@automate/core';
-import { parsePytestReport } from '../../../generation/pytest-report';
+import { parsePytestReport, stripAnsi } from '../../../generation/pytest-report';
 import { PYTEST_ARGS, RunTestsExecutor } from '../../../generation/tools/run-tests-tool';
 import { GenerationBudget } from '../../../generation/generation-budget';
 import { GenerationRun } from '../../../generation/generation-run';
@@ -157,6 +157,31 @@ describe('parsePytestReport', () => {
 
   it('uses the last summary line when output contains more than one', () => {
     expect(parsePytestReport('1 failed in 0.1s\n...\n4 passed in 0.2s')).toMatchObject({ total: 4, passed: 4 });
+  });
+
+  // Recorded verbatim from a real run under `pnpm dev`, where concurrently's FORCE_COLOR made pytest color its summary.
+  const colored = (text: string) => `\u001b[32m\u001b[32m\u001b[1m${text}\u001b[0m\u001b[32m in 3.69s\u001b[0m\u001b[0m`;
+  it.each([
+    [`\u001b[32m.\u001b[0m\u001b[32m    [100%]\u001b[0m\r\n${colored('1 passed')}`, { total: 1, passed: 1, failed: 0, collectionError: false }],
+    [`\u001b[31m\u001b[1m1 failed\u001b[0m, \u001b[32m2 passed\u001b[0m\u001b[31m in 0.30s\u001b[0m`, { total: 3, passed: 2, failed: 1, collectionError: false }],
+    [`\u001b[33mno tests ran\u001b[0m\u001b[33m in 0.01s\u001b[0m`, { total: 0, passed: 0, failed: 0, collectionError: false }],
+    [`\u001b[31mERROR collecting test_main.py\u001b[0m\n${colored('1 error')}`, { total: 1, passed: 0, failed: 1, collectionError: true }],
+  ])('recognizes a color-wrapped summary %#', (output, expected) => {
+    expect(parsePytestReport(output)).toEqual(expected);
+  });
+});
+
+describe('stripAnsi', () => {
+  it('removes color and cursor sequences and leaves plain text untouched', () => {
+    expect(stripAnsi('\u001b[32m\u001b[1m3 passed\u001b[0m in \u001b[2K0.1s')).toBe('3 passed in 0.1s');
+    expect(stripAnsi('3 passed in 0.1s')).toBe('3 passed in 0.1s');
+    expect(stripAnsi('')).toBe('');
+  });
+});
+
+describe('PYTEST_ARGS', () => {
+  it('turns color off so an inherited FORCE_COLOR cannot change the summary format', () => {
+    expect(PYTEST_ARGS).toContain('--color=no');
   });
 });
 

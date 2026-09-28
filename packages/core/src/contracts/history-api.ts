@@ -10,6 +10,9 @@ const Trigger = Type.Union([Type.Literal('manual'), Type.Literal('rerun'), Type.
 const Cursor = Type.String({ pattern: '^[1-9][0-9]*$' });
 const PageLimit = Type.String({ pattern: '^(?:[1-9]|[1-4][0-9]|50)$' });
 const Reuse = Nullable(Type.Object({ kind: Type.Union([Type.Literal('run'), Type.Literal('replay'), Type.Literal('repair')]), templateId: Nullable(Id), templateName: Type.String(), revisionNumber: Id }));
+/** A run's position among its task's runs, oldest first: the number people see ("Run 2"), never the database id. */
+const RunNumber = Type.Integer({ minimum: 1 });
+const RunRef = Type.Object({ id: Id, runNumber: RunNumber });
 const AsOf = Nullable(Type.Object({ at: Type.Integer(), date: Type.String(), timeZone: Type.String(), source: Type.Union([Type.Literal('now'), Type.Literal('chosen'), Type.Literal('copied')]) }));
 
 /** Query for the task-level History list. All filtering is server-side. */
@@ -37,7 +40,7 @@ export const TaskHistoryPageSchema = Type.Object({
 });
 
 export const RunTimelineItemSchema = Type.Object({
-  id: Id, taskId: Id, status: Status, trigger: Trigger,
+  id: Id, taskId: Id, runNumber: RunNumber, status: Status, trigger: Trigger,
   retryOfExecutionId: Nullable(Id), hasGuidance: Type.Boolean(), hasReviewFeedback: Type.Boolean(),
   createdAt: Type.String(), completedAt: Nullable(Type.String()), durationMs: Nullable(Count),
   errorCode: Nullable(Type.String()), outputCount: Count, reuse: Reuse,
@@ -50,13 +53,13 @@ export const RunTimelinePageSchema = Type.Object({
 /** A small provenance summary. Payloads remain on their owning feature routes. */
 export const RunRecordSchema = Type.Object({
   execution: Type.Object({
-    id: Id, taskId: Id, status: Status, trigger: Trigger, retryOfExecutionId: Nullable(Id),
+    id: Id, taskId: Id, runNumber: RunNumber, status: Status, trigger: Trigger, retryOfExecutionId: Nullable(Id),
     provider: Nullable(Type.String()), model: Nullable(Type.String()),
     createdAt: Type.String(), startedAt: Nullable(Type.String()), completedAt: Nullable(Type.String()),
     durationMs: Nullable(Count), errorCode: Nullable(Type.String()), errorMessage: Nullable(Type.String()),
   }),
   personWords: Type.Object({ guidance: Nullable(Type.String()), reviewFeedback: Nullable(Type.String()) }),
-  chain: Type.Object({ previous: Nullable(Id), next: Type.Array(Id) }),
+  chain: Type.Object({ previous: Nullable(RunRef), next: Type.Array(RunRef) }),
   inputs: Type.Array(Type.Object({ id: Id, originalFilename: Type.String(), format: Type.String(), byteSize: Count, sha256: Type.String() })),
   inputsReadByRun: Nullable(Type.Boolean()),
   disclosure: Nullable(Type.Object({ provider: Nullable(Type.String()), model: Nullable(Type.String()), sendCount: Count, grantedAt: Nullable(Type.String()) })),

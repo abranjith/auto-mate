@@ -82,6 +82,9 @@
 - **One export per file** for major abstractions (classes, large interfaces). Small helpers and types can share a file.
 - **A button that POSTs guards itself with a ref, not state.** `disabled={pending}` and `if (pending) return` both read state that updates only after the render, so a double click posts twice. Set a `useRef` flag before the first `await`, clear it on failure, and test with `user.dblClick` asserting one request. _(auto-captured 2026-09-26 — implementation review FEAT-111)_
 - **Imports**: Use path aliases (`@core/`, `@server/`, `@web/`) configured in `tsconfig.json` paths. No relative imports that traverse more than two levels (`../../` max).
+- **Child-process output the app parses runs with color off.** `pnpm dev` runs the server under `concurrently`, which sets `FORCE_COLOR` for its children, and Python tools honor it — a colored pytest summary once blocked every run's verification. Pass the tool's own switch (`--color=no`) and strip ANSI escapes before matching. _(auto-captured 2026-09-27 — fix pnpm-dev run failures)_
+- **Effects that tear down in cleanup must re-arm on mount.** `main.tsx` renders under `<StrictMode>`, which mounts, unmounts, and remounts in development; a `disposed`/`closed` ref set in cleanup must be reset in the same effect's setup, and tests of such hooks render with `reactStrictMode: true`. _(auto-captured 2026-09-27 — fix pnpm-dev run failures)_
+- **People see per-task run numbers, never execution ids.** "Run 2" is a task's second run (`runNumber`, computed from the task's own rows); the execution id stays in URLs and API ids only. _(auto-captured 2026-09-27 — fix pnpm-dev run failures)_
 
 ## Architecture
 

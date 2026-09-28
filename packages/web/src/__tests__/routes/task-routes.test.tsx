@@ -29,7 +29,7 @@ const component = async (path: string) => ((await import(path)) as { Route: { op
 function mount(Component: () => ReactNode) {
   return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Component /></QueryClientProvider>);
 }
-const timelineItem = (id: number): RunTimelineItem => ({ id, taskId: 3, status: 'failed', trigger: id === 10 ? 'manual' : 'rerun', retryOfExecutionId: id === 10 ? null : id - 1, hasGuidance: false, hasReviewFeedback: false, createdAt: at, completedAt: at, durationMs: 5, errorCode: null, outputCount: 0, reuse: null });
+const timelineItem = (id: number): RunTimelineItem => ({ id, taskId: 3, runNumber: id - 9, status: 'failed', trigger: id === 10 ? 'manual' : 'rerun', retryOfExecutionId: id === 10 ? null : id - 1, hasGuidance: false, hasReviewFeedback: false, createdAt: at, completedAt: at, durationMs: 5, errorCode: null, outputCount: 0, reuse: null });
 
 beforeEach(() => { vi.mocked(RunView).mockClear(); mock.task.mockReset(); mock.execution.mockReset(); mock.timeline.mockReset(); mock.pages = []; });
 afterEach(cleanup);
@@ -62,7 +62,17 @@ describe('task layout /tasks/$taskId', () => {
     const view = render(<RunTimeline taskId={3} />);
     const current = view.container.querySelectorAll('[aria-current="page"]');
     expect(current).toHaveLength(1);
-    expect(current[0]?.textContent).toBe('Tried again');
+    expect(current[0]?.textContent).toBe('Run 2 · Tried again');
+  });
+
+  it('numbers runs per task and shows durations in words, not the database id and raw milliseconds', async () => {
+    mock.pages = [{ items: [{ ...timelineItem(12), durationMs: 83_787, outputCount: 1 }, { ...timelineItem(11), durationMs: 5_934 }, timelineItem(10)], nextCursor: null, hasMore: false }];
+    mock.pathname = '/tasks/3/runs/12';
+    const { RunTimeline } = await import('../../components/history/run-timeline');
+    const text = render(<RunTimeline taskId={3} />).container.textContent ?? '';
+    for (const line of ['Run 3 · Tried again', '1 minute 24 seconds · 1 output', 'Run 2 · Tried again', '6 seconds · 0 outputs', 'Run 1 · First run']) expect(text).toContain(line);
+    expect(text).not.toMatch(/\d ms/);
+    expect(text).not.toContain('Run 12');
   });
 });
 

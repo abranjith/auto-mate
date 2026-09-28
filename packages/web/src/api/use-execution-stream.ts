@@ -34,6 +34,15 @@ export function mergeContiguousEvents(
   }
   return { events: merged, gap: false };
 }
+/** Close a socket whose handlers must no longer run. */
+function discard(ws: WebSocket | undefined, code?: number): void {
+  if (!ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  ws.close(code);
+}
 async function loadHistory(executionId: number): Promise<ConversationEvent[]> {
   const result: ConversationEvent[] = [];
   let cursor = 0;
@@ -113,7 +122,8 @@ export function useExecutionStream(executionId: number): ExecutionStream {
   const open = useCallback(() => {
     if (disposed.current || history.data === undefined || summary.data === undefined) return;
     if (isTerminal(summary.data.status)) {
-      socket.current?.close(1000);
+      discard(socket.current, 1000);
+      socket.current = undefined;
       setConnection('closed');
       return;
     }
@@ -122,16 +132,21 @@ export function useExecutionStream(executionId: number): ExecutionStream {
       return;
     }
     if (timer.current) clearTimeout(timer.current);
-    socket.current?.close();
+    discard(socket.current);
     setConnection(attempts.current ? 'reconnecting' : 'connecting');
     const ws = new WebSocket(socketUrl(executionId, lastSeq.current));
     socket.current = ws;
+    // Handlers of a socket that was since replaced or discarded must not act:
+    // a stale close would schedule a reconnect that tears down the live socket.
+    const current = () => socket.current === ws && !disposed.current;
     ws.onopen = () => {
+      if (!current()) return;
       attempts.current = 0;
       setConnection('live');
       setError(undefined);
     };
     ws.onmessage = (message) => {
+      if (!current()) return;
       let parsed: unknown;
       try {
         parsed = JSON.parse(String(message.data));
@@ -149,7 +164,7 @@ export function useExecutionStream(executionId: number): ExecutionStream {
       }
     };
     ws.onclose = (event) => {
-      if (disposed.current) return;
+      if (!current()) return;
       if (event.code === 4004) {
         setError('Execution not found.');
         setConnection('closed');
@@ -166,6 +181,19 @@ export function useExecutionStream(executionId: number): ExecutionStream {
     ws.onerror = () => undefined;
   }, [executionId, history.data, summary.data, merge, reconnect]);
   openRef.current = open;
+  // Declared before the effects that open the socket so it runs first on every
+  // mount. StrictMode (main.tsx) mounts, unmounts, and remounts in development:
+  // the simulated unmount sets `disposed`, and without this reset every later
+  // open() returned early — no socket, no live events, a frozen page.
+  useEffect(() => {
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
+      if (timer.current) clearTimeout(timer.current);
+      discard(socket.current, 1000);
+      socket.current = undefined;
+    };
+  }, []);
   useEffect(() => {
     if (history.data) {
       const merged = mergeContiguousEvents([], history.data);
@@ -191,14 +219,6 @@ export function useExecutionStream(executionId: number): ExecutionStream {
       window.removeEventListener('online', online);
     };
   }, [reconnect]);
-  useEffect(
-    () => () => {
-      disposed.current = true;
-      if (timer.current) clearTimeout(timer.current);
-      socket.current?.close(1000);
-    },
-    [],
-  );
   const retry = () => {
     attempts.current = 0;
     if (timer.current) clearTimeout(timer.current);
