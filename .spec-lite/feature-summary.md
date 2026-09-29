@@ -63,6 +63,13 @@ A passing run parks at `awaiting_approval`. The gate shows reads, writes, checks
 
 ## Data Ingestion & Disclosure
 
+**FEAT-112 — Typed Answers & Follow-up Questions** _(updated: 2026-09-28 by implement)_
+Source spec: [spec.md](features/FEAT-112-typed_answers_follow_up/spec.md)
+
+Every agent clarification offers the person a typed answer, including questions with choices through **Something else…**. Answers are trimmed and capped at 2,000 characters; blank answers are rejected. The UI shows readable choice labels or quoted own-words answers, and shared plain-English rules guide the agent in text-only and file runs. The agent receives how each answer was given and may ask a short follow-up in the same session when an own-words answer is unclear, contradictory, or unworkable. One follow-up per parent and two follow-up levels are allowed; accepted follow-ups do not spend the three-original-question cap. Other attempted follow-ups become ordinary counted questions. The transcript shows the parent context, the run record counts follow-ups, and saved-task notes and later runs carry readable answers in chain order. Question and answer text are excluded from application logs.
+
+---
+
 **FEAT-104 — CSV/XLSX Ingestion & Profiling** _(updated: 2026-09-24 by implement)_
 Source spec: [spec.md](features/FEAT-104-csv_xlsx_ingestion_profiling/spec.md)
 
@@ -71,7 +78,7 @@ People attach up to five `.csv`/`.tsv`/`.xlsx` files (50 MB each) through `POST 
 **FEAT-105 — Disclosure Review & Clarification Behavior** _(updated: 2026-09-26 by fix)_
 Source spec: [spec.md](features/FEAT-105-disclosure_clarification/spec.md)
 
-Attachment tasks now stop at a disclosure review showing the literal bounded file description, recipient provider/model, required ambiguity decisions, applied defaults, and a separate diagnostics choice. Consent is pinned to the exact payload digest and recipient, verified again before transmission, and recorded with durable context or filtered-diagnostic receipts. Default-deny diagnostic filtering drops unknown output and masks user literals. The agent can ask up to three persisted meaning/data-loss questions through `request_clarification`; accepted questions park the execution without consuming an active slot, answers resume it, and cancellation or restart settles the wait honestly. Conversation events render questions, answers, waiting state, and expandable exact-byte receipts as text only. This is a transmission-consent boundary, not an execution-isolation boundary.
+Attachment tasks now stop at a disclosure review showing the literal bounded file description, recipient provider/model, required ambiguity decisions, applied defaults, and a separate diagnostics choice. Consent is pinned to the exact payload digest and recipient, verified again before transmission, and recorded with durable context or filtered-diagnostic receipts. Default-deny diagnostic filtering drops unknown output and masks user literals. The agent can ask up to three original persisted meaning/data-loss questions through `request_clarification`; accepted questions park the execution without consuming an active slot, answers resume it, and cancellation or restart settles the wait honestly. FEAT-112 adds bounded follow-ups outside that original-question cap. Conversation events render questions, answers, waiting state, and expandable exact-byte receipts as text only. This is a transmission-consent boundary, not an execution-isolation boundary.
 
 On a retry, earlier answered agent questions for the same task are included as bounded application text, alongside the prior pre-flight answers.
 

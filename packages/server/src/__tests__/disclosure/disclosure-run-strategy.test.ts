@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Type } from '@sinclair/typebox';
-import { assemblePromptContext } from '@automate/core';
+import { assemblePromptContext, CLARIFICATION_STYLE_RULES } from '@automate/core';
 import { DisclosureRunStrategy } from '../../disclosure/disclosure-run-strategy';
 
 const task = { id: 4, name: 'Task', description: 'Summarize', createdAt: new Date(), updatedAt: new Date() };
@@ -16,13 +16,15 @@ describe('DisclosureRunStrategy', () => {
     const built = strategy.buildRun(task, execution);
     expect(built.prompt).toBe(assemblePromptContext({ userPrompt: 'Summarize', disclosure: { text: 'APPROVED BYTES', consentId: 2 }, appText: [] }).text);
     expect(record).toHaveBeenCalledOnce();
+    expect(built.systemPrompt).toContain(CLARIFICATION_STYLE_RULES);
     expect(built.events?.[0]).toMatchObject({ type: 'disclosure_sent', transmissionId: 9 });
   });
 
-  it('keeps text-only tasks unchanged and records no receipt', () => {
+  it('gives text-only tasks the shared question rules and records no receipt', () => {
     const verify = vi.fn(); const record = vi.fn();
     const strategy = new DisclosureRunStrategy({ disclosure: { verifyForTransmission: verify } as never, transmissions: { record } as never, uploads: { listByTask: () => [] } as never, clarifications: { listByExecution: () => [] } as never, executions: { getById: () => execution } as never, clarificationTool: tool });
     expect(strategy.buildRun(task, execution).prompt).toBe('Summarize');
+    expect(strategy.buildRun(task, execution).systemPrompt).toContain(CLARIFICATION_STYLE_RULES);
     expect(verify).not.toHaveBeenCalled(); expect(record).not.toHaveBeenCalled();
   });
 

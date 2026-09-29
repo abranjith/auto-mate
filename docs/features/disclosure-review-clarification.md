@@ -13,8 +13,9 @@ This is a transparency and consent feature. It controls and records what Auto-Ma
 - Places the approved disclosure text into the provider prompt byte-for-byte. The full prompt also contains your task description and application-authored context for resolved pre-flight decisions.
 - Separates permission to send file context from permission to send filtered diagnostics. File context is required for an attached-file task; diagnostics are optional and enabled by default in the review screen.
 - Classifies ambiguity before the run. Choices that could change meaning or risk data loss require an answer. Cosmetic choices are shown as applied defaults and may expose an alternate selector.
-- Lets the agent request a clarification while it is working. Every request includes a rationale and a proposed default, and all questions in a batch must be answered together.
-- On a retry of the same task, carries forward earlier answered agent questions as bounded question-and-answer text in the prompt. Required pre-flight choices are handled separately: their prior answers are saved as seeded choices on the new execution before its prompt is built.
+- Lets the agent request a clarification while it is working. Its questions, reasons, and choice labels are requested in short, everyday English without code, paths, internal names, or jargon. Every question includes a rationale and a proposed default, and all questions in a batch must be answered together.
+- Accepts a choice or an answer in your own words for every agent question. If your answer is unclear, contradictory, or cannot work for the task, the agent can ask a short follow-up in the same run and turn. A clear answer needs no read-back.
+- On a retry of the same task, carries forward earlier answered agent questions, including follow-ups, as bounded question-and-answer text in the prompt. Required pre-flight choices are handled separately: their prior answers are saved as seeded choices on the new execution before its prompt is built.
 - Parks an unanswered run in `waiting`. A waiting run does not consume an active execution slot and remains waiting until it is answered or cancelled.
 - Stores consent, transmission receipts, clarification questions, answers, answer sources, and transcript events. Expanding a disclosure receipt in the conversation loads the exact transmitted bytes from the local server.
 
@@ -25,7 +26,7 @@ This is a transparency and consent feature. It controls and records what Auto-Ma
 1. On **New task**, enter the result you want and attach one or more analyzed CSV, TSV, or XLSX files.
 2. Select **Start task**. Auto-Mate opens **Review what will leave this machine** instead of starting immediately.
 3. Confirm the provider and model. Expand the payload to read the exact plain text that will be disclosed.
-4. Answer every item under **Decisions required before starting**. Nothing is preselected. The start button remains disabled until every required choice has an answer.
+4. Answer every item under **Decisions required before starting**. These pre-flight decisions use the offered choices only; the agent has not started yet and cannot interpret a typed answer here. Nothing is preselected. The start button remains disabled until every required choice has an answer.
 5. Review **Decisions Auto-Mate applied**. When an item offers a selector, you can choose a different cosmetic default before approval.
 6. Leave **Allow filtered diagnostics for automatic repair** on, or turn it off. The worked example shows how quoted values are replaced before a diagnostic can be sent.
 7. Select **Approve and start**. Auto-Mate first records the consent and then creates the task. If recording consent fails, the task is not created.
@@ -39,14 +40,16 @@ A task without attachments starts directly because only the task description is 
 When the agent encounters ambiguity that changes meaning or risks data loss, the run changes to `waiting` and the question appears in the conversation:
 
 1. Read each question, its rationale, and the proposed default.
-2. Choose one offered option or enter a free-text answer of at most 2,000 characters.
+2. Choose an offered option or select **Something else…** to type your answer. Questions without options show a text box directly. Typed answers can be at most 2,000 characters; a blank or spaces-only answer cannot be sent.
 3. Answer every question in the batch, then select **Send answers**.
 
-The form is disabled while the answer is being saved. A validation or server error displays its message and re-enables the form. After a successful answer, the run returns to `generating`, and the transcript keeps a read-only record of the answer and whether it came from you, an application default, or a prior run.
+The form is disabled while the answer is being saved. A validation or server error displays its message and re-enables the form. After a successful answer, the run returns to `generating`. The transcript shows a choice's readable label or your quoted words, along with whether the answer was your choice, in your words, an application default, or carried over from an earlier run.
+
+If your typed answer needs clarification, the agent may ask a follow-up through the same conversation, without starting another run. The follow-up shows the earlier question and your answer above it. You can answer that follow-up with a choice or in your own words as well. The agent is instructed to continue without repeating a clear answer back to you.
 
 There is no answer timeout. Leaving a question unanswered leaves the run in `waiting`; the proposed default is not applied merely because time passes. If the application refuses an interruption because the per-execution question limit or waiting-run capacity has been reached, it records the refusal and returns the proposed default to the agent. Use the existing run cancel control to stop a waiting run.
 
-If you retry a task after a failed or rejected run, the new run reuses its resolved pre-flight choices. It also includes answered agent questions from earlier runs of that same task in the next prompt, so you need not repeat those answers. Only answered agent questions are carried over; pending, declined, and cancelled questions are not. The carried question-and-answer text is limited to 4,000 characters in total.
+If you retry a task after a failed or rejected run, the new run reuses its resolved pre-flight choices. It also includes answered agent questions and follow-ups from earlier runs of that same task in the next prompt, so you need not repeat those answers. Choice answers use their readable labels, follow-ups appear directly after their parent questions, and repeated question wording is included only once. Pending, declined, and cancelled questions are not carried over. The carried question-and-answer text is limited to 4,000 characters in total.
 
 ### Inspect what was sent
 
@@ -72,10 +75,10 @@ curl -X POST http://127.0.0.1:4317/api/tasks \
 curl http://127.0.0.1:4317/api/executions/9/clarifications
 curl http://127.0.0.1:4317/api/executions/9/disclosure
 
-# Answer every question in a pending batch together.
+# Answer every question in a pending batch together. Your own words are accepted.
 curl -X POST http://127.0.0.1:4317/api/clarifications/4/answers \
   -H "content-type: application/json" \
-  -d '{"answers":[{"questionId":11,"value":"day-first"}]}'
+  -d '{"answers":[{"questionId":11,"value":"Use the first day of each month"}]}'
 ```
 
 ## Inputs and Outputs
@@ -86,8 +89,8 @@ curl -X POST http://127.0.0.1:4317/api/clarifications/4/answers \
 | `POST /api/disclosure/consents` | Upload ids, the displayed digest, and a diagnostics-scope boolean | Immutable consent id, digest, recipient, byte size, scopes, and grant time |
 | `POST /api/tasks` | Prompt, upload ids, consent id/digest, and every required pre-flight decision | The created task and initial execution; no task is created if the gate fails |
 | `GET /api/executions/:id/disclosure` | Positive execution id | Ordered context and diagnostic transmission receipts, including exact stored text |
-| `GET /api/executions/:id/clarifications` | Positive execution id | Ordered question batches, status, rationale, options, defaults, answers, and answer sources |
-| `POST /api/clarifications/:id/answers` | One bounded answer for every question in the pending batch | The settled clarification batch |
+| `GET /api/executions/:id/clarifications` | Positive execution id | Ordered question batches, status, rationale, options, defaults, answers, answer kind, answer sources, and any parent question id for a follow-up |
+| `POST /api/clarifications/:id/answers` | One answer of 1–2,000 characters for every question in the pending batch; spaces-only answers are rejected | The settled clarification batch |
 
 The disclosure text can contain file names, table and column names, inferred types, local statistics, frequent values permitted by the ingestion policy, and the bounded sample rows you saw in the review. It does not contain the complete uploaded file or rows outside the bounded disclosure payload.
 
@@ -103,7 +106,7 @@ Gate failures use the standard error envelope with a correlation id. Relevant co
 | `PREFLIGHT_DECISION_REQUIRED` | 409 | One or more required pre-flight decisions are missing. |
 | `CLARIFICATION_NOT_FOUND` | 404 | The clarification id does not exist. |
 | `CLARIFICATION_NOT_PENDING` | 409 | The batch was already answered, declined, cancelled, or interrupted. |
-| `CLARIFICATION_INVALID_ANSWER` | 400 | An answer is missing, too long, or not one of the offered options. |
+| `CLARIFICATION_INVALID_ANSWER` | 400 | An answer is missing, blank after trimming, or longer than 2,000 characters. |
 | `CLARIFICATION_LIMIT_REACHED` | 409 | The agent attempted to exceed its configured question budget. |
 | `WAITING_CAPACITY_REACHED` | 409 | The configured number of parked runs is already waiting. |
 
@@ -118,11 +121,13 @@ The following provisional D14 settings are parsed by the server:
 | Variable | Default | Purpose |
 | --- | ---: | --- |
 | `AUTOMATE_MAX_WAITING_EXECUTIONS` | `5` | Maximum number of live runs parked for answers before a new question is declined. |
-| `AUTOMATE_MAX_AGENT_CLARIFICATIONS` | `3` | Maximum persisted agent-initiated questions per execution. A batch counts by question, not by tool call. |
+| `AUTOMATE_MAX_AGENT_CLARIFICATIONS` | `3` | Maximum original agent questions per execution. A batch counts by question, not by tool call. Accepted follow-ups do not spend this limit. |
 | `AUTOMATE_MAX_PREFLIGHT_DECISIONS` | `3` | Maximum required choices shown before a run; remaining findings become disclosed defaults. |
 | `AUTOMATE_MAX_DIAGNOSTIC_BYTES` | `8192` | Maximum bytes retained by the default-deny diagnostic filter. |
 
 Consent records and receipts otherwise persist with the task and are removed through the task's database cascade. There is no separate purge schedule for them.
+
+Each original agent question can have one follow-up, and that follow-up can have one more: at most two accepted follow-ups in a chain. An attempted third follow-up, or one that does not follow an answered question in your own words, is treated as an ordinary question and spends the configured original-question limit (three by default). A question can offer at most six choices. Waiting-run capacity also applies to follow-ups.
 
 ## Limitations
 

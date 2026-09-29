@@ -1,0 +1,2 @@
+ALTER TABLE `clarification_question` ADD `follow_up_of_question_id` integer REFERENCES clarification_question(id) ON DELETE CASCADE;--> statement-breakpoint
+CREATE UNIQUE INDEX `clarification_question_follow_up` ON `clarification_question` (`follow_up_of_question_id`) WHERE "clarification_question"."follow_up_of_question_id" is not null;

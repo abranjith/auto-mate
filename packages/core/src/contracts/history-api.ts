@@ -64,7 +64,7 @@ export const RunRecordSchema = Type.Object({
   inputsReadByRun: Nullable(Type.Boolean()),
   disclosure: Nullable(Type.Object({ provider: Nullable(Type.String()), model: Nullable(Type.String()), sendCount: Count, grantedAt: Nullable(Type.String()) })),
   // Questions by where their answer came from: the person, an earlier run of this task, or the proposed default.
-  questions: Nullable(Type.Object({ total: Count, answered: Count, byPerson: Count, seeded: Count, defaulted: Count, declined: Count })),
+  questions: Nullable(Type.Object({ total: Count, answered: Count, byPerson: Count, seeded: Count, defaulted: Count, declined: Count, followUps: Count })),
   code: Nullable(Type.Object({ id: Id, attempt: Count, digest: Type.String(), shortDigest: Type.String(), testsPassed: Nullable(Type.Boolean()), attemptCount: Count })),
   checks: Nullable(Type.Object({ status: Type.String(), blockingCount: Count, advisoryCount: Count, summary: Type.String(), runtime: Nullable(Type.String()) })),
   approval: Nullable(Type.Object({ decidedAt: Type.String(), acknowledgedWarnings: Type.Boolean() })),

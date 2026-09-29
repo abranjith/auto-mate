@@ -1,4 +1,5 @@
 import { ExecutionAlreadySavedError, ExecutionNotFoundError, ExecutionNotSaveableError, RevisionIntegrityError, TEMPLATE_NAME_MAX_CHARS, ValidationError, buildInputContract, buildTableIndex, computeVersionDigest, describeRunState, findWallClockReads, isSavedCodeRun, parseFindingKey, recordRules, renderMappingInstructions, sha256Hex, type DeclaredInput, type DeclaredOutput, type ExecutionStatus, type Finding, type InputContract, type RecordedRule, type RepairMapping, type ReuseKind } from '@automate/core';
+import { answerText, type FindingOption } from '@automate/core';
 import type { Logger } from 'pino';
 import type { DatabaseConnection } from '../db/client';
 import type { ExecutionRepository } from '../db/repositories/execution-repository';
@@ -33,7 +34,7 @@ function promotionNote(mapping: string | null, guidance: string | null, contract
 }
 
 function answered(questions: ReturnType<ClarificationRepository['listByExecution']>) {
-  return questions.flatMap((batch) => batch.questions.map((question) => ({ findingKey: question.findingKey, answer: question.answer ?? question.proposedDefault, proposedDefault: question.proposedDefault, question: question.promptText, status: batch.status })));
+  return questions.flatMap((batch) => batch.questions.map((question) => ({ findingKey: question.findingKey, answer: answerText({ answer: question.answer, answerSource: question.answerSource as 'user' | 'default' | 'seeded' | null, options: question.options ? JSON.parse(question.options) as FindingOption[] : null }) ?? question.proposedDefault, proposedDefault: question.proposedDefault, question: question.promptText, status: batch.status })));
 }
 
 /** Copies only shapes, decisions, runtime, and code from a person-accepted run. */

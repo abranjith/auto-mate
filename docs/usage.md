@@ -97,7 +97,7 @@ When **Start task** is selected with analyzed attachments, the composer changes 
 
 Diagnostic scope is enabled by default in the screen and can be unchecked. When granted and later used, only the default-deny filtered diagnostic text may be sent: unrecognized lines are dropped, quoted values are masked by length, and the text is bounded. Granting this scope does not mean diagnostics are sent during every run.
 
-**Approve and start** remains disabled until every required choice has an answer. The browser then:
+Pre-flight decisions on this review screen use the offered choices only; there is no typed-answer option here. **Approve and start** remains disabled until every required choice has an answer. The browser then:
 
 1. posts the displayed digest, upload ids, and diagnostics choice to create a consent record;
 2. receives the consent id and server-derived digest; and
@@ -116,9 +116,11 @@ The provider can use `request_clarification` only for ambiguity that changes mea
 3. the task page shows the question card; and
 4. the active execution slot is released while the provider session waits.
 
-Choose an offered option or enter bounded free text for every question, then select **Send answers**. Answers are submitted atomically; the execution changes back to `generating` only after the whole batch is valid and persisted. Answered cards remain in the transcript and identify whether an answer came from you, an application default, or a previously seeded answer.
+For each agent question, choose an offered option, or choose **Something else…** and type your answer. A question without offered options shows a text box directly. Typed answers must contain more than spaces and are limited to 2,000 characters. Answer every question in the card, then select **Send answers**. Answers are submitted together; the run continues only after the whole card is saved.
 
-An execution may ask at most three agent-initiated questions by default. If that cap is exhausted, or five executions are already waiting by default, the application records a declined clarification and returns each proposed default to the agent instead of parking another run. The transcript shows that outcome. These limits are server-enforced rather than prompt-only guidance.
+If an answer in your own words is unclear, conflicts with the task, or cannot work, the agent may ask a short follow-up during the same run. The follow-up card shows the earlier question and what you said, so you can answer in context. A clear answer needs no confirmation. Answered cards stay in the transcript, showing the choice label or your typed words and whether the answer was your choice, in your words, an application default, or carried over from an earlier run.
+
+A run may have at most three original agent questions by default. A follow-up to an answer in your own words does not use one of those three, but each question can have only one follow-up, and a chain stops after two follow-up levels. Further questions count toward the original-question limit. If that limit is exhausted, or five runs are already waiting by default, the application records a declined question and returns its proposed default to the agent. The transcript shows that outcome. These limits are enforced by the server.
 
 A guidance retry of a failed generation run, described below, reuses the task's earlier pre-flight answers and includes your answered agent questions from earlier runs in its new prompt. This helps the agent carry your decisions forward after an interrupted run.
 
@@ -515,7 +517,7 @@ Question and answer text is persisted for replay but must not be written to appl
 - **Disclosure review never opens:** Wait until every attachment finishes analysis, then select **Start task** again.
 - **`DISCLOSURE_CONSENT_STALE`:** The payload or recipient changed. Select **Refresh preview**, review it, and approve again.
 - **`PREFLIGHT_DECISION_REQUIRED`:** Return to the review and answer every item under **Decisions required before starting**.
-- **A clarification cannot be submitted:** Answer every question in the card. For option questions, choose one of the displayed values; free-text answers are limited to 2,000 characters.
+- **An agent question cannot be submitted:** Answer every question in the card. Choose an offered option or **Something else…** and type an answer; questions without options show a text box. Typed answers must contain more than spaces and be no longer than 2,000 characters.
 - **The run continues with a proposed default:** The per-execution question cap or waiting-capacity limit was reached. The declined batch remains visible in the transcript.
 - **Conversation shows `EXECUTION_INTERRUPTED`:** The server restarted while the run depended on an in-memory provider session or local process. Its transcript is preserved; open the latest finished run and select **Run again**.
 - **Deleting a task reports `TASK_HAS_OPEN_RUN`:** Finish or cancel the open run, then try deletion again. A waiting question, approval, or review is still an open run.

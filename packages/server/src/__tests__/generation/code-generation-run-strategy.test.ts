@@ -4,6 +4,7 @@ import path from 'node:path';
 import { assemblePromptContext, renderCodeContract } from '@automate/core';
 import { SCRIPT_DEPENDENCY_SET } from '../../execution/dependency-policy';
 import { GENERATION_SYSTEM_PROMPT } from '../../generation/code-generation-run-strategy';
+import { CLARIFICATION_STYLE_RULES } from '@automate/core';
 import { createGenerationHarness, type GenerationHarness, type HarnessOptions } from '../support/generation-harness';
 import { HIGH_CARDINALITY_SENTINEL, ROW_11_SENTINEL } from '../support/generation-fixtures';
 
@@ -64,6 +65,7 @@ describe('CodeGenerationRunStrategy', () => {
     const opened = h.provider.opened[0]!;
     expect(opened.customTools!.map(({ name }) => name)).toEqual(['request_clarification', 'write_script', 'write_test', 'run_tests', 'finalize_script']);
     expect(opened.systemPrompt).toBe(GENERATION_SYSTEM_PROMPT);
+    expect(opened.systemPrompt).toContain(CLARIFICATION_STYLE_RULES);
     for (const name of ['write_script', 'write_test', 'run_tests', 'finalize_script', 'request_clarification']) expect(opened.systemPrompt).toContain(name);
   });
 

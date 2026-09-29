@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { assemblePromptContext } from '@automate/core';
+import { HistoryRepository } from '../db/repositories/history-repository';
 import type { FakeAgentStep } from '../agent/testing/fake-agent-provider';
 import {
   createGenerationHarness,
@@ -49,6 +50,41 @@ const clarify: FakeAgentStep = {
 };
 
 describe('disclosure and clarification end to end', () => {
+  it('takes a typed answer over HTTP and follows up in the same text-only run', async () => {
+    let releaseFollow!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseFollow = resolve; });
+    const follow = { questions: [{ question: 'What time do you mean?', rationale: 'The time changes the result.', impact: 'meaning', proposedDefault: 'Use noon', followUpOf: 0 }] };
+    const logLines: string[] = [];
+    const h = await harness({ files: [], logLines, steps: () => [clarify, { until: gate }, { call: { tool: 'request_clarification', callId: 'follow-1', args: follow } }, { event: { type: 'assistant_text', text: 'Done.', at: new Date().toISOString() } }] });
+    const { base } = await h.serve();
+    const run = h.run();
+    const original = await eventually(() => h.repos.clarifications.listByExecution(h.execution.id).find(({ status }) => status === 'pending'));
+    const answer = await fetch(`${base}/api/clarifications/${original.id}/answers`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ answers: [{ questionId: original.questions[0]!.id, value: '  about 3 hours after eating  ' }] }) });
+    expect(answer.status).toBe(200);
+    expect((await answer.json() as { questions: { answerKind: string; followUpOfQuestionId: number | null }[] }).questions[0]).toMatchObject({ answerKind: 'own_words', followUpOfQuestionId: null });
+    follow.questions[0]!.followUpOf = original.questions[0]!.id;
+    releaseFollow();
+    const second = await eventually(() => h.repos.clarifications.listByExecution(h.execution.id).find(({ callId }) => callId === 'follow-1'));
+    expect(second.status).toBe('pending');
+    expect(second.questions[0]?.followUpOfQuestionId).toBe(original.questions[0]!.id);
+    const answerSecond = await fetch(`${base}/api/clarifications/${second.id}/answers`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ answers: [{ questionId: second.questions[0]!.id, value: '3 p.m.' }] }) });
+    expect(answerSecond.status).toBe(200);
+    const listed = await fetch(`${base}/api/executions/${h.execution.id}/clarifications`);
+    expect((await listed.json() as { clarifications: { questions: { answerKind: string; followUpOfQuestionId: number | null }[] }[] }).clarifications[1]?.questions[0]).toMatchObject({ answerKind: 'own_words', followUpOfQuestionId: original.questions[0]!.id });
+    expect((await run).status).toBe('completed');
+    const results = h.provider.sessions[0]!.toolResults.filter(({ tool }) => tool === 'request_clarification');
+    expect(results).toHaveLength(2);
+    expect(results[0]?.output).toMatchObject({ details: { answers: [{ answeredWith: 'own_words', answer: 'about 3 hours after eating' }], guidance: expect.stringContaining('followUpOf') } });
+    expect(h.repos.clarifications.countAgentQuestions(h.execution.id)).toBe(1);
+    expect(new HistoryRepository(h.store.connection).getRunRecord(h.execution.id)?.questions?.followUps).toBe(1);
+    const events = h.transcript();
+    expect(events.map(({ seq }) => seq)).toEqual(events.map((_, index) => index + 1));
+    expect(events.filter(({ type }) => type === 'clarification_requested')).toHaveLength(2);
+    expect(events.filter(({ type }) => type === 'clarification_answered')).toHaveLength(2);
+    expect(events.some(({ type }) => type === 'assistant_text')).toBe(true);
+    expect(logLines.join('')).not.toContain('Should totals include returns?');
+    expect(logLines.join('')).not.toContain('about 3 hours after eating');
+  });
   it('sends only the approved snapshot, parks for an answer, resumes, and records one context receipt', async () => {
     const h = await harness({
       pythonRuns: [{}],

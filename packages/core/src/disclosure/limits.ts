@@ -1,5 +1,7 @@
 /** D06: maximum agent-initiated questions per execution. Provisional pending D14. */
 export const MAX_AGENT_CLARIFICATIONS = 3;
+/** Maximum accepted follow-ups after an original agent question. */
+export const MAX_FOLLOW_UP_DEPTH = 2;
 /** D06: maximum required choices on the pre-flight screen. Provisional pending D14. */
 export const MAX_PREFLIGHT_DECISIONS = 3;
 /** D06: maximum choices offered by one clarification question. */

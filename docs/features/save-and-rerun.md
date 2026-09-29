@@ -7,6 +7,8 @@ Save a result you accepted, then use its code with another monthly file. Auto-Ma
 
 A **saved task** owns a copy of the accepted run's code and tests, declared outputs, input shape, remembered decisions and answers, and the Python runtime on which that run was checked. It has numbered revisions. Saving an accepted repair adds the next revision; earlier revisions are kept unchanged, and the newest is used for new runs. **Saved tasks** lists the current revision, last run, and run count. The detail page shows expected files, required columns and types, outputs, remembered choices, runtime, revisions, code on request, and runs.
 
+Remembered notes from the agent's questions use the choice's readable label, such as **A single web page**, instead of its internal value. If you answered in your own words, the note keeps your typed answer. An answered follow-up is kept as a separate question and answer.
+
 The saved input shape includes file formats, worksheet names, column names and types. The save dialog states what is kept in these words:
 
 > A saved task keeps column and sheet names, your filenames as labels, your answers, and code that may mention a value the AI saw. It keeps no data rows and survives deleting the task it came from.
@@ -34,6 +36,8 @@ For the column “Date” (how its dates are read), use “DD/MM/YYYY”.
 Your optional note follows the sentences word for word. The repair sends the reviewed instructions and the **new** file's approved description to the AI; it does **not** send the saved code.
 
 On a saved-code run in History, **Run again exactly** starts a linked run with that run's code, input files, and as-of date. It runs the checks and approval gate again. **Repair with AI** is the route for changing what the code does; it requires fresh disclosure consent. Rejecting a saved-code result records your feedback and offers these actions; it does not automatically create an AI retry.
+
+If you retry an AI run of the same task, Auto-Mate carries earlier answered agent questions into the new AI request. It uses readable choice labels and your typed answers, places a retained follow-up directly after its parent with a **Follow-up** prefix, and keeps the latest answer when question wording repeats. This carried context is limited to 4,000 characters. A saved-code run has no AI request, so it does not use this context.
 
 ## Understanding the fit check
 

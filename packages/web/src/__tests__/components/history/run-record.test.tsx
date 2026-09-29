@@ -53,7 +53,7 @@ function full(): RunRecord {
     personWords: { guidance: null, reviewFeedback: 'Totals were off by one region.' }, chain: { previous: { id: 7, runNumber: 1 }, next: [{ id: 11, runNumber: 3 }] },
     inputs: [{ id: 1, originalFilename: 'sales.csv', format: 'csv', byteSize: 10, sha256: 'a'.repeat(64) }], inputsReadByRun: true,
     disclosure: { provider: 'fake', model: 'm', sendCount: 2, grantedAt: at },
-    questions: { total: 3, answered: 3, byPerson: 1, seeded: 2, defaulted: 0, declined: 0 },
+    questions: { total: 3, answered: 3, byPerson: 1, seeded: 2, defaulted: 0, declined: 0, followUps: 1 },
     code: { id: 4, attempt: 2, digest: 'd'.repeat(64), shortDigest: 'dddddddddddd', testsPassed: true, attemptCount: 2 },
     checks: { status: 'passed', blockingCount: 0, advisoryCount: 1, summary: 'Passed with 1 warning', runtime: 'Python 3.12.4 on win32 · 8 packages' },
     approval: { decidedAt: at, acknowledgedWarnings: true },
@@ -87,7 +87,7 @@ describe('run record', () => {
     const view = mount();
     await waitFor(() => expect(view.container.textContent).toContain('Summarize my sales.'));
     const text = view.container.textContent ?? '';
-    for (const line of ['You said: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1 second', '1 output', 'Came from run 1', 'Led to run 3']) expect(text).toContain(line);
+    for (const line of ['You said: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run · 1 follow-up', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1 second', '1 output', 'Came from run 1', 'Led to run 3']) expect(text).toContain(line);
   });
 
   it('mounts each owning view lazily on first open, with exactly one request, and none on reopening', async () => {

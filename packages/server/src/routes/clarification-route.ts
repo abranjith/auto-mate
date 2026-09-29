@@ -1,11 +1,11 @@
 import { Value } from '@sinclair/typebox/value';
-import { ClarificationAnswerRequestSchema, ValidationError, type ClarificationAnswerRequest, type FindingOption } from '@automate/core';
+import { answerKind, ClarificationAnswerRequestSchema, ValidationError, type ClarificationAnswerRequest, type FindingOption } from '@automate/core';
 import { Router } from 'express';
 import type { ClarificationRepository, ClarificationWithQuestions } from '../db/repositories/clarification-repository';
 import type { ClarificationService } from '../disclosure/clarification-service';
 
 const parseId = (value: string, label: string) => { const id = Number(value); if (!Number.isSafeInteger(id) || id < 1) throw new ValidationError(`${label} must be a positive integer.`); return id; };
-const present = (batch: ClarificationWithQuestions) => ({ ...batch, askedAt: batch.askedAt.toISOString(), settledAt: batch.settledAt?.toISOString() ?? null, createdAt: undefined, questions: batch.questions.map((question) => ({ id: question.id, position: question.position, findingKey: question.findingKey, impact: question.impact, promptText: question.promptText, rationale: question.rationale, options: question.options ? JSON.parse(question.options) as FindingOption[] : null, proposedDefault: question.proposedDefault, answer: question.answer, answerSource: question.answerSource, answeredAt: question.answeredAt?.toISOString() ?? null })) });
+const present = (batch: ClarificationWithQuestions) => ({ ...batch, askedAt: batch.askedAt.toISOString(), settledAt: batch.settledAt?.toISOString() ?? null, createdAt: undefined, questions: batch.questions.map((question) => { const options = question.options ? JSON.parse(question.options) as FindingOption[] : null; return { id: question.id, position: question.position, findingKey: question.findingKey, impact: question.impact, promptText: question.promptText, rationale: question.rationale, options, proposedDefault: question.proposedDefault, answer: question.answer, answerSource: question.answerSource, answerKind: answerKind({ answer: question.answer, answerSource: question.answerSource as 'user' | 'default' | 'seeded' | null, options }), followUpOfQuestionId: question.followUpOfQuestionId, answeredAt: question.answeredAt?.toISOString() ?? null }; }) });
 
 /** Clarification replay and answer endpoints. */
 export function clarificationRoute(deps: { readonly clarifications: ClarificationRepository; readonly service: ClarificationService }): Router {

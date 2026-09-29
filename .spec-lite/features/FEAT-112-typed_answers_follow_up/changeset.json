@@ -1,0 +1,322 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-29T01:27:11.750Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-29T01:27:24.184Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-29T01:28:21.160Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-29T01:28:48.134Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-29T01:28:50.601Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-29T01:28:52.944Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-29T01:32:40.235Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-29T01:33:53.246Z",
+      "head": "e72466262ae3de5f1e481d07f8f0be15925ac352"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "docs/architecture.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "docs/features/disclosure-review-clarification.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "docs/features/execution-history.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "docs/features/save-and-rerun.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/history-api.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/__tests__/disclosure/clarification-wording.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/disclosure-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/contracts/history-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/disclosure/clarification-wording.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/disclosure/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/core/src/disclosure/limits.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260929010815_silent_quentin_quire/migration.sql",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/drizzle/20260929010815_silent_quentin_quire/snapshot.json",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/clarification-repository.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure-e2e.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/clarification-service.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/clarification-tool.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/disclosure/disclosure-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/generation/code-generation-run-strategy.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/migrate.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/migration-clarification-follow-up.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/reuse/save-service.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/__tests__/support/generation-harness.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/db/repositories/clarification-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/db/repositories/history-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/db/schema.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/disclosure/clarification-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/disclosure/clarification-tool.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/disclosure/disclosure-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/generation/code-generation-run-strategy.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/index.ts",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "packages/server/src/reuse/save-service.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/server/src/routes/clarification-route.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/clarification-card.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-record.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/conversation/clarification-card.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/conversation/clarification-event.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/history/record-detail.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/history/run-record-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-112-typed_answers_follow_up/changeset.json",
+    ".spec-lite/features/FEAT-112-typed_answers_follow_up/spec.md",
+    ".spec-lite/memory.md"
+  ],
+  "baseline": {
+    "sha": "e72466262ae3de5f1e481d07f8f0be15925ac352",
+    "capturedAt": "2026-09-29T01:05:50.809Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/memory.md",
+      ".spec-lite/features/FEAT-112-typed_answers_follow_up/spec.md"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/memory.md": "14997ef9de11fc62ca222aeba00d35cff51a7876",
+      ".spec-lite/features/FEAT-112-typed_answers_follow_up/spec.md": "c0097d575d421fcb7f35c44cda6dca0a1d3a9628"
+    }
+  },
+  "featureId": "FEAT-112"
+}

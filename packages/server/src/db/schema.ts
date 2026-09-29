@@ -451,6 +451,7 @@ export const clarificationQuestion = sqliteTable(
     proposedDefault: text('proposed_default').notNull(),
     answer: text('answer'),
     answerSource: text('answer_source'),
+    followUpOfQuestionId: integer('follow_up_of_question_id').references((): AnySQLiteColumn => clarificationQuestion.id, { onDelete: 'cascade' }),
     answeredAt: integer('answered_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   },
@@ -459,6 +460,7 @@ export const clarificationQuestion = sqliteTable(
     check('clarification_question_answer_source_check', sql`${table.answerSource} is null or ${table.answerSource} in ('user','default','seeded')`),
     uniqueIndex('clarification_question_position').on(table.clarificationId, table.position),
     index('clarification_question_finding').on(table.findingKey).where(sql`${table.findingKey} is not null`),
+    uniqueIndex('clarification_question_follow_up').on(table.followUpOfQuestionId).where(sql`${table.followUpOfQuestionId} is not null`),
   ],
 );
 

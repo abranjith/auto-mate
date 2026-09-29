@@ -14,7 +14,7 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count} ${cou
 
 /** "3 questions · 2 answered by you · 1 carried over from an earlier run". */
 function questionSummary(questions: NonNullable<RunRecord['questions']>): string {
-  return [plural(questions.total, 'question'), questions.byPerson ? `${questions.byPerson} answered by you` : '', questions.seeded ? `${questions.seeded} carried over from an earlier run` : '', questions.defaulted ? `${questions.defaulted} used the proposed default` : '', questions.declined ? `${questions.declined} not asked` : ''].filter(Boolean).join(' · ');
+  return [plural(questions.total, 'question'), questions.byPerson ? `${questions.byPerson} answered by you` : '', questions.seeded ? `${questions.seeded} carried over from an earlier run` : '', questions.defaulted ? `${questions.defaulted} used the proposed default` : '', questions.declined ? `${questions.declined} not asked` : '', questions.followUps ? plural(questions.followUps, 'follow-up') : ''].filter(Boolean).join(' · ');
 }
 
 /** "Monthly sales · revision 2 · 3f9a… · This file fits, with warnings to review (1 warning)". */

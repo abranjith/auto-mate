@@ -46,6 +46,17 @@ describe('SaveService.save: the saved revision', () => {
     expect(stored).not.toContain(frequent);
   });
 
+  it('saves choice labels and typed answers as readable notes', async () => {
+    const { h, s } = await setup();
+    h.repos.clarifications.open({ executionId: h.execution.id, source: 'agent', status: 'answered', questions: [
+      { impact: 'meaning', promptText: 'Which format?', rationale: 'It changes the result.', options: [{ value: 'single_html', label: 'A single web page' }], proposedDefault: 'single_html', answer: 'single_html', answerSource: 'user' },
+      { impact: 'meaning', promptText: 'What else?', rationale: 'It changes the result.', proposedDefault: 'Nothing else', answer: 'A brief summary', answerSource: 'user' },
+    ] });
+    const saved = s.save.save(h.execution.id, {});
+    const contract = JSON.parse(saved.revision.inputContract) as { notes: { question: string; answer: string }[] };
+    expect(contract.notes).toEqual([{ question: 'Which format?', answer: 'A single web page' }, { question: 'What else?', answer: 'A brief summary' }]);
+  });
+
   it('records a direct clock read in main.py, but not one only in a test file', async () => {
     const { h, s } = await setup({ script: MAIN_PY.replace('def main():', 'def main():\n    stamp = date.today()') });
     const preview = s.save.preview(h.execution.id);

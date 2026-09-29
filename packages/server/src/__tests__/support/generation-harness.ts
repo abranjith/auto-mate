@@ -50,6 +50,8 @@ export function finalizeStep(input: string, overrides: Record<string, unknown> =
 }
 
 export interface HarnessOptions {
+  /** Capture sanitized application log lines for privacy assertions. */
+  readonly logLines?: string[];
   /** Build the agent's steps once the staged upload's stored filename is known. */
   readonly steps?: (upload: UploadRow | null) => readonly FakeAgentStep[];
   readonly scripts?: (upload: UploadRow | null) => readonly FakeAgentScript[];
@@ -69,7 +71,7 @@ export interface HarnessOptions {
 /** Build the stack, stage and approve the files, and create the task — without starting it. */
 export async function createGenerationHarness(options: HarnessOptions = {}) {
   const store: TempStore = createTempStore('automate-generation-');
-  const logger = pino({ level: 'silent' });
+  const logger = options.logLines ? pino({ level: 'info' }, { write: (line: string) => { options.logLines!.push(line); } }) : pino({ level: 'silent' });
   const c = store.connection;
   const repos = { tasks: new TaskRepository(c), executions: new ExecutionRepository(c), events: new ConversationEventRepository(c), uploads: new UploadRepository(c), profiles: new UploadProfileRepository(c), consents: new DisclosureConsentRepository(c), transmissions: new DisclosureTransmissionRepository(c), clarifications: new ClarificationRepository(c), versions: new CodeVersionRepository(c), attempts: new GenerationAttemptRepository(c), fixtures: new SyntheticFixtureRepository(c) };
   const model = { value: 'fake-model' };
@@ -86,7 +88,7 @@ export async function createGenerationHarness(options: HarnessOptions = {}) {
   const uploads = repos.uploads.listByTask(created.task.id);
   const registryRef: { current?: TaskSessionRegistry } = {};
   const publish = (executionId: number, event: Parameters<TaskSessionRegistry['publish']>[1]) => registryRef.current!.publish(executionId, event);
-  const clarificationService = new ClarificationService({ clarifications: repos.clarifications, executions: repos.executions, events: repos.events, maxAgentClarifications: 3, maxWaitingExecutions: 5, waitingCount: () => registryRef.current?.waitingCount() ?? 0, publish });
+  const clarificationService = new ClarificationService({ clarifications: repos.clarifications, executions: repos.executions, events: repos.events, maxAgentClarifications: 3, maxWaitingExecutions: 5, waitingCount: () => registryRef.current?.waitingCount() ?? 0, publish, logger });
   const inner = new DisclosureRunStrategy({ disclosure, transmissions: repos.transmissions, uploads: repos.uploads, clarifications: repos.clarifications, executions: repos.executions, clarificationTool: createClarificationTool(clarificationService), publish });
   const runner = typeof options.runner === 'function' ? options.runner(store.paths, c) : options.runner ?? new FakePythonRunner(options.pythonRuns ?? [], options.runnerOptions);
   const runs = new GenerationRuns();
@@ -108,7 +110,7 @@ export async function createGenerationHarness(options: HarnessOptions = {}) {
     /** Serve the real app over HTTP on a random loopback port. */
     async serve(): Promise<{ base: string; config: ServerConfig }> {
       const config: ServerConfig = { host: '127.0.0.1', port: 0, logLevel: 'silent', maxConcurrentExecutions: 5, allowedOrigins: [], nodeEnv: 'test' };
-      const app = createApp({ logger, dataRoot: store.root, version: 'test', paths: store.paths, getSchemaVersion: () => '5', conversation: { tasks: repos.tasks, executions: repos.executions, events: repos.events, registry }, serverConfig: config, generation: { service } });
+      const app = createApp({ logger, dataRoot: store.root, version: 'test', paths: store.paths, getSchemaVersion: () => '5', conversation: { tasks: repos.tasks, executions: repos.executions, events: repos.events, registry }, serverConfig: config, generation: { service }, disclosure: { service: disclosure, transmissions: repos.transmissions, consents: repos.consents, clarifications: repos.clarifications, clarificationService } });
       const server = app.listen(0, '127.0.0.1');
       servers.push(server);
       await new Promise<void>((resolve) => server.once('listening', resolve));

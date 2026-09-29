@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — FEAT-112 Typed answers and follow-up questions
+
+- Agent questions now accept a choice or a typed answer. Answered questions show choice labels or quoted own-words text.
+- Unclear own-words answers can prompt a short follow-up in the same run. One follow-up per parent and two levels per original question are allowed without spending the three-original-question cap.
+- Follow-ups appear with their parent context in transcripts and counts in run records. Later runs and saved-task notes carry readable answers forward.
+- Shared plain-English question rules apply to both text-only and file runs.
+
 ## Unreleased — FEAT-111 Save and rerun
 
 - Added **Save this task** for accepted runs and a Saved tasks library with immutable code revisions, input contracts, runtime fingerprints, recorded decisions, and as-of dates. Saved tasks outlive their source tasks and can be deleted independently.

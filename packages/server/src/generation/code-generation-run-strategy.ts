@@ -15,7 +15,7 @@
 // pass straight through to the inner strategy.
 // ---------------------------------------------------------------------------
 
-import { buildDisclosurePayload, renderCodeContract, type ContractInputFile, type FileFormat } from '@automate/core';
+import { buildDisclosurePayload, CLARIFICATION_STYLE_RULES, renderCodeContract, type ContractInputFile, type FileFormat } from '@automate/core';
 import type { Logger } from 'pino';
 import type { BuiltRun, RunStrategy } from '../conversation/run-strategy';
 import type { CodeVersionRepository } from '../db/repositories/code-version-repository';
@@ -60,7 +60,7 @@ export const GENERATION_SYSTEM_PROMPT = [
   'You are Auto-Mate\'s code generation agent. You turn a person\'s plain-English request about their file into a Python script, test it, and hand it back.',
   'You have exactly five tools: write_script, write_test, run_tests, finalize_script, and request_clarification. You cannot read files, run commands, or reach the network yourself; the application stores what you write and runs your tests for you against synthetic data.',
   'Follow the CODE CONTRACT in the request exactly.',
-  'Ask through request_clarification only when ambiguity changes meaning or risks data loss. State a rationale and a proposed default. Cosmetic choices must use a disclosed default.',
+  CLARIFICATION_STYLE_RULES,
 ].join('\n');
 
 /** Approved context plus the code contract, the fixtures, and the four generation tools. */

@@ -89,6 +89,7 @@ async function start(): Promise<void> {
       maxWaitingExecutions: config.maxWaitingExecutions ?? 5,
       waitingCount: () => registryRef.current?.waitingCount() ?? 0,
       publish: (executionId, event) => registryRef.current?.publish(executionId, event),
+      logger,
     });
     const inner = new DisclosureRunStrategy({
       disclosure,

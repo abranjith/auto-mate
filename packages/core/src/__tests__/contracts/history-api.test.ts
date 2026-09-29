@@ -34,7 +34,7 @@ describe('history API contracts', () => {
       execution: { id: 3, taskId: 1, runNumber: 2, status: 'completed', trigger: 'manual', retryOfExecutionId: null, provider: 'fake', model: 'm', createdAt: at, startedAt: at, completedAt: at, durationMs: 5, errorCode: null, errorMessage: null },
       personWords: { guidance: null, reviewFeedback: 'Off by one' }, chain: { previous: null, next: [{ id: 4, runNumber: 3 }] },
       inputs: [{ id: 1, originalFilename: 'a.csv', format: 'csv', byteSize: 10, sha256: 'a'.repeat(64) }], inputsReadByRun: true,
-      disclosure: { provider: 'fake', model: 'm', sendCount: 1, grantedAt: at }, questions: { total: 1, answered: 1, byPerson: 1, seeded: 0, defaulted: 0, declined: 0 },
+      disclosure: { provider: 'fake', model: 'm', sendCount: 1, grantedAt: at }, questions: { total: 1, answered: 1, byPerson: 1, seeded: 0, defaulted: 0, declined: 0, followUps: 0 },
       code: { id: 7, attempt: 1, digest: 'd'.repeat(64), shortDigest: 'd'.repeat(12), testsPassed: true, attemptCount: 1 },
       checks: { status: 'passed', blockingCount: 0, advisoryCount: 0, summary: 'ok', runtime: 'Python 3.12.4 on linux · 8 packages' }, approval: { decidedAt: at, acknowledgedWarnings: false },
       scriptRun: { status: 'succeeded', exitCode: 0, durationMs: 5, limitBreach: null, outputTruncated: false, declaredOutputCount: 1, producedOutputCount: 1, artifactCount: 1, unregisteredOutputCount: 0 },

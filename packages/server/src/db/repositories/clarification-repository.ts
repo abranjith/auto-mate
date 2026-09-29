@@ -1,12 +1,12 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { ClarificationNotFoundError, ClarificationNotPendingError, RepositoryError, type FindingOption } from '@automate/core';
+import { answerText, ClarificationNotFoundError, ClarificationNotPendingError, MAX_FOLLOW_UP_DEPTH, RepositoryError, type FindingOption } from '@automate/core';
 import type { DatabaseConnection } from '../client';
 import { clarification, clarificationQuestion, execution } from '../schema';
 
 export type ClarificationRow = typeof clarification.$inferSelect;
 export type ClarificationQuestionRow = typeof clarificationQuestion.$inferSelect;
 export interface ClarificationWithQuestions extends ClarificationRow { readonly questions: readonly ClarificationQuestionRow[] }
-export interface NewQuestion { readonly findingKey?: string | null; readonly impact: 'data_loss' | 'meaning'; readonly promptText: string; readonly rationale: string; readonly options?: readonly FindingOption[] | null; readonly proposedDefault: string; readonly answer?: string | null; readonly answerSource?: 'user' | 'default' | 'seeded' | null }
+export interface NewQuestion { readonly findingKey?: string | null; readonly impact: 'data_loss' | 'meaning'; readonly promptText: string; readonly rationale: string; readonly options?: readonly FindingOption[] | null; readonly proposedDefault: string; readonly answer?: string | null; readonly answerSource?: 'user' | 'default' | 'seeded' | null; readonly followUpOf?: number; readonly followUpOfQuestionId?: number | null }
 export type ClarificationTransaction = Parameters<Parameters<DatabaseConnection['db']['transaction']>[0]>[0];
 
 /** Exclusive persistence boundary for clarification batches and answers. */
@@ -19,7 +19,7 @@ export class ClarificationRepository {
       const insert = (tx: ClarificationTransaction) => {
         const settled = input.status === 'answered' ? this.now() : null;
         const batch = tx.insert(clarification).values({ executionId: input.executionId, source: input.source, callId: input.callId ?? null, status: input.status ?? 'pending', askedAt: this.now(), settledAt: settled, createdAt: this.now() }).returning().get();
-        const questions = input.questions.map((question, position) => tx.insert(clarificationQuestion).values({ clarificationId: batch.id, position, findingKey: question.findingKey ?? null, impact: question.impact, promptText: question.promptText, rationale: question.rationale, options: question.options ? JSON.stringify(question.options) : null, proposedDefault: question.proposedDefault, answer: question.answer ?? null, answerSource: question.answerSource ?? null, answeredAt: question.answer ? this.now() : null, createdAt: this.now() }).returning().get());
+        const questions = input.questions.map((question, position) => tx.insert(clarificationQuestion).values({ clarificationId: batch.id, position, findingKey: question.findingKey ?? null, impact: question.impact, promptText: question.promptText, rationale: question.rationale, options: question.options ? JSON.stringify(question.options) : null, proposedDefault: question.proposedDefault, answer: question.answer ?? null, answerSource: question.answerSource ?? null, followUpOfQuestionId: question.followUpOfQuestionId ?? null, answeredAt: question.answer ? this.now() : null, createdAt: this.now() }).returning().get());
         return { ...batch, questions };
       };
       return transaction ? insert(transaction) : this.connection.db.transaction(insert);
@@ -39,7 +39,23 @@ export class ClarificationRepository {
   }
 
   /** Count persisted agent questions across all batches for an execution. */
-  countAgentQuestions(executionId: number): number { return this.listByExecution(executionId).filter(({ source }) => source === 'agent').reduce((count, batch) => count + batch.questions.length, 0); }
+  countAgentQuestions(executionId: number): number { return this.listByExecution(executionId).filter(({ source }) => source === 'agent').reduce((count, batch) => count + batch.questions.filter(({ followUpOfQuestionId }) => followUpOfQuestionId === null).length, 0); }
+
+  /** Find a question together with the batch that owns its execution and state. */
+  findQuestion(id: number): (ClarificationQuestionRow & { executionId: number; source: 'agent' | 'preflight'; status: ClarificationRow['status'] }) | undefined {
+    const row = this.connection.db.select({ question: clarificationQuestion, batch: clarification }).from(clarificationQuestion).innerJoin(clarification, eq(clarificationQuestion.clarificationId, clarification.id)).where(eq(clarificationQuestion.id, id)).get();
+    return row ? { ...row.question, executionId: row.batch.executionId, source: row.batch.source as 'agent' | 'preflight', status: row.batch.status as ClarificationRow['status'] } : undefined;
+  }
+
+  /** Walk the bounded parent chain; a broken or cyclic chain cannot be accepted. */
+  followUpChainDepth(id: number): number {
+    let depth = 0; let current = this.findQuestion(id);
+    while (current?.followUpOfQuestionId !== null && current?.followUpOfQuestionId !== undefined && depth <= MAX_FOLLOW_UP_DEPTH) { depth++; current = this.findQuestion(current.followUpOfQuestionId); }
+    return current ? depth : MAX_FOLLOW_UP_DEPTH + 1;
+  }
+
+  /** Whether a parent already has its one permitted follow-up. */
+  hasFollowUp(id: number): boolean { return this.connection.db.select({ id: clarificationQuestion.id }).from(clarificationQuestion).where(eq(clarificationQuestion.followUpOfQuestionId, id)).get() !== undefined; }
 
   /** Atomically answer every question and settle the batch. */
   answer(id: number, answers: readonly { questionId: number; value: string; source?: 'user' | 'default' | 'seeded' }[]): ClarificationWithQuestions {
@@ -89,14 +105,25 @@ export class ClarificationRepository {
       const answers: string[] = [];
       const seen = new Set<string>();
       let remaining = maxChars;
+      const selected: ClarificationQuestionRow[] = [];
       for (const question of this.questionsFor(batches.map(({ id }) => id)).sort((a, b) => b.id - a.id)) {
         if (!question.answer || seen.has(question.promptText) || remaining <= 0) continue;
         seen.add(question.promptText);
-        const text = `${question.promptText}: ${question.answer}`.slice(0, remaining);
-        answers.push(text);
-        remaining -= text.length;
+        selected.push(question);
       }
-      return answers.reverse();
+      const byId = new Map(selected.map((question) => [question.id, question]));
+      const children = new Map<number, ClarificationQuestionRow[]>();
+      for (const question of selected) if (question.followUpOfQuestionId && byId.has(question.followUpOfQuestionId)) children.set(question.followUpOfQuestionId, [...(children.get(question.followUpOfQuestionId) ?? []), question]);
+      const ordered: ClarificationQuestionRow[] = [];
+      const visit = (question: ClarificationQuestionRow): void => { if (ordered.includes(question)) return; ordered.push(question); for (const child of children.get(question.id) ?? []) visit(child); };
+      selected.reverse().filter((question) => !question.followUpOfQuestionId || !byId.has(question.followUpOfQuestionId)).forEach(visit);
+      for (const question of ordered) {
+        if (remaining <= 0) break;
+        const options = question.options ? JSON.parse(question.options) as FindingOption[] : null;
+        const line = `${question.followUpOfQuestionId ? 'Follow-up — ' : ''}${question.promptText}: ${answerText({ answer: question.answer, answerSource: question.answerSource as 'user' | 'default' | 'seeded' | null, options })}`.slice(0, remaining);
+        answers.push(line); remaining -= line.length;
+      }
+      return answers;
     } catch (cause) { throw new RepositoryError('Prior agent clarification answers could not be read.', cause); }
   }
 
