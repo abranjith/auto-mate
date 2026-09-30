@@ -10,7 +10,7 @@
 // run detail above for whoever wants it.
 // ---------------------------------------------------------------------------
 
-import { useState, type FormEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describeRunOutcome, type ArtifactListResponse, type NextStep, type ScriptRun } from '@automate/core';
 import { artifactArchiveUrl, artifactDownloadUrl } from '../../api/artifact-queries';
 import { ds } from '../../design-system/tokens';
@@ -18,8 +18,7 @@ import { ds } from '../../design-system/tokens';
 export interface NoOutputsPanelProps {
   readonly run: ScriptRun;
   readonly artifacts: ArtifactListResponse | undefined;
-  /** Start again with the person's words: a rejection with feedback, or a guidance retry. */
-  readonly onRetry: (detail: string) => Promise<unknown>;
+  readonly reviewing?: boolean;
   /** Stop a run that is still going. */
   readonly onCancel?: () => void;
 }
@@ -31,47 +30,20 @@ export function needsOutcomePanel(run: ScriptRun, artifacts: ArtifactListRespons
   return run.status !== 'succeeded' || run.limitBreached !== null || missing || (artifacts?.artifacts.length ?? 0) === 0;
 }
 
-function RetryForm({ label, onRetry }: { label: string; onRetry: (detail: string) => Promise<unknown> }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (!text.trim()) { setError('Say what should be different, even in a few words.'); return; }
-    setPending(true); setError(undefined);
-    onRetry(text).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'That could not be started.')).finally(() => setPending(false));
-  };
-  if (!open) return <button type="button" className={ds.btnGhost} onClick={() => setOpen(true)}>{label}</button>;
-  return (
-    <form className={ds.stackTight} onSubmit={submit}>
-      <label className={ds.field}>
-        <span className={ds.label}>{label}</span>
-        <textarea className={ds.textarea} value={text} onChange={(event) => setText(event.target.value)} />
-      </label>
-      <div className={ds.row}>
-        <button type="submit" className={ds.btnPrimary} disabled={pending}>Try again with this</button>
-        <button type="button" className={ds.btnGhost} disabled={pending} onClick={() => setOpen(false)}>Back</button>
-      </div>
-      {error ? <p className={ds.statusDanger} role="alert">{error}</p> : null}
-    </form>
-  );
-}
-
 /** The one control for each next step. */
-function Control({ step, props }: { step: NextStep; props: NoOutputsPanelProps }): ReactNode {
-  const list = props.artifacts;
+export function NextStepControl({ step, artifacts, executionId, reviewing = false, onCancel }: { step: NextStep; artifacts?: ArtifactListResponse; executionId: number; reviewing?: boolean; onCancel?: () => void }): ReactNode {
   switch (step.action) {
     case 'review_result': return <a className={ds.btnGhost} href="#review">{step.label}</a>;
     case 'download_produced': {
-      const only = list?.artifacts.length === 1 ? list.artifacts[0] : undefined;
-      return <a className={ds.btnGhost} href={only ? artifactDownloadUrl(only.id) : artifactArchiveUrl(props.run.executionId)} download>{step.label}</a>;
+      const only = artifacts?.artifacts.length === 1 ? artifacts.artifacts[0] : undefined;
+      return <a className={ds.btnGhost} href={only ? artifactDownloadUrl(only.id) : artifactArchiveUrl(executionId)} download>{step.label}</a>;
     }
     case 'retry_with_detail':
-    case 'adjust_request': return <RetryForm label={step.label} onRetry={props.onRetry} />;
+    case 'adjust_request': return <a className={ds.btnGhost} href={reviewing ? '#review' : '#run-again'}>{step.label}</a>;
     case 'open_transcript': return <a className={ds.btnGhost} href="#transcript">{step.label}</a>;
+    case 'open_checks': return <a className={ds.btnGhost} href="#checks" onClick={() => { const panel = document.getElementById('run-record-details') as HTMLDetailsElement | null; const checks = document.getElementById('checks') as HTMLDetailsElement | null; if (panel) panel.open = true; if (checks) { checks.open = true; checks.scrollIntoView?.(); checks.focus(); } }}>{step.label}</a>;
     case 'prepare_runtime': return <a className={ds.btnGhost} href="/settings">{step.label}</a>;
-    case 'cancel': return <button type="button" className={ds.btnGhost} onClick={props.onCancel} disabled={!props.onCancel}>{step.label}</button>;
+    case 'cancel': return <button type="button" className={ds.btnGhost} onClick={onCancel} disabled={!onCancel}>{step.label}</button>;
   }
 }
 
@@ -85,7 +57,7 @@ export function NoOutputsPanel(props: NoOutputsPanelProps) {
       {outcome.limit ? <p>{outcome.limit}</p> : null}
       {outcome.detail ? <p>{outcome.detail}</p> : null}
       <ul className={ds.nextStepList} aria-label="Next steps">
-        {outcome.nextSteps.map((step) => <li key={step.action}><Control step={step} props={props} /></li>)}
+        {outcome.nextSteps.map((step) => <li key={step.action}><NextStepControl step={step} artifacts={artifacts} executionId={run.executionId} reviewing={props.reviewing} onCancel={props.onCancel} /></li>)}
       </ul>
     </section>
   );

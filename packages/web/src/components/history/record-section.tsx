@@ -8,7 +8,7 @@ export type DetailKind = 'disclosure' | 'questions' | 'code' | 'checks' | 'run' 
 export function RecordSection({ title, summary, executionId, detail, resourceId, savedRevisionNumber }: { title: string; summary: string; executionId: number; detail?: DetailKind; resourceId?: number; savedRevisionNumber?: number }) {
   const [opened, setOpened] = useState(false);
   if (!detail) return <div className={ds.recordSection}><strong>{title}</strong><span>{summary}</span></div>;
-  return <details className={ds.recordSection} onToggle={(event) => { if (event.currentTarget.open) setOpened(true); }}>
+  return <details id={title === 'Checks' ? 'checks' : undefined} tabIndex={title === 'Checks' ? -1 : undefined} className={ds.recordSectionDetails} onToggle={(event) => { if (event.currentTarget.open) setOpened(true); }}>
     <summary className={ds.codeCardSummary}><strong>{title}</strong><span>{summary}</span></summary>
     {detail && opened ? <Suspense fallback={<p className={ds.hint}>Loading details…</p>}><Detail kind={detail} executionId={executionId} resourceId={resourceId} {...(savedRevisionNumber === undefined ? {} : { savedRevisionNumber })} /></Suspense> : null}
   </details>;

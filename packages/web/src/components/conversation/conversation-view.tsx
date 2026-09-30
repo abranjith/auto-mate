@@ -8,6 +8,7 @@ import { DisclosureReceipt } from '../disclosure/disclosure-receipt';
 import { CodeVersionCard } from '../generation/code-version-card';
 import { TestRunEvent } from '../generation/test-run-event';
 import { describeRunStatus } from '../execution/run-result';
+import { useShowTechnical } from '../history/use-technical-details';
 const AssistantMessage = lazy(() =>
   import('./assistant-message').then((module) => ({
     default: module.AssistantMessage,
@@ -15,6 +16,15 @@ const AssistantMessage = lazy(() =>
 );
 type ToolFinished = Extract<ConversationEvent, { type: 'tool_finished' }>;
 type ArtifactsRegistered = Extract<ConversationEvent, { type: 'artifacts_registered' }>;
+
+/** Whether an event is useful only when someone asks to see the app's steps. */
+export function isTechnicalEvent(event: ConversationEvent): boolean {
+  switch (event.type) {
+    case 'tool_started': case 'tool_finished': case 'turn_finished': case 'clarification_answered': case 'runtime_prepared': case 'failed': return true;
+    case 'user_prompt': case 'assistant_text': case 'state_changed': case 'clarification_requested': case 'disclosure_sent': case 'code_version_sealed': case 'test_run_finished': case 'generation_settled': case 'verification_finished': case 'approval_decided': case 'run_finished': case 'review_decided': case 'artifacts_registered': case 'task_saved': case 'reuse_started': return false;
+    default: return event satisfies never;
+  }
+}
 
 /** The transcript line for a registration: numbers only, in words. */
 export function describeRegistration(event: Pick<ArtifactsRegistered, 'artifactCount' | 'undeclaredCount' | 'unregisteredOutputCount'>): string {
@@ -59,6 +69,7 @@ export function ConversationView({
   events: readonly ConversationEvent[];
   executionId?: number;
 }) {
+  const technical = useShowTechnical();
   const viewport = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
   const ordered = useMemo(
@@ -107,10 +118,12 @@ export function ConversationView({
         The conversation will appear here when the run starts.
       </div>
     );
+  if (!technical && ordered.every(isTechnicalEvent)) return <div className={ds.card}>Nothing to show yet. Turn on technical details to see the app&apos;s steps.</div>;
   return (
     <div>
       <div ref={viewport} className={ds.conversation} onScroll={scroll}>
         {ordered.map((event) => {
+          if (!technical && isTechnicalEvent(event)) return null;
           switch (event.type) {
             case 'user_prompt':
               return (

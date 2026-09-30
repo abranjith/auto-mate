@@ -6,16 +6,24 @@ Auto-Mate lets you describe a task in plain language, starts one agent run, and 
 
 ## What It Does
 
-- The **New task** page provides a text-only composer. It accepts a description of up to 8,000 characters, supports Ctrl/Cmd+Enter, and keeps the text in place if creation fails. Surrounding whitespace is removed when the task is submitted; line breaks and other content inside the description are preserved.
+- The **New task** page provides a plain-language composer with optional file attachments. It accepts a description of up to 8,000 characters, supports Ctrl/Cmd+Enter, and keeps the text in place if creation fails. Surrounding whitespace is removed when the task is submitted; line breaks and other content inside the description are preserved.
 - Creating a task also creates its first execution and returns immediately. The browser opens `/tasks/<taskId>` while the server runs the request through the configured agent provider.
-- The task page renders the user prompt, assistant markdown, tool starts and finishes, provider-reported turn usage, state changes, and failures in sequence order. Tool details are collapsed by default. Raw HTML in assistant markdown is not enabled, tool input and output are rendered as text, and external links open with protective link attributes.
+- The task page renders the user prompt, assistant markdown, state changes, and other conversation events in sequence order. The **Show technical details** switch controls whether tool calls, provider-reported turn usage, and other diagnostic events appear. When tool calls are visible, their details are collapsed by default. Raw HTML in assistant markdown is not enabled, tool input and output are rendered as text, and external links open with protective link attributes.
 - The server persists every displayed event before broadcasting it. Each event has a 1-based sequence number that is unique and gap-free within its execution. A failed append does not consume a sequence number or broadcast that event; the next successful append uses that number. Consecutive assistant text fragments are combined for up to 100 ms or 1 KiB before they receive a sequence number.
 - The browser loads durable history over REST, then follows the live tail over WebSocket. It ignores duplicate sequence numbers and reloads history if it detects a gap. Unexpected disconnects use exponential reconnect delays starting around 500 ms and capped around 10 seconds; offline and reconnecting states include a manual retry control.
-- A **Cancel run** button is available while an execution is non-terminal, including while the run is being prepared or its provider session is opening. Cancellation stops preparation where supported, asks an open provider session to stop, and records the final state as `aborted`, displayed as **Cancelled**. If cancellation arrives before the provider run starts, no prompt is sent. The cancellation response waits for in-flight preparation or opening to settle. Completed runs show duration, turn count, and cost only when those values were actually reported.
+- A **Cancel run** button is available while an execution is non-terminal, including while the run is being prepared or its provider session is opening. Cancellation stops preparation where supported, asks an open provider session to stop, and records the final state as `aborted`, displayed as **Cancelled**. If cancellation arrives before the provider run starts, no prompt is sent. The cancellation response waits for in-flight preparation or opening to settle.
+
+### Run header and conversation
+
+Each run starts with a header showing its run number, status, connection state, and duration (or **Still running**). It shows one total cost when the provider reports a cost. Turn count and input/output token totals appear in the header when **Show technical details** is on and those figures were reported.
+
+The switch is off by default. Its choice is saved in this browser as `automate.showTechnicalDetails` and follows changes made in another tab. If browser storage is unavailable, the view still works and starts with technical details off. With the switch off, the conversation hides tool start and finish cards (including tool names and timings), per-turn usage lines, **Clarification answered** lines, Python runtime preparation lines, and raw failure lines. The outcome panel also hides its error code and correlation ID. Turning the switch on reveals those details; the events remain in the saved transcript either way. The prompt, assistant replies, and other conversation events remain visible when the conversation is open.
+
+**Conversation** stays open during an unfinished run and collapses when the run finishes. Select its heading to reopen it, or follow an **Open the transcript** link. **How this run was made** is a separate section that starts collapsed.
 
 ### Execution states
 
-The current task flow is `pending` to `generating`, followed by `completed`, `failed`, or `aborted`. The data contract also reserves `waiting`, `verifying`, and `executing`, but this feature does not enter those states; later features own those transitions. Terminal states cannot transition again.
+Runs begin in `pending`. Depending on the task, they may move through `generating`, `waiting` for an answer, `verifying`, `awaiting_approval`, `executing`, and `awaiting_review`. The terminal states are `completed`, `failed`, `aborted`, and `rejected`; terminal states cannot transition again.
 
 ### Recovery outcomes
 
@@ -23,10 +31,10 @@ The current task flow is `pending` to `generating`, followed by `completed`, `fa
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Browser or socket disconnects during a run                    | The run continues on the server. Reconnection asks for events after the last sequence already held by the browser, avoiding gaps and duplicates.                                                           |
 | Browser reconnects after a run was cancelled                  | The terminal `aborted` state is returned in the socket snapshot even if no socket was connected when cancellation happened.                                                                                |
-| Server restarts with a non-terminal execution in the database | Before accepting connections, the server marks it `failed` with `EXECUTION_INTERRUPTED`, appends a final state-change event, and tells the user to start it again. The in-memory agent run is not resumed. |
+| Server restarts with an active in-memory run in the database | Before accepting connections, the server marks it `failed` with `EXECUTION_INTERRUPTED`, appends a final state-change event, and tells the user to start it again. Approval and review gates remain available after a restart. |
 | Server shuts down gracefully                                  | The server asks live runs to abort and waits up to five seconds. Any run still not settled is recorded as interrupted.                                                                                     |
 | Two browser clients follow the same execution                 | Both receive the same persisted event sequence. Disconnecting one does not stop the run or the other client.                                                                                               |
-| Provider reports a failure                                    | The execution becomes `failed`, and the provider's sanitized error code and plain-language message appear in the transcript and failure panel.                                                             |
+| Provider reports a failure                                    | The execution becomes `failed`, and its plain-language outcome appears in one result panel. The error code and raw failure transcript line appear when technical details are on.                                                             |
 
 ### D09 chat UI decision
 
@@ -40,7 +48,7 @@ Start the local application from the repository root:
 pnpm dev
 ```
 
-Open `http://127.0.0.1:5173/`, enter the result you want, and select **Start task**. The application opens the task conversation automatically. Use **Cancel run** while the status is non-terminal. If the live indicator changes to **Reconnecting** or **Offline**, the browser retries automatically, and you can select **Retry** to try immediately.
+Open `http://127.0.0.1:5173/`, enter the result you want, and select **Start task**. The application opens the task conversation automatically. Use **Cancel run** while the status is non-terminal. On the run page, use **Show technical details** in the header to inspect tool calls, per-turn usage, and diagnostic lines. Expand **Conversation** to read a finished run's transcript. If the live indicator changes to **Reconnecting** or **Offline**, the browser retries automatically, and you can select **Retry** to try immediately.
 
 In development, Vite forwards both REST requests and execution WebSocket upgrades under `/api` to the local server on port 4317. The browser connects to the socket through its current host on port 5173. The development server requires port 5173 to be free; it does not switch to another port.
 
@@ -60,19 +68,19 @@ Non-browser clients may omit the `Origin` header, but they must send a local `Ho
 
 ### Browser input and display
 
-The composer accepts one required text prompt from 1 to 8,000 characters after validation. It has no file picker, attachment control, or URL field. A task gets a display name from its first non-empty prompt line: whitespace is collapsed, the name is limited to 80 characters, and punctuation-only content falls back to `Untitled task`.
+The composer accepts one required text prompt from 1 to 8,000 characters after validation, plus optional file attachments. It has no URL field. A task gets a display name from its first non-empty prompt line: whitespace is collapsed, the name is limited to 80 characters, and punctuation-only content falls back to `Untitled task`.
 
-The conversation can display these seven persisted event types:
+The conversation's original task flow includes these persisted event types. Later features add events for clarification, disclosure, code generation, verification, execution, outputs, review, and saved tasks. The technical-details switch changes their display, not what the server persists:
 
 | Event            | User-visible meaning                                                                    |
 | ---------------- | --------------------------------------------------------------------------------------- |
 | `user_prompt`    | The submitted task description.                                                         |
 | `state_changed`  | The execution moved from one status to another.                                         |
 | `assistant_text` | Markdown-formatted assistant output.                                                    |
-| `tool_started`   | A normalized tool call began; its input is available in a collapsed card.               |
-| `tool_finished`  | A normalized tool call ended, including whether it failed and its text-rendered output. |
-| `turn_finished`  | A provider turn ended; token counts and cost appear only when supplied.                 |
-| `failed`         | A sanitized provider error occurred.                                                    |
+| `tool_started`   | A normalized tool call began; its input is available in a collapsed card when technical details are on. |
+| `tool_finished`  | A normalized tool call ended, including whether it failed and its text-rendered output, when technical details are on. |
+| `turn_finished`  | A provider turn ended; reported token counts and cost appear when technical details are on. |
+| `failed`         | A sanitized provider error occurred; its raw transcript line appears when technical details are on. |
 
 ### REST API
 
@@ -125,10 +133,6 @@ These checks reduce cross-site requests from a foreign browser page. The loopbac
 
 ## Limitations
 
-- This feature sends only the words typed by the user. It does not accept files, attachments, URLs, or file-derived context; ingestion and disclosure review belong to later features.
-- The current pass-through run registers no custom tools and does not generate or execute Python. Tool cards exist for normalized events supplied by later run strategies and for test providers.
-- `waiting`, `verifying`, and `executing` are reserved statuses with no active transitions in this feature. Clarification, verification, and script execution are not implemented here.
 - A restarted in-flight agent session cannot resume. It is deliberately converted to an interrupted failure that the user must start again.
-- Conversation events have no retention or deletion policy yet, so transcripts continue to grow in the local database.
 - The WebSocket snapshot returns at most 500 missed events. REST is the authoritative paginated history source and the browser reloads it when a sequence gap is detected.
-- There is no authentication, task history view, rerun control, artifact rendering, or execution isolation boundary in this feature.
+- There is no authentication or enforced execution isolation boundary in this local preview.

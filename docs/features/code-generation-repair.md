@@ -4,7 +4,7 @@
 
 This page covers what happens after you describe a task, attach a file, and approve what Auto-Mate may send. The AI agent writes a Python script for your task and writes its own tests for that script. It runs the tests, reads what failed, and repairs the script. Each test run is one attempt, and the agent gets a limited number of them: three by default. The tests run on **made-up data shaped like your file**, built from the column descriptions and sample rows you approved. **Your actual file is not opened at any point during this.**
 
-Every attempt shows up in the conversation as it happens, and the code is one click away. The loop never pauses to ask whether it may try again. At the end, the agent chooses a final version of the script. Auto-Mate seals that version so it cannot change afterward.
+Every attempt is recorded in the run's **Conversation**, where the code is one click away. The conversation stays open while the run is active and starts collapsed after it ends. The loop never pauses to ask whether it may try again. At the end, the agent chooses a final version of the script. Auto-Mate seals that version so it cannot change afterward.
 
 In this build, the script stops there. It is not run on your real file, and there are no results to download yet. Checking the final version independently and running it are jobs for later features that are not built yet.
 
@@ -96,36 +96,36 @@ If the server restarts during a run, the run is not resumed. It fails with `EXEC
 
 ### Follow a run in the conversation
 
-Open the task after approving the review. The conversation fills in as the agent works:
+Open the task after approving the review. The run page leads with its result when the run settles. Expand **Conversation** below **How this run was made** to see the attempts and messages. The conversation fills in as the agent works:
 
 - **Progress line.** While the run is active, a line at the bottom reads, for example, **Attempt 2 of 3 — repairing the script**. Other phases are **writing the script**, **running its tests**, **tests passed; choosing the final version**, and **no more test runs; choosing the final version**. A bar beside it shows how much of the time limit is used, such as **4 min of 10 min**. Time spent waiting for your answer to a question is not counted.
 - **File writes.** Each `write_script` or `write_test` call shows its file path. In place of the file's text it shows a size, such as **wrote 4.1 KiB**. The code itself is kept in one place, the database, and is not copied into the conversation.
 - **Attempt card.** Each tested version appears as a collapsed card, such as **Attempt 1 — 2 files, 84 lines**, with the first 12 characters of its fingerprint. Click it to load the code. The card lists every file with its line count and role. It shows each file as numbered plain text with a **Copy** button, and it shows **tests passed** or **tests failed**. There is no syntax coloring.
-- **Diagnostics receipt.** When a test run fails, a line such as **Sent filtered diagnostics to anthropic `claude-sonnet-5` — 612 bytes** appears. Expand it to see exactly what was sent.
+- **Diagnostics receipt.** When a test run fails, a line such as **Sent filtered diagnostics to anthropic `claude-sonnet-5` — 612 bytes** appears. Expand it to see exactly what was sent. The receipt remains in **Conversation** even when **Show technical details** is off.
 - **Test result.** A headline such as **Attempt 1: 1 of 3 tests failed.** appears with **2 of 3 attempts left.** under it. The filtered failure text the agent was shown follows in monospace. If the filter dropped lines, a plain sentence says so, for example: **14 lines of output were not recognized as safe to send, so they were dropped.** A refused request reads, for example, **Attempt 4 was not run because every allowed attempt had already been used.**
 - **Test-data line.** Under every test result that ran, this line appears: **Tested against 200 synthetic rows built from your column descriptions and the 10 sample rows you approved. Your real file has not been read yet.** Select **Show the test data** to see the first 20 rows of each sheet, starting with your approved sample rows.
-- **Final summary.** When the run ends, one line sums it up. For example: **Chose attempt 2 of 3 as the final version, which passed its own tests. Attempt 1: 1 of 3 tests failed. Attempt 2: all 3 tests passed.** A failed run also shows the **Run failed** panel with a plain-English message and its code.
+- **Final summary.** When the run ends, one line sums it up. For example: **Chose attempt 2 of 3 as the final version, which passed its own tests. Attempt 1: 1 of 3 tests failed. Attempt 2: all 3 tests passed.** A failed run leads with one outcome in **Result**, including the summary and an attempt list when available. Its error code and correlation ID appear there only when **Show technical details** is on.
 
-If your browser disconnects, the run continues. Reopening the task replays the conversation, and the code, attempts, and test data are fetched again.
+The run header's **Show technical details** switch remembers your choice in this browser. With it off, **Conversation** omits tool names and timings, turn token lines, runtime preparation, the duplicate raw failure line, and the brief clarification-answered line. Attempt cards, test results, and filtered-diagnostics receipts remain available. If your browser disconnects, the run continues. Reopening the task restores the conversation, and the code, attempts, and test data are fetched again.
 
 ### When a run uses up its attempts
 
-A failed code-generation run shows a panel headed **Tell me what I got wrong and I'll try again.** The panel lists what each attempt did. It has a **Your guidance (optional)** box that holds up to 2,000 characters, with a live counter. It has two buttons: **Try again** and **Not now**.
+A failed code-generation run shows one outcome under **Result**. It explains what happened, lists the attempts when available, and offers one **Run again** control there. The control has a **Your guidance (optional)** box for up to 2,000 characters. You can also open **Conversation** for the detailed attempt and diagnostic records. The error code and correlation ID are available through **Show technical details**.
 
-Selecting **Try again**:
+Selecting **Run again**:
 
 - Starts a **new run** of the same task, linked to the failed one. The failed run is not changed and stays stored. The page switches to follow the new run.
-- Reuses your approval and the answers you gave to pre-flight questions. You do not see the review screen again. Answers you gave to the agent's questions in earlier runs of this task are also included in the new prompt, so the agent can use them without asking again.
+- Reuses your approval while it still matches the file description and AI recipient, along with the answers you gave to pre-flight questions. If approval needs renewing, the disclosure review opens before the new run starts. Answers you gave to the agent's questions in earlier runs of this task are also included in the new prompt, so the agent can use them without asking again.
 - Gives the new run its own full set of attempts, and freshly invented test rows (the sample rows stay the same).
 - Adds your hint after your original request. The hint is sent to the AI provider as your own words, and it appears in the conversation as a second message from you.
 
-The retry is refused in these cases:
+The retry may need another step or be refused in these cases:
 
-- **The AI model, the provider, or the file description changed since you approved.** Your approval no longer matches, and the panel says so. Start the task again from **New task**, attaching the file again, and review what will be sent before approving. Auto-Mate does not reuse an approval that no longer matches.
-- **You did not allow failure details.** The retry reuses that choice, so it stops at its first test run the same way. This build has no control to add the permission to an existing task. Start a new task and leave **Allow filtered diagnostics for automatic repair** on.
+- **The AI model, the provider, or the file description changed since you approved.** Your approval no longer matches. The retry control opens a fresh disclosure review so you can approve the current description and recipient before starting the new run. Auto-Mate does not reuse an approval that no longer matches.
+- **You did not allow failure details.** The retry opens the disclosure review so you can choose whether to allow filtered diagnostics for automatic repair. Without that permission, the next generation run cannot use failed test output to repair its code.
 - **Another run is using the only active slot.** The limit is set by `AUTOMATE_MAX_CONCURRENT_EXECUTIONS`, which defaults to 1. Wait for that run to finish.
 
-**Not now** leaves the run as it is. The panel appears only for a failed code-generation run. A cancelled or completed run shows no panel, although the API below accepts a retry of any finished run.
+Leaving the page without selecting **Run again** leaves the failed run as it is. Only the latest run of a task offers the retry control; an earlier run links to the run that followed it. A completed run can offer **Run it again**, and a cancelled run can also offer a retry in its outcome. When a run is waiting for your review, use **Did this do what you wanted?** to give feedback and start a linked run.
 
 **What makes a good hint.** The agent has never seen your file. It knows the column descriptions, the approved sample rows, your request, and the filtered failure text. A useful hint fills the gaps:
 
@@ -271,7 +271,7 @@ Some values are fixed rather than configurable:
 - **Synthetic tests are limited evidence.** They cover the columns, types, ranges, and sample rows you approved, not the rows that were never described. A final version, even one that passed its own tests, has not been run on your real file.
 - **No verification or real run yet.** Nothing checks the final version independently, runs it on your file, or turns its outputs into results you can open. Auto-Mate records whether a test run left a readable `manifest.json`, but that observation does not change any outcome.
 - **One message covers every runtime problem.** A missing `uv`, a missing Python, and an environment that could not be prepared all end the run with the same `PYTHON_RUNTIME_UNAVAILABLE` message. Preparation can fail when there is no network on first setup, or when it takes longer than `AUTOMATE_UV_SYNC_TIMEOUT_MS`. The message does not say which of these happened. If both tools are installed, check the network connection and try again.
-- **Retries have limits.** A retry cannot change your failure-details choice or pick up a new model. Both require a new task. The page offers a retry only for a failed code-generation run. After a server restart, the page suggests starting the task again, although the retry route also works for an interrupted run.
-- **Only the latest run is on the page.** After a retry, the task page follows the newest run. The earlier run stays stored and readable through `GET /api/executions/:id/events` and the routes above, but this build has no history view for it.
+- **Retries have limits.** A retry cannot change the selected AI model. If the approval no longer matches, **Run again** opens the disclosure review again. A retry is offered on the latest eligible run, including an interrupted run.
+- **Earlier runs remain readable.** After a retry, the page follows the new run. The task's lineage rail links to earlier runs and shows why each later run was started.
 - **Code is plain text.** The code view has no syntax coloring and no side-by-side comparison between attempts.
 - **Nothing expires.** Generated code, attempts, and test data have no retention schedule in this build.

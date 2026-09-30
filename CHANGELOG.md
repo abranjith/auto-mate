@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — FEAT-113 Run page lineage and result first
+
+- Replaced the flat task run list with an oldest-first lineage rail that quotes retry guidance and links saved-task origins and saved revisions.
+- Moved outputs and final text answers above the run record and conversation. The run header shows duration and one cost total.
+- Added a browser-remembered technical-details switch and collapsed finished transcripts below the result.
+- Consolidated failed-run wording and retry into one outcome panel, with technical codes hidden until requested.
+
 ## Unreleased — FEAT-112 Typed answers and follow-up questions
 
 - Agent questions now accept a choice or a typed answer. Answered questions show choice labels or quoted own-words text.

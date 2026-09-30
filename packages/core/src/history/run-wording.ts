@@ -2,6 +2,7 @@
 import { ERROR_CODES } from '../errors/error-codes';
 import type { ExecutionStatus } from '../conversation/execution-state';
 import type { ReuseKind } from '../reuse/reuse-kind';
+import type { RunTimelineItem } from '../contracts/history-api';
 
 export type ExecutionTrigger = 'manual' | 'rerun' | 'feedback';
 export type RunStateDescription = { label: string; detail: string | null };
@@ -48,6 +49,46 @@ export function describeTrigger(trigger: ExecutionTrigger, options: { hasGuidanc
     case 'feedback': return 'Re-run after your review';
     default: return trigger satisfies never;
   }
+}
+
+/**
+ * Shorten a person's reason for display on a run connector.
+ * @param text The original reason, if one was provided.
+ * @param max Maximum displayed characters, including the ellipsis.
+ * @returns One line of text, or null for empty input.
+ * @example excerptReason('use  the Total column') // 'use the Total column'
+ */
+export function excerptReason(text: string | null, max = 140): string | null {
+  const clean = text?.replace(/\s+/g, ' ').trim();
+  if (!clean) return null;
+  if (clean.length <= max) return clean;
+  const prefix = clean.slice(0, max - 1);
+  const space = prefix.lastIndexOf(' ');
+  return `${space > 0 ? prefix.slice(0, space) : prefix}…`;
+}
+
+/**
+ * Describe why a later run follows its predecessor.
+ * @param item The later run's trigger and recorded reason.
+ * @returns A label and optional verbatim excerpt.
+ * @example describeLineageEdge({ trigger: 'rerun', hasGuidance: true, reason: 'Use totals', reuse: null })
+ */
+export function describeLineageEdge(item: Pick<RunTimelineItem, 'trigger' | 'hasGuidance' | 'reason' | 'reuse'>): { label: string; quote: string | null } {
+  const label = describeTrigger(item.trigger, { hasGuidance: item.hasGuidance, reuseKind: item.reuse?.kind });
+  const quote = item.trigger === 'manual' || item.reuse?.kind === 'replay' ? null : item.reason;
+  return { label, quote };
+}
+
+/**
+ * Explain where the first run of a task came from, when a saved task was used.
+ * @param reuse The saved-task origin, if any.
+ * @returns A readable origin sentence, or null for a plain run or replay.
+ * @example describeLineageOrigin({ kind: 'run', templateId: 7, templateName: 'Sales', revisionNumber: 2 })
+ */
+export function describeLineageOrigin(reuse: RunTimelineItem['reuse']): string | null {
+  if (!reuse || reuse.kind === 'replay') return null;
+  const source = reuse.templateId === null ? 'a saved task since deleted' : `“${reuse.templateName}” (revision ${reuse.revisionNumber})`;
+  return reuse.kind === 'repair' ? `Repaired ${source} for another file` : `Ran ${source} with another file`;
 }
 
 /**

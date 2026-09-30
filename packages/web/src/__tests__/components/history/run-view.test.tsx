@@ -2,7 +2,7 @@
 // Each owning feature's leaf component is replaced by a vi.fn stub, so the
 // assertions are by component identity: that exact export was mounted.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ConversationEvent, ExecutionStatus, ExecutionSummary } from '@automate/core';
 import { RunView } from '../../../components/history/run-view';
@@ -15,7 +15,8 @@ import { artifact, list, run } from '../artifacts/artifact-fixtures';
 const mock = vi.hoisted(() => ({ stream: null as unknown }));
 vi.mock('../../../api/use-execution-stream', () => ({ useExecutionStream: () => mock.stream }));
 vi.mock('../../../components/history/run-record-panel', () => ({ RunRecordPanel: () => null }));
-vi.mock('../../../components/generation/generation-section', () => ({ GenerationSection: () => null }));
+vi.mock('../../../components/generation/generation-section', () => ({ GenerationSection: () => null, isGenerationRun: () => false }));
+vi.mock('../../../components/saved/save-task-dialog', () => ({ SaveTaskDialog: () => null }));
 vi.mock('../../../components/verification/verification-report', () => ({ VerificationReport: () => null }));
 vi.mock('../../../components/verification/run-intent-panel', () => ({ RunIntentPanel: vi.fn(() => <div>intent gate</div>) }));
 vi.mock('../../../components/review/review-panel', () => ({ ReviewPanel: vi.fn(() => <div>review panel</div>) }));
@@ -45,6 +46,32 @@ beforeEach(() => { for (const component of [RunIntentPanel, ReviewPanel, Artifac
 afterEach(cleanup);
 
 describe('RunView extraction', () => {
+  it('opens the conversation while generating and closes it when finished', async () => {
+    const view = mount('generating', []);
+    expect(view.container.querySelector('#transcript')?.hasAttribute('open')).toBe(true);
+    mock.stream = { ...mock.stream as object, execution: summary('completed') };
+    view.rerender(<QueryClientProvider client={new QueryClient()}><RunView taskId="3" executionId={9} /></QueryClientProvider>);
+    await waitFor(() => expect(view.container.querySelector('#transcript')?.hasAttribute('open')).toBe(false));
+  });
+
+  it('opens the conversation for a transcript link', async () => {
+    const view = mount('completed', []);
+    expect(view.container.querySelector('#transcript')?.hasAttribute('open')).toBe(false);
+    window.location.hash = '#transcript';
+    fireEvent(window, new HashChangeEvent('hashchange'));
+    await waitFor(() => expect(view.container.querySelector('#transcript')?.hasAttribute('open')).toBe(true));
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+
+  it('keeps the conversation open when a person opened it during the run', async () => {
+    const view = mount('generating', []);
+    const summaryElement = view.container.querySelector('#transcript summary')!;
+    fireEvent.click(summaryElement);
+    fireEvent.click(summaryElement);
+    mock.stream = { ...mock.stream as object, execution: summary('completed') };
+    view.rerender(<QueryClientProvider client={new QueryClient()}><RunView taskId="3" executionId={9} /></QueryClientProvider>);
+    expect(view.container.querySelector('#transcript')?.hasAttribute('open')).toBe(true);
+  });
   it('mounts FEAT-107\'s intent gate for a run at awaiting_approval', async () => {
     mount('awaiting_approval', [verified]);
     await waitFor(() => expect(RunIntentPanel).toHaveBeenCalled());
@@ -58,8 +85,20 @@ describe('RunView extraction', () => {
   });
 
   it('mounts FEAT-109\'s artifact list for a completed run with artifacts', async () => {
-    mount('completed', [verified, ran, registered]);
+    const view = mount('completed', [verified, ran, registered]);
     await waitFor(() => expect(ArtifactList).toHaveBeenCalled());
+    const body = view.container.textContent ?? '';
+    expect(body.indexOf('Result')).toBeLessThan(body.indexOf('How this run was made'));
+    expect(body.indexOf('How this run was made')).toBeLessThan(body.indexOf('Conversation'));
+  });
+
+  it('puts the final text-only answer once above the conversation', async () => {
+    const chunks: ConversationEvent[] = [{ seq: 2, type: 'assistant_text', text: 'Final ', at }, { seq: 3, type: 'assistant_text', text: 'answer', at }];
+    const view = mount('completed', chunks);
+    await waitFor(() => expect(view.container.textContent).toContain('Final answer'));
+    const result = view.container.querySelector('[aria-label="Result"]');
+    expect(result?.textContent).toContain('Final answer');
+    expect(result?.textContent?.match(/Final answer/g)).toHaveLength(1);
   });
 
   it('mounts FEAT-105\'s clarification card for a waiting run', async () => {

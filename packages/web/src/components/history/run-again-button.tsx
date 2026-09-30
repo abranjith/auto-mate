@@ -21,6 +21,7 @@ export function RunAgainButton({ taskId, executionId, uploadIds, savedCode = fal
   const [preview, setPreview] = useState<DisclosurePreviewResponse>();
   /** A double click must not post two replays: state updates land only after both clicks. */
   const replaying = useRef(false);
+  const retrying = useRef(false);
   const navigate = useNavigate(); const client = useQueryClient();
   const replay = async () => { if (replaying.current) return; replaying.current = true; setPending(true); setError(null); try {
     const created = await replayExecution(executionId);
@@ -33,7 +34,8 @@ export function RunAgainButton({ taskId, executionId, uploadIds, savedCode = fal
     catch (cause) { setError(cause instanceof AutoMateError ? cause : new AutoMateError(ERROR_CODES.INTERNAL_ERROR, 'The disclosure review could not be loaded.')); }
   };
   const start = async (decisions?: readonly { findingKey: string; choice: string }[]) => {
-    if (pending || guidance.length > MAX_GUIDANCE_CHARS) return;
+    if (retrying.current || guidance.length > MAX_GUIDANCE_CHARS) return;
+    retrying.current = true;
     setPending(true); setError(null); setOpenRunId(null);
     try {
       const created = await retryExecution(executionId, guidance, decisions);
@@ -44,6 +46,7 @@ export function RunAgainButton({ taskId, executionId, uploadIds, savedCode = fal
       ]);
       await navigate({ to: '/tasks/$taskId/runs/$executionId', params: { taskId: String(taskId), executionId: String(created.execution.id) } });
     } catch (cause) {
+      retrying.current = false;
       const failure = cause instanceof AutoMateError ? cause : new AutoMateError(ERROR_CODES.INTERNAL_ERROR, 'This run could not be started.');
       setError(failure);
       if (needsConsent(failure.code) && uploadIds.length) await refreshPreview();

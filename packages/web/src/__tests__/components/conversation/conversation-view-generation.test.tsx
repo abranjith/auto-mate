@@ -1,8 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ConversationEvent, ExecutionSummary } from '@automate/core';
 import { ConversationView } from '../../../components/conversation/conversation-view';
+import { TechnicalDetailsContext } from '../../../components/history/use-technical-details';
 import { elidedLabel } from '../../../components/conversation/tool-call-card';
 import { GenerationSection, isGenerationRun } from '../../../components/generation/generation-section';
 
@@ -41,7 +42,7 @@ describe('ConversationView with generation events', () => {
 
   it('shows an elided tool argument as a size, not as an empty object', async () => {
     const user = userEvent.setup();
-    render(<ConversationView events={events.slice(1, 3)} />);
+    render(<TechnicalDetailsContext.Provider value={true}><ConversationView events={events.slice(1, 3)} /></TechnicalDetailsContext.Provider>);
     await user.click(screen.getByText(/write_script — finished/));
     expect(screen.getByText(/"content": "wrote 4.1 KiB"/)).toBeTruthy();
     expect(elidedLabel(512)).toBe('wrote 512 bytes');
@@ -63,17 +64,16 @@ describe('GenerationSection', () => {
     expect(await screen.findByText('Attempt 1 of 3')).toBeTruthy();
   });
 
-  it('offers the guidance retry once a generation run has failed', async () => {
+  it('leaves a failed generation run to the outcome panel', () => {
     const failed = { ...base, status: 'failed' as const, error: { code: 'GENERATION_ATTEMPTS_EXHAUSTED', message: 'Used all 3.' } };
     render(<GenerationSection execution={failed} events={[...events.slice(0, 7), { ...events[7]!, outcome: 'exhausted', summary: 'Used all 3 attempts without getting the tests to pass.' } as ConversationEvent]} loadAttempts={loadAttempts} />);
-    await waitFor(() => expect(screen.getByText('Tell me what I got wrong and I\'ll try again.')).toBeTruthy());
-    expect(screen.getByText('Used all 3 attempts without getting the tests to pass.')).toBeTruthy();
+    expect(screen.queryByText('Tell me what I got wrong and I\'ll try again.')).toBeNull();
   });
 
-  it.each(['timed_out', 'cost_limit', 'incomplete', 'finalized'] as const)('offers the guidance retry for a failed run whose generation ended %s', async (outcome) => {
+  it.each(['timed_out', 'cost_limit', 'incomplete', 'finalized'] as const)('leaves failed %s generation to the outcome panel', (outcome) => {
     const failed = { ...base, status: 'failed' as const, error: { code: 'GENERATION_FAILED', message: 'x' } };
     render(<GenerationSection execution={failed} events={[...events.slice(0, 7), { ...events[7]!, outcome } as ConversationEvent]} loadAttempts={loadAttempts} />);
-    await waitFor(() => expect(screen.getByText('Tell me what I got wrong and I\'ll try again.')).toBeTruthy());
+    expect(screen.queryByText('Tell me what I got wrong and I\'ll try again.')).toBeNull();
   });
 
   it('shows neither progress nor retry for a completed run', () => {

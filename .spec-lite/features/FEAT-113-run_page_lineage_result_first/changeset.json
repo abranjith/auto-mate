@@ -1,0 +1,400 @@
+{
+  "vcs": "git",
+  "captures": [
+    {
+      "event": "implement.task.post",
+      "task": "TASK-001",
+      "at": "2026-09-29T04:11:27.039Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-002",
+      "at": "2026-09-29T04:14:50.847Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-003",
+      "at": "2026-09-29T04:16:32.011Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-004",
+      "at": "2026-09-29T04:18:48.053Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-005",
+      "at": "2026-09-29T04:20:57.538Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-006",
+      "at": "2026-09-29T04:24:31.322Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.task.post",
+      "task": "TASK-007",
+      "at": "2026-09-29T04:34:43.504Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-29T04:36:05.561Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    },
+    {
+      "event": "implement.post",
+      "at": "2026-09-30T02:24:38.637Z",
+      "head": "c1b244fbd32b25a6318e31e34a1790a1f652ed60"
+    }
+  ],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/code-generation-repair.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/execution-history.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/results-outputs-downloads.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/run-page-lineage-result-first.md",
+      "status": "U",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/save-and-rerun.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/features/task-conversation-surface.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/quickstart.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "docs/usage.md",
+      "status": "M",
+      "role": "implement"
+    },
+    {
+      "path": "packages/core/README.md",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/contracts/history-api.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/__tests__/history/run-failure.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/__tests__/history/run-wording.test.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/artifacts/next-step.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/contracts/history-api.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/history/index.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/core/src/history/run-failure.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/core/src/history/run-wording.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/__tests__/db/repositories/history-repository.test.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/server/src/db/repositories/history-repository.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-002"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/artifact-list.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/artifacts/no-outputs-panel.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/conversation-view-generation.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/conversation-view.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/conversation/run-controls.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/generation/generation-components.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/lineage-rail.test.tsx",
+      "status": "U",
+      "role": "implement"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-header.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-outcome-panel.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-record.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/run-view.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/history/use-technical-details.test.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/__tests__/components/verification/verification-components.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/web/src/__tests__/routes/task-routes.test.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/artifacts/no-outputs-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/conversation-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-005"
+    },
+    {
+      "path": "packages/web/src/components/conversation/failure-panel.tsx",
+      "status": "D",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/conversation/run-controls.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/components/execution/run-result.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-failure-panel.tsx",
+      "status": "D",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/generation/generation-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/lineage-rail.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/history/record-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/web/src/components/history/run-again-button.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/run-header.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/components/history/run-outcome-panel.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-007"
+    },
+    {
+      "path": "packages/web/src/components/history/run-record-panel.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-003"
+    },
+    {
+      "path": "packages/web/src/components/history/run-result-lead.tsx",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/web/src/components/history/run-timeline-item.tsx",
+      "status": "D",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/history/run-timeline.tsx",
+      "status": "D",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/components/history/run-view.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/components/history/use-technical-details.ts",
+      "status": "U",
+      "role": "implement",
+      "task": "TASK-004"
+    },
+    {
+      "path": "packages/web/src/components/verification/gate-section.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-006"
+    },
+    {
+      "path": "packages/web/src/design-system/tokens.ts",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "packages/web/src/routes/tasks.$taskId.tsx",
+      "status": "M",
+      "role": "implement",
+      "task": "TASK-001"
+    },
+    {
+      "path": "README.md",
+      "status": "M",
+      "role": "implement"
+    }
+  ],
+  "excluded": [
+    ".spec-lite/feature-summary.md",
+    ".spec-lite/features/FEAT-113-run_page_lineage_result_first/changeset.json",
+    ".spec-lite/features/FEAT-113-run_page_lineage_result_first/spec.md"
+  ],
+  "baseline": {
+    "sha": "c1b244fbd32b25a6318e31e34a1790a1f652ed60",
+    "capturedAt": "2026-09-29T04:09:45.587Z",
+    "dirtyAtBaseline": [
+      ".spec-lite/features/FEAT-113-run_page_lineage_result_first/spec.md"
+    ],
+    "dirtyBlobHashes": {
+      ".spec-lite/features/FEAT-113-run_page_lineage_result_first/spec.md": "71215f6c465e01bdc1be5107e3e10046f635a79f"
+    }
+  },
+  "featureId": "FEAT-113"
+}

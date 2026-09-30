@@ -1,7 +1,6 @@
-import { describeLimitBreach, formatBytes, type ArtifactListResponse, type ScriptRun } from '@automate/core';
+import { describeLimitBreach, formatBytes, type ScriptRun } from '@automate/core';
 import { ds } from '../../design-system/tokens';
 import { UntrustedText } from '../verification/run-intent-panel';
-import { ArtifactList } from '../artifacts/artifact-list';
 
 const TAIL_LINES = 40;
 
@@ -28,14 +27,14 @@ function tail(text: string | null): string {
  * registered (FEAT-109), listed by name while they load — and the tail of its
  * output.
  */
-export function RunResult({ run, artifacts }: { run: ScriptRun; artifacts?: ArtifactListResponse }) {
+export function RunResult({ run }: { run: ScriptRun }) {
   const output = [tail(run.stdout), tail(run.stderr)].filter(Boolean).join('\n');
   return (
     <section className={ds.runResult} aria-label="Run result">
       <p className={run.status === 'succeeded' ? ds.verdictPassed : ds.verdictBlocked}>{describeRunStatus(run)}</p>
       {run.limitBreached ? <p className={ds.statusDanger}>{describeLimitBreach(run.limitBreached)}</p> : null}
       {run.outputByteCount !== null ? <p className={ds.hint}>Output files used {formatBytes(run.outputByteCount)}.</p> : null}
-      {artifacts ? <ArtifactList list={artifacts} /> : run.declaredOutputs.length > 0 ? (
+      {run.declaredOutputs.length > 0 ? (
         <div className={ds.stackTight}>
           <h3 className={ds.label}>What it produced</h3>
           <ul className={ds.gateList}>

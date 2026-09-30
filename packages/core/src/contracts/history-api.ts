@@ -42,6 +42,8 @@ export const TaskHistoryPageSchema = Type.Object({
 export const RunTimelineItemSchema = Type.Object({
   id: Id, taskId: Id, runNumber: RunNumber, status: Status, trigger: Trigger,
   retryOfExecutionId: Nullable(Id), hasGuidance: Type.Boolean(), hasReviewFeedback: Type.Boolean(),
+  reason: Nullable(Type.String({ maxLength: 140 })),
+  savedAs: Type.Array(Type.Object({ templateId: Id, name: Type.String(), revisionNumber: Id })),
   createdAt: Type.String(), completedAt: Nullable(Type.String()), durationMs: Nullable(Count),
   errorCode: Nullable(Type.String()), outputCount: Count, reuse: Reuse,
 });

@@ -1,8 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ConversationEvent } from '@automate/core';
-import { ConversationView, describeStateChange, joinAssistantText } from '../../../components/conversation/conversation-view';
+import { CONVERSATION_EVENT_KINDS, type ConversationEvent } from '@automate/core';
+import { ConversationView, describeStateChange, isTechnicalEvent, joinAssistantText } from '../../../components/conversation/conversation-view';
+import { TechnicalDetailsContext } from '../../../components/history/use-technical-details';
 // Warm the lazily loaded markdown renderer once, so `findBy*` below measures
 // rendering, not the first transform of its module graph — which can exceed
 // the 1 s query timeout when the full workspace suite loads the CPU.
@@ -39,9 +40,27 @@ const events: ConversationEvent[] = [
   },
 ];
 describe('ConversationView', () => {
+  it('hides technical events while retaining the prompt, reply, and state', async () => {
+    const { container } = render(<ConversationView events={events} />);
+    await screen.findByText('Working');
+    expect(container.textContent).toContain('Do it');
+    expect(container.textContent).toContain('Run ended: Done');
+    for (const hidden of ['status — finished', 'Turn finished', 'Readable failure']) expect(container.textContent).not.toContain(hidden);
+    expect(isTechnicalEvent(events.find((event) => event.type === 'failed')!)).toBe(true);
+    expect(isTechnicalEvent(events.find((event) => event.type === 'user_prompt')!)).toBe(false);
+  });
+
+  it('explains an all-technical transcript', () => {
+    render(<ConversationView events={events.filter(isTechnicalEvent)} />);
+    expect(screen.getByText(/Turn on technical details/)).toBeTruthy();
+  });
+  it('classifies every registered conversation event kind', () => {
+    const technical = new Set(['tool_started', 'tool_finished', 'turn_finished', 'clarification_answered', 'runtime_prepared', 'failed']);
+    for (const { kind } of CONVERSATION_EVENT_KINDS) expect(isTechnicalEvent({ type: kind } as ConversationEvent), kind).toBe(technical.has(kind));
+  });
   it('renders all seven event kinds in seq order and tool details safely', async () => {
     const user = userEvent.setup();
-    const { container } = render(<ConversationView events={events} />);
+    const { container } = render(<TechnicalDetailsContext.Provider value={true}><ConversationView events={events} /></TechnicalDetailsContext.Provider>);
     expect(await screen.findByText('Working')).toBeTruthy();
     expect(container.textContent?.indexOf('Do it')).toBeLessThan(
       container.textContent?.indexOf('Working') ?? 0,
@@ -100,10 +119,10 @@ describe('ConversationView', () => {
     ).not.toMatch(/^javascript:/);
   });
   it('shows running tools, empty state, and jump-to-latest when unpinned', async () => {
-    const { rerender } = render(<ConversationView events={[]} />);
+    const { rerender } = render(<TechnicalDetailsContext.Provider value={true}><ConversationView events={[]} /></TechnicalDetailsContext.Provider>);
     expect(screen.getByText(/conversation will appear/i)).toBeTruthy();
     rerender(
-      <ConversationView
+      <TechnicalDetailsContext.Provider value={true}><ConversationView
         events={[
           {
             seq: 1,
@@ -114,7 +133,7 @@ describe('ConversationView', () => {
             at,
           },
         ]}
-      />,
+      /></TechnicalDetailsContext.Provider>,
     );
     expect(screen.getByText('slow — running')).toBeTruthy();
     const viewport = screen.getByText('slow — running').closest('details')

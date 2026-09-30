@@ -69,11 +69,10 @@ describe('ArtifactList', () => {
   });
 });
 
-describe('RunResult with outputs (FEAT-107 retired its placeholder)', () => {
-  it('shows the artifact list instead of the filename summary', () => {
-    render(<RunResult run={run()} artifacts={list(THREE)} />);
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.getByRole('link', { name: /Download all 3 files/ })).toBeTruthy();
+describe('RunResult with declared outputs', () => {
+  it('keeps the declared filename summary in the run detail', () => {
+    render(<RunResult run={run({ declaredOutputs: [{ filename: 'a.csv', type: 'csv', title: 'A', description: '', byteSize: 1, present: true }] })} />);
+    expect(screen.getByLabelText('Run result').textContent).toContain('What it produced');
   });
 
   it('no longer apologises that viewing and downloading arrive later, anywhere in the web package', () => {

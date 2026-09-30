@@ -17,7 +17,7 @@ import type { ScriptRunStatus } from '../contracts/verification-api';
 import { describeLimitBreach, type LimitBreach } from '../execution/runtime-environment';
 
 /** A control the outcome panel renders. Every member must have one. */
-export const NEXT_STEP_ACTIONS = ['review_result', 'download_produced', 'retry_with_detail', 'adjust_request', 'open_transcript', 'prepare_runtime', 'cancel'] as const;
+export const NEXT_STEP_ACTIONS = ['review_result', 'download_produced', 'retry_with_detail', 'adjust_request', 'open_transcript', 'open_checks', 'prepare_runtime', 'cancel'] as const;
 export type NextStepAction = (typeof NEXT_STEP_ACTIONS)[number];
 
 export interface NextStep {
@@ -54,6 +54,7 @@ const STEP: Readonly<Record<NextStepAction, NextStep>> = {
   retry_with_detail: { action: 'retry_with_detail', label: 'Try again, telling me more about what you want' },
   adjust_request: { action: 'adjust_request', label: 'Ask for something smaller or simpler' },
   open_transcript: { action: 'open_transcript', label: 'See what happened, step by step' },
+  open_checks: { action: 'open_checks', label: 'See what the checks found' },
   prepare_runtime: { action: 'prepare_runtime', label: 'Open Settings to prepare Python' },
   cancel: { action: 'cancel', label: 'Stop the run' },
 };

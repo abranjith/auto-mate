@@ -49,7 +49,7 @@ Shared TypeBox contracts cover previews, consents, receipts, clarification batch
 - `validateCodePath(path, role)` is the one path rule the tool boundary and the repository share: relative, forward slashes, at most two levels, `.py`, pytest naming for tests only, and `output/` reserved.
 - `buildSyntheticFixture(profile, { rowCount, seed })` builds test data from a profile or disclosed table, never from a path. Every literal in its output is either a cell of the approved disclosure payload or a value it invented. It is deterministic for a given seed. It never repeats a sample value in a high-cardinality column.
 - `renderCodeContract(context)` is the only place the code-generation instructions exist. It contains no absolute path and states that test data is synthetic (`SYNTHETIC_DATA_WARNING`).
-- `summarizeAttempts` and `describeAttempt` give the plain-English wording shared by the API, the transcript, and the UI. `limits.ts` holds the provisional D14 defaults.
+- `summarizeAttempts` and `describeAttempt` give the plain-English wording shared by the API, the transcript, and the run outcome panel. `limits.ts` holds the provisional D14 defaults.
 
 `packages/core/src/execution/python-runner.ts` is the `PythonRunner` seam that FEAT-108 fills: `probe()`, `ensureEnvironment(signal)`, and `run(request)`, types only. A type-level test pins it at three methods. `stdout` and `stderr` in its results are raw, untrusted output, and they must pass `filterDiagnostics` before reaching any prompt.
 

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -71,23 +71,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('run record', () => {
-  it('keeps sparse old runs readable: the interruption leads, only What you asked and Run render, and nothing is styled as an error', async () => {
+  it('keeps sparse old runs readable with the request only in the task card', async () => {
     const view = mount();
-    await waitFor(() => expect(view.container.textContent).toContain('Summarize my sales.'));
-    expect(view.container.querySelector('h2')?.nextElementSibling?.textContent).toBe(INTERRUPTION_MESSAGES.waiting);
+    expect(view.container.textContent).not.toContain('Summarize my sales.');
+    expect(view.container.querySelector('h2')?.textContent).toBe('How this run was made');
     expect(view.container.textContent).toContain('<script>alert(1)</script> =SUM(A1)');
     expect(view.container.querySelector('script')).toBeNull();
-    expect([...view.container.querySelectorAll('strong')].map((title) => title.textContent)).toEqual(['What you asked', 'Run']);
+    expect([...view.container.querySelectorAll('strong')].map((title) => title.textContent)).toEqual(['Run']);
+    expect(view.container.textContent).toContain('Your guidance for this run:');
     expect([...view.container.querySelectorAll('*')].some((element) => element.className === ds.statusDanger)).toBe(false);
-    expect(await screen.findByRole('button', { name: 'Run again' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Run again' })).toBeNull();
   });
 
   it('summarizes every section of a full record in one line each', async () => {
     mock.record = full();
     const view = mount();
-    await waitFor(() => expect(view.container.textContent).toContain('Summarize my sales.'));
+    expect(view.container.textContent).not.toContain('Summarize my sales.');
     const text = view.container.textContent ?? '';
-    for (const line of ['You said: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run · 1 follow-up', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1 second', '1 output', 'Came from run 1', 'Led to run 3']) expect(text).toContain(line);
+    for (const line of ['Your review: Totals were off by one region.', '1 input file · The run read exactly these files', '2 sends to fake (m)', '3 questions · 1 answered by you · 2 carried over from an earlier run · 1 follow-up', 'Attempt 2 · dddddddddddd · its own tests passed', 'Passed with 1 warning · Python 3.12.4 on win32 · 8 packages', 'you acknowledged the warnings', 'succeeded · 1 second', '1 output', 'Came from run 1', 'Led to run 3']) expect(text).toContain(line);
   });
 
   it('mounts each owning view lazily on first open, with exactly one request, and none on reopening', async () => {
@@ -114,16 +115,4 @@ describe('run record', () => {
     }
   });
 
-  it('offers Run again only for the latest terminal run', async () => {
-    mock.latest.mockResolvedValue({ items: [{ id: 10 }] });
-    mount();
-    await waitFor(() => expect(mock.latest).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: 'Run again' })).toBeNull();
-    cleanup();
-    mock.record = { ...sparse(), execution: { ...sparse().execution, status: 'generating', errorCode: null, errorMessage: null } };
-    mock.latest.mockResolvedValue({ items: [{ id: 9 }] });
-    mount();
-    await waitFor(() => expect(mock.latest).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole('button', { name: 'Run again' })).toBeNull();
-  });
 });

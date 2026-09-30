@@ -107,7 +107,7 @@ describe('HistoryRepository', () => {
     expect(search('')).toHaveLength(5);
   });
 
-  it('pages a task timeline newest first and reports guidance and feedback flags without their text', () => {
+  it('pages a task timeline newest first and excerpts guidance and feedback', () => {
     const f = fixture();
     const created = f.tasks.createWithExecution('Timeline');
     let previous = created.execution.id;
@@ -121,7 +121,33 @@ describe('HistoryRepository', () => {
     const ids = [...first.items, ...second.items].map((item) => item.id);
     expect(ids).toEqual([...ids].sort((a, b) => b - a));
     expect(first.items.find((item) => item.trigger === 'feedback')).toMatchObject({ hasReviewFeedback: false, hasGuidance: true });
-    expect(JSON.stringify([first, second])).not.toMatch(/private (guidance|feedback)/);
+    expect(first.items.find((item) => item.trigger === 'feedback')?.reason).toMatch(/private feedback/);
+    expect(second.items.at(-1)?.reason).toBeNull();
+    expect(first.items.every((item) => item.savedAs.length === 0)).toBe(true);
+  });
+
+  it('loads saved-task markers in one query for a page of runs', () => {
+    const f = fixture();
+    const created = f.tasks.createWithExecution('Saved runs');
+    for (let index = 0; index < 9; index++) f.store.connection.client.prepare("insert into execution (task_id, status, trigger, guidance) values (?, 'failed', 'rerun', ?)").run(created.task.id, `Try ${index}`);
+    const statements = captureStatements(f, () => f.history.listRuns(created.task.id, { limit: 10 }));
+    expect(statements.filter((entry) => entry.sql.includes('from template_revision tr join task_template tt'))).toHaveLength(1);
+    expect(f.history.listRuns(created.task.id, { limit: 10 }).items.every((item) => Array.isArray(item.savedAs))).toBe(true);
+  });
+
+  it('attaches saved revisions to their source runs and drops deleted-template markers', () => {
+    const f = fixture();
+    const first = f.tasks.createWithExecution('Monthly');
+    const secondId = Number(f.store.connection.client.prepare("insert into execution (task_id, status, trigger) values (?, 'completed', 'rerun')").run(first.task.id).lastInsertRowid);
+    const templateId = Number(f.store.connection.client.prepare("insert into task_template (name, description) values ('Saved monthly', 'A report')").run().lastInsertRowid);
+    const insert = f.store.connection.client.prepare("insert into template_revision (template_id, revision_number, source_execution_id, content_digest, entrypoint, summary, declared_inputs, declared_outputs, input_contract, contract_digest, runtime_fingerprint, runtime_detail, reads_wall_clock) values (?, ?, ?, ?, 'main.py', 'Report', '[]', '[]', '{}', ?, 'fp', '{}', 0)");
+    insert.run(templateId, 1, first.execution.id, 'a'.repeat(64), 'b'.repeat(64));
+    insert.run(templateId, 2, secondId, 'c'.repeat(64), 'd'.repeat(64));
+    const items = f.history.listRuns(first.task.id, { limit: 10 }).items;
+    expect(items.find((item) => item.id === first.execution.id)?.savedAs).toEqual([{ templateId, name: 'Saved monthly', revisionNumber: 1 }]);
+    expect(items.find((item) => item.id === secondId)?.savedAs).toEqual([{ templateId, name: 'Saved monthly', revisionNumber: 2 }]);
+    f.store.connection.client.prepare('delete from task_template where id = ?').run(templateId);
+    expect(f.history.listRuns(first.task.id, { limit: 10 }).items.every((item) => item.savedAs.length === 0)).toBe(true);
   });
 
   it('returns a sparse record for a FEAT-103-era text-only run', () => {

@@ -2,9 +2,9 @@
 
 # Results, Outputs, and Downloads
 
-This page covers what you get at the end of a run: the files the script wrote. When a run finishes (see [Independent Verification and Execution Gate](verification-execution-gate.md)), Auto-Mate takes ownership of every file the script wrote, shows each one in the app with a viewer that fits it, and lets you download any of them, or all of them as one ZIP. When a run produces nothing, or less than it promised, the page says what happened in plain words and offers the next step.
+This page covers what you get from a run: its output files, final text answer, or outcome. The run page puts **Result** near the top, after anything that needs your attention. For a script run (see [Independent Verification and Execution Gate](verification-execution-gate.md)), Auto-Mate takes ownership of the files the script wrote, shows previews, and lets you download each one or all of them as one ZIP. A completed run with only a text reply shows that reply under **Answer**. When a run produces nothing, produces less than it promised, or ends unsuccessfully, one outcome summary explains what happened and offers next steps.
 
-No AI is contacted at any point in this feature. Registering, viewing, paging, and downloading all happen on your computer.
+Registering, viewing, paging, and downloading outputs happen on your computer. Starting a new run through **Run again** can contact the configured AI provider.
 
 Two things this page must not overstate:
 
@@ -18,8 +18,10 @@ Two things this page must not overstate:
 1. **The run settles.** After the script exits, Auto-Mate compares the files in `runs/{executionId}/output/` with the script's `manifest.json`, as before.
 2. **Every file is registered.** Each file the manifest declared, and each file the script wrote without declaring, is moved into `artifacts/{taskId}/{artifactId}{ext}`, fingerprinted with SHA-256, typed, and recorded. A file the script forgot to list is kept and marked **Not listed** (*The script wrote this but did not list it.*), not thrown away.
 3. **Where the run lands does not change.** Registration never decides whether a run succeeded. A failed run still registers whatever it wrote, because a partial result you can download is worth more than nothing.
-4. **The result panel shows the files.** Each file has a card with its name, type, size, and the script's own title and description (shown as plain text), a **Show preview** control, and **Download**. When there is more than one file, **Download all N files (size) as a ZIP** appears with the count and total size on the button.
+4. **The run page leads with the result.** Its **Result** section shows available outputs above **How this run was made** and the conversation. Each file has a card with its name, type, size, and the script's own title and description (shown as plain text), a **Show preview** control, and **Download**. When there is more than one file, **Download all N files (size) as a ZIP** appears with the count and total size on the button. Partial outputs remain available even when the run did not succeed.
 5. **The transcript records the count.** One line such as *Kept 4 files from this run, 1 of them not listed by the script.* No file names appear in the transcript.
+
+For a completed run that did not generate a script, **Answer** shows the final assistant reply in the same **Result** section. **How this run was made** and **Conversation** are below it; both are collapsed after the run ends. The conversation remains open while a run is active.
 
 ### The nine output types
 
@@ -84,7 +86,7 @@ Auto-Mate does not rewrite a report to make it self-contained. Rewriting model-w
 
 ### When there is nothing, or not enough, to show
 
-A run that fails, hits a limit, produces nothing, or produces fewer files than it promised shows a panel with a headline, a sentence of detail, and next steps. Every next step is a control on the same screen:
+A run that fails, is cancelled or rejected, hits a limit, produces nothing, or produces fewer files than it promised shows one outcome panel below any available outputs. It gives a headline, details where available, and next steps. The run page has one retry area for the latest run; next-step links lead to that area, the review control, the checks, the transcript, Settings, or a download as appropriate. Earlier runs link to the run that followed them instead of offering another retry control.
 
 | Situation | Headline | Next steps |
 | --- | --- | --- |
@@ -96,13 +98,13 @@ A run that fails, hits a limit, produces nothing, or produces fewer files than i
 | Could not start | *The script could not be started.* | Open Settings to prepare Python; try again |
 | Stopped by you | *The run was stopped.* | Try again; download what it produced |
 
-**Try again** sends your words as the rejection feedback when the run is waiting for your review, or as retry guidance when the run failed. No panel shows a stack trace, an exit code as its headline, or a file path.
+For a failed latest run, **Run again** accepts optional guidance in the outcome panel. A saved-code run instead offers **Run again exactly** and **Repair with AI** in that same retry area. A run waiting for review uses **Did this do what you wanted?** as its retry route. The panel does not use a stack trace, exit code, or file path as its headline; the technical-details switch can reveal the error code and correlation ID.
 
 ### Retention
 
 Outputs live for the life of the task, are deleted with it, and are never purged by age. This is the same rule as for your uploaded files. Deleting a task removes its `artifact` rows through the database and its `artifacts/{taskId}/` folder in the same operation, and a startup sweep removes any `artifacts/<taskId>/` folder whose task no longer exists. There is no way to delete one output on its own and no "saved" flag: those belong to a standalone artifact library, which is deferred.
 
-No screen deletes a task yet. The history view that will list tasks to delete is a later feature, so today deletion is reachable only in code.
+You can delete a task from History; this removes its retained outputs with the task.
 
 ## Configuration
 
@@ -137,7 +139,6 @@ Errors: `ARTIFACT_NOT_FOUND`, `ARTIFACT_FILE_MISSING`, `ARTIFACT_NOT_PREVIEWABLE
 
 - **The preview frame guarantees nothing about the script that wrote the report.** See the top of this page.
 - **Formula-like cells are counted, not neutralized.**
-- **No task deletion screen.** Retention is implemented but reachable only in code until the history view lands.
 - **A crash between moving a file and recording it** leaves an unreferenced file in a live task's folder until the task is deleted.
 - **Several ranges in one request** are answered with the whole file.
 - **Each table page confirms the file's text encoding by reading the whole file once**, in chunks, before parsing. Memory stays bounded, but paging a very large CSV is slower than it needs to be.

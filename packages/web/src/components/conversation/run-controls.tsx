@@ -44,26 +44,3 @@ export function RunControls({ execution }: { execution: ExecutionSummary }) {
     </div>
   );
 }
-
-/** Optional provider-reported completion metrics. */
-export function CompletedSummary({
-  execution,
-}: {
-  execution: ExecutionSummary;
-}) {
-  if (execution.status !== 'completed') return null;
-  const parts = [
-    execution.durationMs === null ? undefined : `${execution.durationMs} ms`,
-    execution.usage.turns === undefined
-      ? undefined
-      : `${execution.usage.turns} turns`,
-    execution.usage.costUsd === undefined
-      ? undefined
-      : `$${execution.usage.costUsd.toFixed(4)}`,
-  ].filter(Boolean);
-  return (
-    <p className={ds.eventLine}>
-      Completed{parts.length ? ` · ${parts.join(' · ')}` : ''}
-    </p>
-  );
-}

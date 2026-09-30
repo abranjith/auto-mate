@@ -13,6 +13,7 @@ vi.mock('@tanstack/react-router', () => ({
   Navigate: ({ to, params }: { to: string; params: Record<string, string> }) => <p>redirect {to} {JSON.stringify(params)}</p>,
   Link: ({ children, ...props }: { children: ReactNode; 'aria-current'?: 'page' }) => <a href="/run" aria-current={props['aria-current']}>{children}</a>,
   useLocation: () => ({ pathname: mock.pathname }),
+  useParams: () => mock.params,
   useNavigate: () => vi.fn(),
 }));
 vi.mock('../../api/task-queries', () => ({ getTask: mock.task, getExecution: mock.execution, useAbortExecution: () => ({ mutate: vi.fn() }) }));
@@ -29,7 +30,7 @@ const component = async (path: string) => ((await import(path)) as { Route: { op
 function mount(Component: () => ReactNode) {
   return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Component /></QueryClientProvider>);
 }
-const timelineItem = (id: number): RunTimelineItem => ({ id, taskId: 3, runNumber: id - 9, status: 'failed', trigger: id === 10 ? 'manual' : 'rerun', retryOfExecutionId: id === 10 ? null : id - 1, hasGuidance: false, hasReviewFeedback: false, createdAt: at, completedAt: at, durationMs: 5, errorCode: null, outputCount: 0, reuse: null });
+const timelineItem = (id: number): RunTimelineItem => ({ id, taskId: 3, runNumber: id - 9, status: 'failed', trigger: id === 10 ? 'manual' : 'rerun', retryOfExecutionId: id === 10 ? null : id - 1, hasGuidance: false, hasReviewFeedback: false, reason: null, savedAs: [], createdAt: at, completedAt: at, durationMs: 5, errorCode: null, outputCount: 0, reuse: null });
 
 beforeEach(() => { vi.mocked(RunView).mockClear(); mock.task.mockReset(); mock.execution.mockReset(); mock.timeline.mockReset(); mock.pages = []; });
 afterEach(cleanup);
@@ -55,22 +56,23 @@ describe('task layout /tasks/$taskId', () => {
     expect(screen.getByRole('link', { name: 'Back to History' }).getAttribute('href')).toBe('/history');
   });
 
-  it('marks exactly the selected run as current in the timeline', async () => {
+  it('marks exactly the selected run as current in the lineage', async () => {
     mock.pages = [{ items: [timelineItem(12), timelineItem(11), timelineItem(10)], nextCursor: null, hasMore: false }];
     mock.pathname = '/tasks/3/runs/11';
-    const { RunTimeline } = await import('../../components/history/run-timeline');
-    const view = render(<RunTimeline taskId={3} />);
+    const { LineageRail } = await import('../../components/history/lineage-rail');
+    const view = render(<LineageRail taskId={3} currentExecutionId={11} />);
     const current = view.container.querySelectorAll('[aria-current="page"]');
     expect(current).toHaveLength(1);
-    expect(current[0]?.textContent).toBe('Run 2 · Tried again');
+    expect(current[0]?.textContent).toBe('Run 2');
   });
 
-  it('numbers runs per task and shows durations in words, not the database id and raw milliseconds', async () => {
+  it('numbers runs per task in chronological order', async () => {
     mock.pages = [{ items: [{ ...timelineItem(12), durationMs: 83_787, outputCount: 1 }, { ...timelineItem(11), durationMs: 5_934 }, timelineItem(10)], nextCursor: null, hasMore: false }];
     mock.pathname = '/tasks/3/runs/12';
-    const { RunTimeline } = await import('../../components/history/run-timeline');
-    const text = render(<RunTimeline taskId={3} />).container.textContent ?? '';
-    for (const line of ['Run 3 · Tried again', '1 minute 24 seconds · 1 output', 'Run 2 · Tried again', '6 seconds · 0 outputs', 'Run 1 · First run']) expect(text).toContain(line);
+    const { LineageRail } = await import('../../components/history/lineage-rail');
+    const text = render(<LineageRail taskId={3} />).container.textContent ?? '';
+    expect(text.indexOf('Run 1')).toBeLessThan(text.indexOf('Run 2'));
+    expect(text.indexOf('Run 2')).toBeLessThan(text.indexOf('Run 3'));
     expect(text).not.toMatch(/\d ms/);
     expect(text).not.toContain('Run 12');
   });

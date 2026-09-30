@@ -1,13 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AutoMateError, MAX_GUIDANCE_CHARS, type CodeVersionDetail, type ConversationEvent, type ExecutionSummary, type GenerationAttempt, type SyntheticFixture } from '@automate/core';
+import { type CodeVersionDetail, type ConversationEvent, type GenerationAttempt, type SyntheticFixture } from '@automate/core';
 import { CodeVersionCard } from '../../../components/generation/code-version-card';
 import { CodeFileView } from '../../../components/generation/code-file-view';
 import { TestRunResult, withheldSentence } from '../../../components/generation/test-run-result';
 import { FixtureNote, fixtureSentence } from '../../../components/generation/fixture-note';
 import { GenerationProgress, generationPhase, waitingMs } from '../../../components/generation/generation-progress';
-import { GenerationFailurePanel } from '../../../components/generation/generation-failure-panel';
 import { TestRunEvent } from '../../../components/generation/test-run-event';
 
 afterEach(cleanup);
@@ -20,7 +19,6 @@ const failedRun: TestRun = { seq: 4, type: 'test_run_finished', attemptId: 1, at
 const HOSTILE_CODE = 'print("<script>alert(1)</script>")\nx = 1\ny = 2\n';
 const detail: CodeVersionDetail = { id: 7, executionId: 2, attempt: 1, status: 'tested_fail', contentDigest: digest, entrypoint: 'main.py', isFinal: false, testsPassed: false, summary: null, sealedAt: at, createdAt: at, declaredInputs: null, declaredOutputs: null, files: [{ path: 'main.py', role: 'script', byteSize: 60, lineCount: 3, sha256: digest, content: HOSTILE_CODE }] };
 const fixture: SyntheticFixture = { id: 1, executionId: 2, uploadId: 3, fileName: '3-sales.csv', format: 'csv', sheetCount: 1, rowCount: 200, sampleRowCount: 10, byteSize: 4096, sha256: digest, seed: 'seed', createdAt: at, preview: [{ sheetName: null, header: ['region', 'note'], rows: [['North', '=HYPERLINK("http://x")'], ['<img src=x onerror=alert(1)>', '@SUM(A1)']] }] };
-const execution: ExecutionSummary = { id: 2, taskId: 1, status: 'failed', trigger: 'manual', retryOfExecutionId: null, provider: 'fake', model: 'fake', usage: {}, startedAt: at, completedAt: at, durationMs: 10, error: { code: 'GENERATION_ATTEMPTS_EXHAUSTED', message: 'This run used all 3 attempts.' }, createdAt: at };
 const attempt = (n: number, overrides: Partial<GenerationAttempt> = {}): GenerationAttempt => ({ id: n, executionId: 2, codeVersionId: n, attempt: n, status: 'failed', refusalReason: null, testsTotal: 3, testsPassed: 2, testsFailed: 1, exitCode: 1, manifestPresent: false, diagnosticDigest: null, droppedLineCount: 0, durationMs: 5, startedAt: at, settledAt: at, diagnostics: null, ...overrides });
 
 describe('GenerationProgress', () => {
@@ -127,56 +125,5 @@ describe('FixtureNote', () => {
     await waitFor(() => expect(screen.getAllByText(/Your real file has not been read yet\./)).toHaveLength(2));
     expect(await screen.findByText('ValueError: <str len=3>')).toBeTruthy();
     expect(loadAttempts).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('GenerationFailurePanel', () => {
-  const attempts = [attempt(1), attempt(2, { status: 'errored' }), attempt(3)];
-
-  it('lists every attempt with its outcome and the summary', () => {
-    render(<GenerationFailurePanel execution={execution} attempts={attempts} summary="Used all 3 attempts without getting the tests to pass." renderLink={false} />);
-    expect(screen.getByText('Tell me what I got wrong and I\'ll try again.')).toBeTruthy();
-    expect(screen.getByText('Used all 3 attempts without getting the tests to pass.')).toBeTruthy();
-    expect(screen.getByText('Attempt 1: 1 of 3 tests failed.')).toBeTruthy();
-    expect(screen.getByText(/Attempt 2: the tests could not start/)).toBeTruthy();
-  });
-
-  it('disables retry while the guidance exceeds the cap, then posts it exactly once', async () => {
-    const user = userEvent.setup();
-    let release!: (value: never) => void;
-    const onRetry = vi.fn(() => new Promise<never>((resolve) => { release = resolve; }));
-    const onRetried = vi.fn();
-    render(<GenerationFailurePanel execution={execution} attempts={attempts} onRetry={onRetry} onRetried={onRetried} renderLink={false} />);
-    const box = screen.getByRole('textbox');
-    await user.click(box);
-    await user.paste('x'.repeat(MAX_GUIDANCE_CHARS + 1));
-    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(true);
-    await user.clear(box);
-    await user.type(box, 'Group by month.');
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect((screen.getByRole('button', { name: 'Starting…' }) as HTMLButtonElement).disabled).toBe(true);
-    await user.click(screen.getByRole('button', { name: 'Starting…' }));
-    expect(onRetry).toHaveBeenCalledTimes(1);
-    expect(onRetry).toHaveBeenCalledWith(2, 'Group by month.');
-    release({ task: {}, execution: { id: 9 } } as never);
-    await waitFor(() => expect(onRetried).toHaveBeenCalledTimes(1));
-  });
-
-  it('surfaces the server\'s message, and for a stale approval offers to review what is sent instead of retrying blindly', async () => {
-    const user = userEvent.setup();
-    const onRetry = vi.fn().mockRejectedValue(new AutoMateError('DISCLOSURE_CONSENT_STALE', 'The recipient changed from fake a to fake b since you approved this.'));
-    render(<GenerationFailurePanel execution={execution} attempts={attempts} onRetry={onRetry} renderLink={false} />);
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText(/The recipient changed/)).toBeTruthy();
-    expect(screen.getByText(/Review what is sent and approve it again/)).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Try again' }) as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('lets a person leave the run as it is', async () => {
-    const user = userEvent.setup();
-    render(<GenerationFailurePanel execution={execution} attempts={attempts} renderLink={false} />);
-    await user.click(screen.getByRole('button', { name: 'Not now' }));
-    expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.getByText(/stays as it is/)).toBeTruthy();
   });
 });

@@ -156,7 +156,7 @@ describe('untrusted content renders as literal text on every surface', () => {
 });
 
 describe('GateSection', () => {
-  const api = (overrides: Partial<GateApi> = {}): GateApi => ({ getVerification: vi.fn(() => Promise.resolve(report())), getIntent: vi.fn(() => Promise.resolve(intent())), getRun: vi.fn(() => Promise.resolve(run())), decideApproval: vi.fn(() => Promise.resolve(approved)), submitReview: vi.fn(() => Promise.resolve({ status: 'completed', retryExecutionId: null })), getArtifacts: vi.fn(() => Promise.resolve({ executionId: 2, scriptRunId: 1, artifacts: [], artifactCount: 0, unregisteredOutputCount: 0, declaredOutputCount: 1, producedOutputCount: 1, totalBytes: 0, discrepancies: [], archiveUrl: null })), retry: vi.fn(() => Promise.reject(new Error('not used'))), ...overrides });
+  const api = (overrides: Partial<GateApi> = {}): GateApi => ({ getVerification: vi.fn(() => Promise.resolve(report())), getIntent: vi.fn(() => Promise.resolve(intent())), decideApproval: vi.fn(() => Promise.resolve(approved)), submitReview: vi.fn(() => Promise.resolve({ status: 'completed', retryExecutionId: null })), ...overrides });
   const finished: ConversationEvent = { seq: 5, type: 'verification_finished', verificationRunId: 1, codeVersionId: 3, status: 'passed', blockingCount: 0, advisoryCount: 0, summary: 'All checks passed.', runtimeDescription: 'Python 3.12.4 on Linux (x64)', at };
   const base: ExecutionSummary = { id: 2, taskId: 1, status: 'verifying', trigger: 'manual', retryOfExecutionId: null, provider: null, model: null, usage: {}, startedAt: at, completedAt: null, durationMs: null, error: null, createdAt: at };
   it('says it is checking while verifying', () => {
@@ -176,33 +176,10 @@ describe('GateSection', () => {
     expect(screen.getByText('This is running on your computer with the same access this application has.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Run it' })).toBeNull();
   });
-  it('shows the result and the review question at awaiting_review', async () => {
+  it('shows the review question but leaves the result to the result lead at awaiting_review', async () => {
     const events: ConversationEvent[] = [finished, { seq: 9, type: 'run_finished', scriptRunId: 1, status: 'succeeded', exitCode: 0, durationMs: 5, declaredOutputCount: 1, producedOutputCount: 1, outputTruncated: false, at }];
     render(wrap(<GateSection execution={{ ...base, status: 'awaiting_review' }} events={events} api={api()} />));
     expect(await screen.findByText('Did this do what you wanted?')).toBeTruthy();
-    expect(await screen.findByLabelText('Run result')).toBeTruthy();
-  });
-  // FEAT-109: an outcome with nothing to show leads somewhere, through the control that exists for the status.
-  const ran = (status: Exclude<ScriptRun['status'], 'running'>): ConversationEvent[] => [finished, { seq: 9, type: 'run_finished', scriptRunId: 1, status, exitCode: 0, durationMs: 5, declaredOutputCount: 0, producedOutputCount: 0, outputTruncated: false, at }];
-  it('retries an empty result awaiting review by rejecting it with the person\'s words', async () => {
-    const onRetried = vi.fn();
-    const gate = api({ getRun: vi.fn(() => Promise.resolve(run({ declaredOutputs: [], declaredOutputCount: 0 }))), submitReview: vi.fn(() => Promise.resolve({ status: 'rejected', retryExecutionId: 7 })) });
-    render(wrap(<GateSection execution={{ ...base, status: 'awaiting_review' }} events={ran('succeeded')} api={gate} onRetried={onRetried} />));
-    await userEvent.click(await screen.findByRole('button', { name: /Try again, telling me more/ }));
-    await userEvent.type(screen.getByRole('textbox', { name: /Try again, telling me more/ }), 'Write a CSV.');
-    await userEvent.click(screen.getByRole('button', { name: 'Try again with this' }));
-    expect(gate.submitReview).toHaveBeenCalledWith(2, { verdict: 'rejected', feedback: 'Write a CSV.' });
-    expect(onRetried).toHaveBeenCalledWith(7);
-  });
-  it('retries a failed run through the guidance retry', async () => {
-    const onRetried = vi.fn();
-    const gate = api({ getRun: vi.fn(() => Promise.resolve(run({ status: 'failed', exitCode: 0, manifestPresent: false, declaredOutputs: [] }))), retry: vi.fn(() => Promise.resolve({ task: { id: 1, name: 't', description: 'd', createdAt: at, updatedAt: at }, execution: { ...base, id: 8, status: 'pending' as const } })) });
-    render(wrap(<GateSection execution={{ ...base, status: 'failed' }} events={ran('failed')} api={gate} onRetried={onRetried} />));
-    expect(await screen.findByText('The script finished but did not say what it produced.')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /Try again, telling me more/ }));
-    await userEvent.type(screen.getByRole('textbox'), 'List the output.');
-    await userEvent.click(screen.getByRole('button', { name: 'Try again with this' }));
-    expect(gate.retry).toHaveBeenCalledWith(2, 'List the output.');
-    expect(onRetried).toHaveBeenCalledWith(8);
+    expect(screen.queryByLabelText('Run result')).toBeNull();
   });
 });

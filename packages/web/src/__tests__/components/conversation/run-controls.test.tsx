@@ -9,8 +9,7 @@ import {
   type ExecutionSummary,
 } from '@automate/core';
 import { ExecutionStatusBadge } from '../../../components/conversation/execution-status-badge';
-import { FailurePanel } from '../../../components/conversation/failure-panel';
-import { CompletedSummary, RunControls } from '../../../components/conversation/run-controls';
+import { RunControls } from '../../../components/conversation/run-controls';
 const mock = vi.hoisted(() => ({
   mutation: {
     mutate: vi.fn(),
@@ -74,21 +73,5 @@ describe('run terminal controls', () => {
     await user.click(screen.getByRole('button'));
     expect(mock.mutation.mutate).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('alert').textContent).toContain('already finished');
-  });
-  it('renders safe interrupted copy and omits absent completion metrics', () => {
-    const { container } = render(
-      <>
-        <FailurePanel
-          error={{
-            code: 'EXECUTION_INTERRUPTED',
-            message: 'C:\\private\\stack\nat x',
-          }}
-        />
-        <CompletedSummary execution={{ ...base, status: 'completed' }} />
-      </>,
-    );
-    expect(screen.getByRole('alert').textContent).toContain('server restarted');
-    expect(container.textContent).not.toMatch(/private|at x/);
-    expect(container.textContent).not.toMatch(/turn|\$/);
   });
 });

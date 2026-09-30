@@ -1,4 +1,4 @@
-import { describeLimitBreach, HISTORY_STATUS_GROUPS, RepositoryError, TERMINAL_STATUSES, type HistoryStatusGroup, type RunRecord, type RunTimelineItem, type RunTimelinePage, type TaskCounts, type TaskHistoryItem, type TaskHistoryPage } from '@automate/core';
+import { describeLimitBreach, excerptReason, HISTORY_STATUS_GROUPS, RepositoryError, TERMINAL_STATUSES, type HistoryStatusGroup, type RunRecord, type RunTimelineItem, type RunTimelinePage, type TaskCounts, type TaskHistoryItem, type TaskHistoryPage } from '@automate/core';
 import type { DatabaseConnection } from '../client';
 import { statusLiterals } from '../status-sql';
 
@@ -57,9 +57,19 @@ export class HistoryRepository {
   listRuns(taskId: number, options: PageOptions): RunTimelinePage {
     return this.read(() => {
       const rows = this.all(`select e.id, e.task_id taskId, e.status, e.trigger, e.retry_of_execution_id retryOfExecutionId, e.guidance, e.review_feedback reviewFeedback, e.created_at createdAt, e.completed_at completedAt, e.duration_ms durationMs, e.error_code errorCode, er.kind reuseKind, er.template_id templateId, er.template_name templateName, er.revision_number revisionNumber, (select count(*) from artifact a where a.execution_id = e.id) outputCount, ${RUN_NUMBER_SQL} runNumber from execution e left join execution_reuse er on er.execution_id = e.id where e.task_id = ? ${options.cursor === undefined ? '' : 'and e.id < ?'} order by e.id desc limit ?`, [taskId, ...(options.cursor === undefined ? [] : [options.cursor]), options.limit + 1]);
-      const items: RunTimelineItem[] = rows.slice(0, options.limit).map((row) => ({
+      const page = rows.slice(0, options.limit);
+      const ids = page.map((row) => number(row.id));
+      const saved = this.all(`select tr.source_execution_id executionId, tt.id templateId, tt.name name, tr.revision_number revisionNumber from template_revision tr join task_template tt on tt.id = tr.template_id where tr.source_execution_id in (${ids.map(() => '?').join(',') || 'null'}) order by tr.id`, ids);
+      const savedByRun = new Map<number, RunTimelineItem['savedAs']>();
+      for (const row of saved) {
+        const entries = savedByRun.get(number(row.executionId)) ?? [];
+        entries.push({ templateId: number(row.templateId), name: text(row.name), revisionNumber: number(row.revisionNumber) });
+        savedByRun.set(number(row.executionId), entries);
+      }
+      const items: RunTimelineItem[] = page.map((row) => ({
         id: number(row.id), taskId: number(row.taskId), runNumber: number(row.runNumber), status: text(row.status) as RunTimelineItem['status'], trigger: text(row.trigger) as RunTimelineItem['trigger'],
         retryOfExecutionId: row.retryOfExecutionId === null ? null : number(row.retryOfExecutionId), hasGuidance: row.guidance !== null, hasReviewFeedback: row.reviewFeedback !== null,
+        reason: excerptReason(row.guidance === null ? null : text(row.guidance)), savedAs: savedByRun.get(number(row.id)) ?? [],
         createdAt: iso(row.createdAt)!, completedAt: iso(row.completedAt), durationMs: row.durationMs === null ? null : number(row.durationMs), errorCode: row.errorCode === null ? null : text(row.errorCode), outputCount: number(row.outputCount), reuse: reuseSummary(row),
       }));
       return { items, nextCursor: rows.length > options.limit ? String(items.at(-1)?.id) : null, hasMore: rows.length > options.limit };
